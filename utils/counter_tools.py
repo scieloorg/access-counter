@@ -37,3 +37,18 @@ def generate_session_id(ip: str, browser_name: str, browser_version: str, date: 
     date_slice = _extract_slice(date)
     user_agent = _extract_user_agent(browser_name, browser_version)
     return '|'.join([ip, user_agent, date_slice])
+
+
+def is_double_click(past_action, current_action):
+    """
+    Verifica se a ação atual (``current_action``) é um duplo-clique
+
+    :param past_action: ação mais antiga
+    :param current_action: ação atual
+    :return: True se for duplo-clique, False caso contrário
+    """
+    if past_action.action_name == current_action.action_name:
+        time_delta = current_action.server_time - past_action.server_time
+        if time_delta.days == 0 and time_delta.seconds < 30:
+            return True
+    return False
