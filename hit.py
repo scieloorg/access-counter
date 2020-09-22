@@ -79,3 +79,9 @@ class Hit:
             self.item_type = map_helper.HIT_TYPE_ARTICLE
         else:
             self.item_type = map_helper.HIT_TYPE_UNDEFINED
+
+    def __str__(self):
+        return '|'.join([self.session_id, str(self.server_time), str(self.item_type), self.action_name])
+
+    def __repr__(self):
+        return '|'.join([self.session_id, str(self.server_time), str(self.item_type), self.action_name])
