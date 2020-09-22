@@ -139,3 +139,13 @@ class Hit:
     def _article_is_xml(self):
         if map_helper.ARTICLE_URL_XML in self.action_name:
             return True
+
+
+class HitManager:
+    """
+    Modelo de dados utilizado para gerenciar items de acesso.
+    """
+    def __init__(self):
+        self.items = []
+        self.session_to_actions = {}
+        self.pid_to_hits = {}
