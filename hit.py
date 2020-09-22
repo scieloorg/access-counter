@@ -213,3 +213,13 @@ class HitManager:
             return map_helper.HIT_TYPE_ARTICLE
 
         return map_helper.HIT_TYPE_UNDEFINED
+
+    def create_hit_from_log_row(self, **log_row):
+        """
+        Cria um item de acesso a partir de uma linha de log
+
+        :param log_row: linha de log
+        :return: Hit povoado com os dados da linha de log
+        """
+        return Hit(**log_row)
+
