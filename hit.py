@@ -85,3 +85,57 @@ class Hit:
 
     def __repr__(self):
         return '|'.join([self.session_id, str(self.server_time), str(self.item_type), self.action_name])
+
+    def get_article_type(self):
+        """
+        Obtém o tipo de conteúdo acessado com base na URL da ação, se for artigo.
+        :return: Tipo de conteúdo acessado
+        """
+        if self.item_type == map_helper.HIT_TYPE_ARTICLE:
+            if self._article_is_full_text():
+                return map_helper.ARTICLE_TYPE_FULL_TEXT
+            elif self._article_is_full_text_plus():
+                return map_helper.ARTICLE_TYPE_FULL_TEXT_PLUS
+            elif self._article_is_abstract():
+                return map_helper.ARTICLE_TYPE_ABSTRACT
+            elif self._article_is_xml():
+                return map_helper.ARTICLE_TYPE_XML
+            elif self._article_is_pdf():
+                return map_helper.ARTICLE_TYPE_PDF
+            elif self._article_is_how_to_cite():
+                return map_helper.ARTICLE_TYPE_HOW_TO_CITE
+            elif self._article_is_translated():
+                return map_helper.ARTICLE_TYPE_TRANSLATED
+            else:
+                return map_helper.ARTICLE_TYPE_UNDEFINED
+
+    def _article_is_pdf(self):
+        if map_helper.ARTICLE_URL_PDF in self.action_name:
+            return True
+
+    def _article_is_how_to_cite(self):
+        if map_helper.ARTICLE_URL_HOW_TO_CITE in self.action_name:
+            if self.script == 'sci_isoref':
+                return True
+
+    def _article_is_full_text(self):
+        if map_helper.ARTICLE_URL_FULL_TEXT in self.action_name:
+            if self.script == 'sci_arttext':
+                return True
+
+    def _article_is_full_text_plus(self):
+        if map_helper.ARTICLE_URL_FULL_TEXT_PLUS in self.action_name:
+            return True
+
+    def _article_is_abstract(self):
+        if map_helper.ARTICLE_URL_ABSTRACT in self.action_name:
+            if self.script == 'sci_abstract':
+                return True
+
+    def _article_is_translated(self):
+        if map_helper.ARTICLE_URL_TRANSLATED in self.action_name:
+            return True
+
+    def _article_is_xml(self):
+        if map_helper.ARTICLE_URL_XML in self.action_name:
+            return True
