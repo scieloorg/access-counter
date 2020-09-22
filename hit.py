@@ -181,3 +181,22 @@ class HitManager:
             self.session_to_actions[hit.session_id][hit.action_name] = []
 
         self.session_to_actions[hit.session_id][hit.action_name].append(hit)
+
+    def count_hits_by_pid(self):
+        """
+        Gera mapa ``pid`` -> ``{tipo de conteúdo}`` -> ``[hits]``
+        """
+        for session_id in self.session_to_actions:
+            actions_names = self.session_to_actions[session_id]
+            for action_name in actions_names:
+                hits = actions_names[action_name]
+                for hit in hits:
+                    if hit.item_type == map_helper.HIT_TYPE_ARTICLE:
+                        if hit.pid not in self.pid_to_hits:
+                            self.pid_to_hits[hit.pid] = {}
+
+                        hit_article_type = hit.get_article_type()
+                        if hit_article_type not in self.pid_to_hits[hit.pid]:
+                            self.pid_to_hits[hit.pid][hit_article_type] = []
+
+                        self.pid_to_hits[hit.pid][hit_article_type].append(hit)
