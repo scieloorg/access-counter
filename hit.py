@@ -49,3 +49,11 @@ class Hit:
                                                             self.browser_version,
                                                             self.server_time)
 
+    def extract_params_from_action_name(self, action_name: str):
+        """
+        Extrai parâmetros da URL e cria campos ``pid``, ``tlng`` e ``script``
+
+        :param action_name: URL da ação
+        :return: dicionário com os parâmetros extraídos da URL da ação
+        """
+        return dict(parse.parse_qsl(parse.urlsplit(action_name).query))
