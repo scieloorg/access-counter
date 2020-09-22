@@ -57,3 +57,11 @@ class Hit:
         :return: dicionário com os parâmetros extraídos da URL da ação
         """
         return dict(parse.parse_qsl(parse.urlsplit(action_name).query))
+
+    def create_attrs_from_action_params(self):
+        """
+        Cria campos ``pid``, ``tlng`` e ``script`` a partir dos valores dos parâmetros da URL da ação
+        """
+        self.pid = self.action_params.get('pid', '')
+        self.tlng = self.action_params.get('tlng', '')
+        self.script = self.action_params.get('script', '')
