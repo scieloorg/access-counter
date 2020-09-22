@@ -200,3 +200,16 @@ class HitManager:
                             self.pid_to_hits[hit.pid][hit_article_type] = []
 
                         self.pid_to_hits[hit.pid][hit_article_type].append(hit)
+
+    def get_item_type(self, pid):
+        """
+        Obtém o tipo de item acessado conforme o parâmetro ``pid``
+        """
+        if len(pid) == 9:
+            return map_helper.HIT_TYPE_JOURNAL
+        elif len(pid) == 17:
+            return map_helper.HIT_TYPE_ISSUE
+        elif len(pid) == 23:
+            return map_helper.HIT_TYPE_ARTICLE
+
+        return map_helper.HIT_TYPE_UNDEFINED
