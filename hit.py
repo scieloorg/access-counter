@@ -223,3 +223,28 @@ class HitManager:
         """
         return Hit(**log_row)
 
+    def clean_double_clicks(self, dict_session_values):
+        """
+        Remove cliques duplos
+
+        :param dict_session_values: dicionário que mapeia sessão a valores de ação (``action_name``, ``pid``)
+        """
+        for session, actions in dict_session_values.items():
+            for action_attr, hits in actions.items():
+                if len(hits) > 1:
+                    hits = sorted(hits, key=lambda x: x.server_time)
+                    cleaned_hits = []
+
+                    for i in range(len(hits) - 1):
+                        past_hit = hits[i]
+                        current_hit = hits[i + 1]
+
+                        if not counter_tools.is_double_click(past_hit, current_hit):
+                            cleaned_hits.append(past_hit)
+                        elif i + 2 == len(hits):
+                            cleaned_hits.append(current_hit)
+
+                    if cleaned_hits:
+                        dict_session_values[session][action_attr] = cleaned_hits
+                    else:
+                        dict_session_values[session][action_attr] = hits
