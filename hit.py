@@ -167,3 +167,17 @@ class HitManager:
                 counter += 1
                 print('\r%s' % str(counter), end='')
         print()
+
+    def _update_session_to_action(self, hit: Hit):
+        """
+        Atualiza mapa identificador de sessão -> ações
+
+        :param hit: acesso a ser atualizado no mapa de sessões
+        """
+        if hit.session_id not in self.session_to_actions:
+            self.session_to_actions[hit.session_id] = {}
+
+        if hit.action_name not in self.session_to_actions[hit.session_id]:
+            self.session_to_actions[hit.session_id][hit.action_name] = []
+
+        self.session_to_actions[hit.session_id][hit.action_name].append(hit)
