@@ -22,3 +22,18 @@ def _extract_slice(date: datetime):
     str_date = '-'.join([str(x) for x in [date.year, date.month, date.day]])
     str_hour_slice = str(date.hour)
     return '|'.join([str_date, str_hour_slice])
+
+
+def generate_session_id(ip: str, browser_name: str, browser_version: str, date: datetime):
+    """
+    Gera um ID de sessão
+
+    :param ip: endereço IP
+    :param browser_name: nome do navegador
+    :param browser_version: versão do navegador
+    :param date: data e hora
+    :return: uma str que representa um ID de sessão
+    """
+    date_slice = _extract_slice(date)
+    user_agent = _extract_user_agent(browser_name, browser_version)
+    return '|'.join([ip, user_agent, date_slice])
