@@ -12,3 +12,13 @@ def _extract_user_agent(browser_name: str, browser_version: str):
     return '/'.join([browser_name, browser_version])
 
 
+def _extract_slice(date: datetime):
+    """
+    Extrai uma fatia no formato ``YYYY-MM-DD|H``
+
+    :param date: um elemento datetime
+    :return: uma str no formato YYYY-MM-DD|H
+    """
+    str_date = '-'.join([str(x) for x in [date.year, date.month, date.day]])
+    str_hour_slice = str(date.hour)
+    return '|'.join([str_date, str_hour_slice])
