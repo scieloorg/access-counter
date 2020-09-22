@@ -65,3 +65,17 @@ class Hit:
         self.pid = self.action_params.get('pid', '')
         self.tlng = self.action_params.get('tlng', '')
         self.script = self.action_params.get('script', '')
+
+    def create_item_type_from_pid(self):
+        """
+        Cria campo item_type conforme o tamanho do ``pid``
+
+        """
+        if len(self.pid) == 9:
+            self.item_type = map_helper.HIT_TYPE_JOURNAL
+        elif len(self.pid) == 17:
+            self.item_type = map_helper.HIT_TYPE_ISSUE
+        elif len(self.pid) == 23:
+            self.item_type = map_helper.HIT_TYPE_ARTICLE
+        else:
+            self.item_type = map_helper.HIT_TYPE_UNDEFINED
