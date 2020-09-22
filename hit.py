@@ -149,3 +149,21 @@ class HitManager:
         self.items = []
         self.session_to_actions = {}
         self.pid_to_hits = {}
+
+    def set_items(self, raw_name: str):
+        """
+        Carrega arquivo de log
+
+        :param raw_name: nome do arquivo de log
+        """
+        print('Lendo arquivo de log')
+        counter = 0
+        with open(raw_name) as f:
+            csv_file = csv.DictReader(f, delimiter='\t')
+            for log_row in csv_file:
+                hit = self.create_hit_from_log_row(**log_row)
+                self.items.append(hit)
+                self._update_session_to_action(hit)
+                counter += 1
+                print('\r%s' % str(counter), end='')
+        print()
