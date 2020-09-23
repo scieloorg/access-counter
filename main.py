@@ -11,7 +11,7 @@ def main():
 
     parser.add_argument(
         '--raw',
-        default=None,
+        required=True,
         dest='raw',
         help='log em formato raw'
     )
@@ -21,7 +21,7 @@ def main():
     time_start = time()
 
     iam = HitManager()
-    iam.set_items(params.raw)
+    iam.set_hits(params.raw)
 
     print('Removendo cliques-duplos')
     iam.clean_double_clicks(iam.session_to_actions)
@@ -29,9 +29,9 @@ def main():
     print('Contando acessos por PID')
     iam.count_hits_by_pid()
 
-    print('Extrai métricas COUNTER R5')
+    print('Extraindo métricas COUNTER R5')
     cs = CounterStat()
-    cs.populate_reports(iam.pid_to_hits)
+    cs.populate_counter(iam.pid_to_hits)
 
     for pid in cs.articles:
         print(pid, cs.articles[pid])
