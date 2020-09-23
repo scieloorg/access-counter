@@ -22,26 +22,14 @@ class Hit:
         # Versão do navegador utilizado
         self.browser_version = kargs['browserVersion'].lower()
 
-        # ID atribuído a visita (pelo Matomo)
-        self.visit_id = kargs['visitId'].lower()
-
-        # ID atribuído ao visitante (pelo Matomo)
-        self.visitor_id = kargs['visitorId'].lower()
-
-        # ID da ação (na tabela do Matomo)
-        self.action_id = kargs['actionId'].lower()
-
         # URL da ação
         self.action_name = kargs['actionName'].lower()
 
         # Extrai parâmetros da URL da ação
-        self.action_params = self.extract_params_from_action_name(self.action_name)
+        self.action_params = self._extract_params_from_action_name(self.action_name)
 
-        # Cria campos pid, tlng e script a partir dos parâmetros da URL da ação
-        self.create_attrs_from_action_params()
-
-        # Extrai tipo de URL
-        self.create_item_type_from_pid()
+        # Cria campos pid, tlng, script, hit_type e content_type a partir dos parâmetros da URL da ação
+        self._create_attrs()
 
         # Gera um ID de sessão
         self.session_id = counter_tools.generate_session_id(self.ip,
@@ -49,7 +37,7 @@ class Hit:
                                                             self.browser_version,
                                                             self.server_time)
 
-    def extract_params_from_action_name(self, action_name: str):
+    def _extract_params_from_action_name(self, action_name: str):
         """
         Extrai parâmetros da URL e cria campos ``pid``, ``tlng`` e ``script``
 
@@ -58,85 +46,106 @@ class Hit:
         """
         return dict(parse.parse_qsl(parse.urlsplit(action_name).query))
 
-    def create_attrs_from_action_params(self):
+    def _extract_hit_type(self):
         """
-        Cria campos ``pid``, ``tlng`` e ``script`` a partir dos valores dos parâmetros da URL da ação
+        Obtém o tipo de item acessado (article, issue, journal ou platform) conforme o parâmetro ``pid`` de um hit
+
+        :param pid: pid de um hit
+        """
+        if len(self.pid) == 9:
+            return map_helper.HIT_TYPE_JOURNAL
+        elif len(self.pid) == 17:
+            return map_helper.HIT_TYPE_ISSUE
+        elif len(self.pid) == 23:
+            return map_helper.HIT_TYPE_ARTICLE
+        else:
+            return map_helper.HIT_TYPE_PLATFORM
+
+    def _extract_content_type(self):
+        """
+        Obtém o tipo de conteúdo acessado (para article, por exemplo, há os seguintes tipos de contéudo: texto completo, página plus do texto completo, pdf, xml, resumo, como citar, texto completo traduzido)
+
+        :return: tipo de conteúdo acessado
+        """
+        if self.hit_type == map_helper.HIT_TYPE_ARTICLE:
+            return self.get_article_content_type()
+        elif self.hit_type == map_helper.HIT_TYPE_ISSUE:
+            return self.get_issue_content_type()
+        elif self.hit_type == map_helper.HIT_TYPE_JOURNAL:
+            return self.get_journal_content_type()
+        elif self.hit_type == map_helper.HIT_TYPE_PLATFORM:
+            return self.get_platform_content_type()
+
+    def _create_attrs(self):
+        """
+        Cria campos ``pid``, ``tlng``, ``script``, ``hit_type`` e ``content_type`` a partir dos parâmetros da URL da ação
         """
         self.pid = self.action_params.get('pid', '')
         self.tlng = self.action_params.get('tlng', '')
         self.script = self.action_params.get('script', '')
+        self.hit_type = self._extract_hit_type()
+        self.content_type = self._extract_content_type()
 
-    def create_item_type_from_pid(self):
+    def get_article_content_type(self):
         """
-        Cria campo item_type conforme o tamanho do ``pid``
+        Obtém o tipo de conteúdo acessado com base na URL da ação
 
-        """
-        if len(self.pid) == 9:
-            self.item_type = map_helper.HIT_TYPE_JOURNAL
-        elif len(self.pid) == 17:
-            self.item_type = map_helper.HIT_TYPE_ISSUE
-        elif len(self.pid) == 23:
-            self.item_type = map_helper.HIT_TYPE_ARTICLE
-        else:
-            self.item_type = map_helper.HIT_TYPE_UNDEFINED
-
-    def __str__(self):
-        return '|'.join([self.session_id, str(self.server_time), str(self.item_type), self.action_name])
-
-    def __repr__(self):
-        return '|'.join([self.session_id, str(self.server_time), str(self.item_type), self.action_name])
-
-    def get_article_type(self):
-        """
-        Obtém o tipo de conteúdo acessado com base na URL da ação, se for artigo.
         :return: Tipo de conteúdo acessado
         """
-        if self.item_type == map_helper.HIT_TYPE_ARTICLE:
-            if self._article_is_full_text():
-                return map_helper.ARTICLE_TYPE_FULL_TEXT
-            elif self._article_is_full_text_plus():
-                return map_helper.ARTICLE_TYPE_FULL_TEXT_PLUS
-            elif self._article_is_abstract():
-                return map_helper.ARTICLE_TYPE_ABSTRACT
-            elif self._article_is_xml():
-                return map_helper.ARTICLE_TYPE_XML
-            elif self._article_is_pdf():
-                return map_helper.ARTICLE_TYPE_PDF
-            elif self._article_is_how_to_cite():
-                return map_helper.ARTICLE_TYPE_HOW_TO_CITE
-            elif self._article_is_translated():
-                return map_helper.ARTICLE_TYPE_TRANSLATED
-            else:
-                return map_helper.ARTICLE_TYPE_UNDEFINED
+        if self._article_content_is_full_text():
+            return map_helper.ARTICLE_CONTENT_TYPE_FULL_TEXT
+        elif self._article_content_is_full_text_plus():
+            return map_helper.ARTICLE_CONTENT_TYPE_FULL_TEXT_PLUS
+        elif self._article_content_is_abstract():
+            return map_helper.ARTICLE_CONTENT_TYPE_ABSTRACT
+        elif self._article_content_is_xml():
+            return map_helper.ARTICLE_CONTENT_TYPE_XML
+        elif self._article_content_is_pdf():
+            return map_helper.ARTICLE_CONTENT_TYPE_PDF
+        elif self._article_content_is_how_to_cite():
+            return map_helper.ARTICLE_CONTENT_TYPE_HOW_TO_CITE
+        elif self._article_content_is_translated():
+            return map_helper.ARTICLE_CONTENT_TYPE_TRANSLATED
+        else:
+            return map_helper.ARTICLE_CONTENT_TYPE_UNDEFINED
 
-    def _article_is_pdf(self):
+    def get_issue_content_type(self):
+        pass
+
+    def get_journal_content_type(self):
+        pass
+
+    def get_platform_content_type(self):
+        pass
+
+    def _article_content_is_pdf(self):
         if map_helper.ARTICLE_URL_PDF in self.action_name:
             return True
 
-    def _article_is_how_to_cite(self):
+    def _article_content_is_how_to_cite(self):
         if map_helper.ARTICLE_URL_HOW_TO_CITE in self.action_name:
             if self.script == 'sci_isoref':
                 return True
 
-    def _article_is_full_text(self):
+    def _article_content_is_full_text(self):
         if map_helper.ARTICLE_URL_FULL_TEXT in self.action_name:
             if self.script == 'sci_arttext':
                 return True
 
-    def _article_is_full_text_plus(self):
+    def _article_content_is_full_text_plus(self):
         if map_helper.ARTICLE_URL_FULL_TEXT_PLUS in self.action_name:
             return True
 
-    def _article_is_abstract(self):
+    def _article_content_is_abstract(self):
         if map_helper.ARTICLE_URL_ABSTRACT in self.action_name:
             if self.script == 'sci_abstract':
                 return True
 
-    def _article_is_translated(self):
+    def _article_content_is_translated(self):
         if map_helper.ARTICLE_URL_TRANSLATED in self.action_name:
             return True
 
-    def _article_is_xml(self):
+    def _article_content_is_xml(self):
         if map_helper.ARTICLE_URL_XML in self.action_name:
             return True
 
@@ -146,23 +155,23 @@ class HitManager:
     Modelo de dados utilizado para gerenciar items de acesso.
     """
     def __init__(self):
-        self.items = []
+        self.hits = []
         self.session_to_actions = {}
         self.pid_to_hits = {}
 
-    def set_items(self, raw_name: str):
+    def set_hits(self, log_file_name: str):
         """
         Carrega arquivo de log
 
-        :param raw_name: nome do arquivo de log
+        :param log_file_name: nome do arquivo de log
         """
         print('Lendo arquivo de log')
         counter = 0
-        with open(raw_name) as f:
+        with open(log_file_name) as f:
             csv_file = csv.DictReader(f, delimiter='\t')
             for log_row in csv_file:
                 hit = self.create_hit_from_log_row(**log_row)
-                self.items.append(hit)
+                self.hits.append(hit)
                 self._update_session_to_action(hit)
                 counter += 1
                 print('\r%s' % str(counter), end='')
@@ -184,35 +193,15 @@ class HitManager:
 
     def count_hits_by_pid(self):
         """
-        Gera mapa ``pid`` -> ``{tipo de conteúdo}`` -> ``[hits]``
+        Gera mapa ``pid`` -> ``{tipo de url}`` -> ``[hits]``
         """
-        for session_id in self.session_to_actions:
-            actions_names = self.session_to_actions[session_id]
-            for action_name in actions_names:
-                hits = actions_names[action_name]
+        for session_id, actions_names in self.session_to_actions.items():
+            for action_name, hits in actions_names.items():
                 for hit in hits:
-                    if hit.item_type == map_helper.HIT_TYPE_ARTICLE:
-                        if hit.pid not in self.pid_to_hits:
-                            self.pid_to_hits[hit.pid] = {}
+                    if hit.pid not in self.pid_to_hits:
+                        self.pid_to_hits[hit.pid] = []
+                    self.pid_to_hits[hit.pid].append(hit)
 
-                        hit_article_type = hit.get_article_type()
-                        if hit_article_type not in self.pid_to_hits[hit.pid]:
-                            self.pid_to_hits[hit.pid][hit_article_type] = []
-
-                        self.pid_to_hits[hit.pid][hit_article_type].append(hit)
-
-    def get_item_type(self, pid):
-        """
-        Obtém o tipo de item acessado conforme o parâmetro ``pid``
-        """
-        if len(pid) == 9:
-            return map_helper.HIT_TYPE_JOURNAL
-        elif len(pid) == 17:
-            return map_helper.HIT_TYPE_ISSUE
-        elif len(pid) == 23:
-            return map_helper.HIT_TYPE_ARTICLE
-
-        return map_helper.HIT_TYPE_UNDEFINED
 
     def create_hit_from_log_row(self, **log_row):
         """
@@ -241,6 +230,8 @@ class HitManager:
 
                         if not counter_tools.is_double_click(past_hit, current_hit):
                             cleaned_hits.append(past_hit)
+                            if i + 2 == len(hits):
+                                cleaned_hits.append(current_hit)
                         elif i + 2 == len(hits):
                             cleaned_hits.append(current_hit)
 
