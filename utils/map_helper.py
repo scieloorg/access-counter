@@ -35,43 +35,43 @@ ARTICLE_URL_TRANSLATED = 'scielo.br/scieloorg/php/translate.php?'
 ARTICLE_URL_PDF = 'scielo.br/pdf/'
 
 # Tipo indefinido
-ARTICLE_TYPE_UNDEFINED = -1
+ARTICLE_CONTENT_TYPE_UNDEFINED = -1
 
 # Artigo completo
-ARTICLE_TYPE_FULL_TEXT = 0
+ARTICLE_CONTENT_TYPE_FULL_TEXT = 0
 
 # Artigo completo em formato de página plus
-ARTICLE_TYPE_FULL_TEXT_PLUS = 1
+ARTICLE_CONTENT_TYPE_FULL_TEXT_PLUS = 1
 
 # Artigo em formato de resumo
-ARTICLE_TYPE_ABSTRACT = 2
+ARTICLE_CONTENT_TYPE_ABSTRACT = 2
 
 # Artigo em formato XML
-ARTICLE_TYPE_XML = 3
+ARTICLE_CONTENT_TYPE_XML = 3
 
 # Artigo em formato PDF
-ARTICLE_TYPE_PDF = 4
+ARTICLE_CONTENT_TYPE_PDF = 4
 
 # Página de mais informações sobre como citar artigo
-ARTICLE_TYPE_HOW_TO_CITE = 5
+ARTICLE_CONTENT_TYPE_HOW_TO_CITE = 5
 
 # Página de versão traduzida do artigo
-ARTICLE_TYPE_TRANSLATED = 6
+ARTICLE_CONTENT_TYPE_TRANSLATED = 6
 
 # Lista de URLs que contam para COUNTER Item Investigations
-COUNTER_ARTICLE_ITEM_INVESTIGATIONS = [ARTICLE_TYPE_FULL_TEXT,
-                                       ARTICLE_TYPE_FULL_TEXT_PLUS,
-                                       ARTICLE_TYPE_ABSTRACT,
-                                       ARTICLE_TYPE_HOW_TO_CITE,
-                                       ARTICLE_TYPE_XML,
-                                       ARTICLE_TYPE_TRANSLATED,
-                                       ARTICLE_TYPE_PDF]
+COUNTER_ARTICLE_ITEM_INVESTIGATIONS = [ARTICLE_CONTENT_TYPE_FULL_TEXT,
+                                       ARTICLE_CONTENT_TYPE_FULL_TEXT_PLUS,
+                                       ARTICLE_CONTENT_TYPE_ABSTRACT,
+                                       ARTICLE_CONTENT_TYPE_HOW_TO_CITE,
+                                       ARTICLE_CONTENT_TYPE_XML,
+                                       ARTICLE_CONTENT_TYPE_TRANSLATED,
+                                       ARTICLE_CONTENT_TYPE_PDF]
 
 # Lista de URLs que são contabilizadas para COUNTER Item Requests
-COUNTER_ARTICLE_ITEM_REQUESTS = [ARTICLE_TYPE_FULL_TEXT,
-                                 ARTICLE_TYPE_FULL_TEXT_PLUS,
-                                 ARTICLE_TYPE_XML,
-                                 ARTICLE_TYPE_PDF]
+COUNTER_ARTICLE_ITEM_REQUESTS = [ARTICLE_CONTENT_TYPE_FULL_TEXT,
+                                 ARTICLE_CONTENT_TYPE_FULL_TEXT_PLUS,
+                                 ARTICLE_CONTENT_TYPE_XML,
+                                 ARTICLE_CONTENT_TYPE_PDF]
 
 # Página principal de issue + script=sci_issuetoc, pid={}
 ISSUE_URL_MAIN_PAGE = 'scielo.br/scielo.php?'
