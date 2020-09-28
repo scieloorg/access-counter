@@ -114,3 +114,22 @@ PLATFORM_URL_EVUALATION = 'scielo.br/avaliacao/'
 
 # Página de equipe
 PLATFORM_URL_TEAM = 'scielo.br/equipe/equipe_i.htm'
+
+# Domínio para coleção
+DOMAINS = {
+    'www.scielo.cl': 'chi',
+    'www.scielosp.org': 'spa',
+    'www.scielo.br': 'scl',
+    'www.scielo.mec.pt': 'prt',
+    'scielo.isciii.es': 'esp',
+    'www.scielo.org.za': 'sza',
+    'pepsic.bvsalud.org': 'psi',
+    'www.scielo.org.pe': 'per',
+    'www.scielo.org.ar': 'arg',
+    'www.scielo.edu.uy': 'ury',
+    'www.scielo.org.mx': 'mex',
+    'www.scielo.org.co': 'col',
+    'www.scielo.org.ve': 'ven',
+    'www.scielo.sa.cr': 'cri',
+    'scielo.sld.cu': 'cub'
+}
