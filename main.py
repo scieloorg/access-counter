@@ -1,4 +1,5 @@
 import argparse
+import pickle
 
 from counter import CounterStat
 from hit import HitManager
@@ -16,11 +17,19 @@ def main():
         help='log em formato raw'
     )
 
+    parser.add_argument(
+        '--pdf_paths',
+        dest='pdf_to_pid',
+        help='dicionário que mapeia path de PDF a PID'
+    )
+
     params = parser.parse_args()
 
     time_start = time()
 
-    iam = HitManager()
+    pdf_to_pid = pickle.load(open(params.pdf_to_pid, 'rb'))
+
+    iam = HitManager(pdf_to_pid)
     iam.set_hits(params.raw)
 
     print('Removendo cliques-duplos')
@@ -38,6 +47,7 @@ def main():
 
     time_end = time()
     print('Durou %.2f segundos' % (time_end - time_start))
+
 
 if __name__ == '__main__':
     main()
