@@ -83,6 +83,7 @@ class Hit:
         self.pid = self.action_params.get('pid', '')
         self.tlng = self.action_params.get('tlng', '')
         self.script = self.action_params.get('script', '')
+
         self.hit_type = self._extract_hit_type()
         self.content_type = self._extract_content_type()
 
@@ -154,10 +155,11 @@ class HitManager:
     """
     Modelo de dados utilizado para gerenciar items de acesso.
     """
-    def __init__(self):
+    def __init__(self, pdf_to_pid):
         self.hits = []
         self.session_to_actions = {}
         self.pid_to_hits = {}
+        self.pdf_to_pid = pdf_to_pid
 
     def set_hits(self, log_file_name: str):
         """
@@ -171,7 +173,13 @@ class HitManager:
             csv_file = csv.DictReader(f, delimiter='\t')
             for log_row in csv_file:
                 hit = self.create_hit_from_log_row(**log_row)
+
+                # Caso hit não tenha um PID na URL, pode ser um PDF de artigo
+                if not hit.pid:
+                    self.extract_pid_from_pdf(hit)
+
                 self.hits.append(hit)
+
                 self._update_session_to_action(hit)
                 counter += 1
                 print('\r%s' % str(counter), end='')
@@ -198,10 +206,10 @@ class HitManager:
         for session_id, actions_names in self.session_to_actions.items():
             for action_name, hits in actions_names.items():
                 for hit in hits:
-                    if hit.pid not in self.pid_to_hits:
-                        self.pid_to_hits[hit.pid] = []
-                    self.pid_to_hits[hit.pid].append(hit)
-
+                    if hit.pid:
+                        if hit.pid not in self.pid_to_hits:
+                            self.pid_to_hits[hit.pid] = []
+                        self.pid_to_hits[hit.pid].append(hit)
 
     def create_hit_from_log_row(self, **log_row):
         """
@@ -239,3 +247,19 @@ class HitManager:
                         dict_session_values[session][action_attr] = cleaned_hits
                     else:
                         dict_session_values[session][action_attr] = hits
+
+    def extract_pid_from_pdf(self, hit: Hit):
+        """
+        Extrai o PID de um artigo a partir de dicionário de path_pdf para PID
+
+        :param hit: um objeto Hit
+        """
+        url_parsed = parse.urlparse(hit.action_name)
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+
+        extracted_pid = self.pdf_to_pid.get(collection, {}).get(url_parsed.path)
+        if extracted_pid:
+            if len(extracted_pid) == 1:
+                hit.pid = extracted_pid
+            else:
+                print('WARNNING:Há mais de um PID %s associado ao PDF %s' % (extracted_pid, url_parsed.path))
