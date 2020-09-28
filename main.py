@@ -20,7 +20,7 @@ def main():
     parser.add_argument(
         '--pdf_paths',
         dest='pdf_to_pid',
-        help='dicionário que mapeia path de PDF a PID'
+        help='dicionário que mapeia caminho de PDF a PID'
     )
 
     params = parser.parse_args()
