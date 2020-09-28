@@ -133,3 +133,8 @@ DOMAINS = {
     'www.scielo.sa.cr': 'cri',
     'scielo.sld.cu': 'cub'
 }
+
+# Expressões regulares para identificação de PID, ISSUE e ISSN
+REGEX_ARTICLE_PID = r'^s\d{4}-\d{17}$'
+REGEX_ISSUE_PID = r'^\d{4}-\d{12}$'
+REGEX_JOURNAL_PID = r'^\d{4}-\d{4}$'
