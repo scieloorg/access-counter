@@ -84,15 +84,15 @@ class CounterStat:
 
     def _populate_articles(self, pid_to_hits: dict):
         """
-        Povoa ``self.articles`` com os acessos nos moldes COUNTER R5
+        Povoa ``self.articles`` com os acessos no formato COUNTER R5
 
-        :param pid_to_hits: dicionário que contém pids associados a seus respectivos hits
+        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
         """
         for pid, hits in pid_to_hits.items():
-            dated_hits = self.get_datefied_hits(hits)
-            for year in dated_hits:
-                for month in dated_hits[year]:
-                    for day in dated_hits[year][month]:
+            datefied_hits = self.get_datefied_hits(hits)
+            for year in datefied_hits:
+                for month in datefied_hits[year]:
+                    for day in datefied_hits[year][month]:
 
                         if pid not in self.articles:
                             self.articles[pid] = {year: {}}
@@ -104,22 +104,22 @@ class CounterStat:
                             self.articles[pid][year][month][day] = METRICS_ITEM.copy()
 
                         self.articles[pid][year][month][day]['total_item_requests'] = self._get_total(
-                            pid_to_hits[pid],
+                            datefied_hits[year][month][day],
                             map_helper.HIT_TYPE_ARTICLE,
                             map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
 
                         self.articles[pid][year][month][day]['total_item_investigations'] = self._get_total(
-                            pid_to_hits[pid],
+                            datefied_hits[year][month][day],
                             map_helper.HIT_TYPE_ARTICLE,
                             map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
 
                         self.articles[pid][year][month][day]['unique_item_requests'] = self._get_unique(
-                            pid_to_hits[pid],
+                            datefied_hits[year][month][day],
                             map_helper.HIT_TYPE_ARTICLE,
                             map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
 
                         self.articles[pid][year][month][day]['unique_item_investigations'] = self._get_unique(
-                            pid_to_hits[pid],
+                            datefied_hits[year][month][day],
                             map_helper.HIT_TYPE_ARTICLE,
                             map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
 
