@@ -289,25 +289,33 @@ class HitManager:
                 return True
 
     def _journal_content_is_about(self, hit):
-        acronym = self.issn_to_acronym.get(hit.pid)
+        url_parsed = parse.urlparse(hit.action_name)
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_ABOUT.format(acronym) in hit.action_name:
                 return True
 
     def _journal_content_is_editorial_board(self, hit):
-        acronym = self.issn_to_acronym.get(hit.pid)
+        url_parsed = parse.urlparse(hit.action_name)
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_EDITORIAL_BOARD.format(acronym) in hit.action_name:
                 return True
 
     def _journal_content_is_subscription(self, hit):
-        acronym = self.issn_to_acronym.get(hit.pid)
+        url_parsed = parse.urlparse(hit.action_name)
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_SUBSCRIPTION.format(acronym) in hit.action_name:
                 return True
 
     def _journal_content_is_instructions(self, hit):
-        acronym = self.issn_to_acronym.get(hit.pid)
+        url_parsed = parse.urlparse(hit.action_name)
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_INSTRUCTIONS.format(acronym) in hit.action_name:
                 return True
