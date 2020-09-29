@@ -49,10 +49,13 @@ class HitManager:
     """
     Classe que gerencia objetos Hit.
     """
-    def __init__(self, path_pdf_to_pid):
+    def __init__(self, path_pdf_to_pid, issn_to_acronym):
         self.session_to_actions = {}
         self.pid_to_hits = {}
+
+        # Dicionários para tratamento de PID
         self.pdf_path_to_pid = path_pdf_to_pid
+        self.issn_to_acronym = issn_to_acronym
 
     def set_hits(self, log_file_name: str):
         """
@@ -84,13 +87,21 @@ class HitManager:
         """
         Gera mapa ``pid`` -> ``{tipo de url}`` -> ``[hits]``
         """
+        counter = 0
+        total = len(self.session_to_actions.keys())
         for session_id, actions_names in self.session_to_actions.items():
+            counter += 1
+            print('\r%d de %d' % (counter, total), end='')
             for action_name, hits in actions_names.items():
                 for hit in hits:
+                    # Caso PID esteja definido
                     if hit.pid:
                         if hit.pid not in self.pid_to_hits:
                             self.pid_to_hits[hit.pid] = []
                         self.pid_to_hits[hit.pid].append(hit)
+                    # TODO: situação em que o PID não está definido (acessos à plataforma em geral)
+                    else:
+                        pass
 
     def create_hit_from_log_row(self, **log_row):
         """
