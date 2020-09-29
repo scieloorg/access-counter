@@ -9,6 +9,7 @@ from utils import counter_tools, map_helper
 class Hit:
     """
     Modelo de dados que representa o acesso a uma página (ação).
+    Classe que representa o acesso a uma página (ação).
     """
     def __init__(self, **kargs):
         # Endereço IP
@@ -41,6 +42,9 @@ class Hit:
 
         self.hit_type = ''
         self.content_type = ''
+
+    def __str__(self):
+        return '|'.join([self.session_id, self.server_time.strftime("%M:%S"), self.action_name])
 
 
 class HitManager:
