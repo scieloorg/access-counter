@@ -116,17 +116,21 @@ class HitManager:
 
         return new_hit
 
-    def clean_double_clicks(self, dict_session_values):
+    def remove_double_clicks(self, session_to_actions):
         """
         Remove cliques duplos
 
-        :param dict_session_values: dicionário que mapeia sessão a valores de ação (``action_name``, ``pid``)
+        :param session_to_actions: dicionário que mapeia sessão a ações
         """
-        for session, actions in dict_session_values.items():
-            for action_attr, hits in actions.items():
+        for session, actions in session_to_actions.items():
+            for action_name, hits in actions.items():
+
+                # Lista de hits sem duplos-cliques
+                cleaned_hits = []
+
+                # Caso haja mais de um Hit a uma mesma ação, dentro da sessão, remove os cliques-duplos
                 if len(hits) > 1:
                     hits = sorted(hits, key=lambda x: x.server_time)
-                    cleaned_hits = []
 
                     for i in range(len(hits) - 1):
                         past_hit = hits[i]
@@ -144,10 +148,8 @@ class HitManager:
                     cleaned_hits.extend(hits)
                     logging.debug('Hit.remove_double_clicks:adicionado %s' % hits[0])
 
-                    if cleaned_hits:
-                        dict_session_values[session][action_attr] = cleaned_hits
-                    else:
-                        dict_session_values[session][action_attr] = hits
+                # Troca lista de hits para a lista de cliques limpa (sem duplos-cliques)
+                session_to_actions[session][action_name] = cleaned_hits
 
     def set_pid_from_pdf(self, hit: Hit):
         """
