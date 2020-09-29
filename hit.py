@@ -1,4 +1,5 @@
 import csv
+import logging
 import re
 
 from datetime import datetime
@@ -6,9 +7,11 @@ from urllib import parse
 from utils import counter_tools, map_helper
 
 
+logging.basicConfig(filename='logs/hit_' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '.log', level=logging.DEBUG)
+
+
 class Hit:
     """
-    Modelo de dados que representa o acesso a uma página (ação).
     Classe que representa o acesso a uma página (ação).
     """
     def __init__(self, **kargs):
@@ -49,7 +52,7 @@ class Hit:
 
 class HitManager:
     """
-    Modelo de dados utilizado para gerenciar items de acesso.
+    Classe que gerencia objetos Hit.
     """
     def __init__(self, path_pdf_to_pid):
         self.session_to_actions = {}
@@ -62,17 +65,13 @@ class HitManager:
 
         :param log_file_name: nome do arquivo de log
         """
-        print('Lendo arquivo de log')
-        counter = 0
         with open(log_file_name) as f:
             csv_file = csv.DictReader(f, delimiter='\t')
             for log_row in csv_file:
                 hit = self.create_hit_from_log_row(**log_row)
                 self._update_session_to_action(hit)
 
-                counter += 1
-                print('\r%s' % str(counter), end='')
-        print()
+                logging.debug('Hit.set_hits:importado:%s' % hit)
 
     def _update_session_to_action(self, hit: Hit):
         """
@@ -137,8 +136,13 @@ class HitManager:
                             cleaned_hits.append(past_hit)
                             if i + 2 == len(hits):
                                 cleaned_hits.append(current_hit)
+                                logging.debug('Hit.remove_double_clicks:adicionado:%s' % current_hit)
                         elif i + 2 == len(hits):
                             cleaned_hits.append(current_hit)
+                            logging.debug('Hit.remove_double_clicks:adicionado:%s' % current_hit)
+                else:
+                    cleaned_hits.extend(hits)
+                    logging.debug('Hit.remove_double_clicks:adicionado %s' % hits[0])
 
                     if cleaned_hits:
                         dict_session_values[session][action_attr] = cleaned_hits
