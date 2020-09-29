@@ -26,6 +26,12 @@ def main():
     )
 
     parser.add_argument(
+        '--acronyms',
+        dest='issn_to_acronym',
+        help='dicionário que mapeia ISSN a acrônimo'
+    )
+
+    parser.add_argument(
         '--out',
         action='store_true',
         help='salva resultados em arquivo JSON'
@@ -42,8 +48,9 @@ def main():
     time_start = time()
 
     pdf_to_pid = pickle.load(open(params.pdf_to_pid, 'rb'))
+    issn_to_acronym = pickle.load(open(params.issn_to_acronym, 'rb'))
 
-    iam = HitManager(pdf_to_pid)
+    iam = HitManager(pdf_to_pid, issn_to_acronym)
 
     for f in files_queue:
         iam.set_hits(f)
@@ -59,8 +66,8 @@ def main():
     cs.populate_counter(iam.pid_to_hits)
 
     if params.out:
-        print(params.raw.replace('.log', '.json'))
-        json.dump(cs.articles, open('results/results.json', 'w'), indent=True)
+        json.dump(cs.articles, open('results/articles.json', 'w'), indent=True)
+        json.dump(cs.journals, open('results/journals.json', 'w'), indent=True)
 
     time_end = time()
     print('Durou %.2f segundos' % (time_end - time_start))
