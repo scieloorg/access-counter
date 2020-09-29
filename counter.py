@@ -1,4 +1,4 @@
-from utils import map_helper
+from utils import map_helper, pid_tools
 
 
 # Métricas para Item
@@ -20,6 +20,7 @@ class CounterStat:
     """
     def __init__(self):
         self.journals = {}
+        self.issues = {}
         self.articles = {}
         self.platform = {}
 
@@ -74,13 +75,45 @@ class CounterStat:
 
     def populate_counter(self, pid_to_hits):
         """
-        Povoa ``self.articles``, ``self.journals``, ``self.platform`` nos moldes COUNTER R5
+        Povoa ``self.articles``, ``self.journals``, ``self.platform`` no formato COUNTER R5
 
-        :param pid_to_hits: dicionário que contém pids associados a seus respectivos hits
+        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
         """
-        self._populate_articles(pid_to_hits)
-        self._populate_journals(pid_to_hits)
-        self._populate_platform(pid_to_hits)
+        pid_article_to_hits = {}
+        pid_journal_to_hits = {}
+        pid_issue_to_hits = {}
+        platform_to_hits = {}
+
+        pid_articles = [pid for pid in pid_to_hits if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_ARTICLE]
+        for pid in pid_articles:
+            if pid not in pid_article_to_hits:
+                pid_article_to_hits[pid] = []
+            pid_article_to_hits[pid] = pid_to_hits[pid]
+
+        for pid, hits in pid_to_hits.items():
+            pid_type = pid_tools.get_pid_type(pid)
+
+            if pid_type == map_helper.HIT_TYPE_ARTICLE:
+                if pid not in pid_article_to_hits:
+                    pid_article_to_hits[pid] = []
+                pid_article_to_hits[pid].extend(hits)
+            elif pid_type == map_helper.HIT_TYPE_JOURNAL:
+                if pid not in pid_journal_to_hits:
+                    pid_journal_to_hits[pid] = []
+                pid_journal_to_hits[pid].extend(hits)
+            elif pid_type == map_helper.HIT_TYPE_ISSUE:
+                if pid not in pid_issue_to_hits:
+                    pid_issue_to_hits[pid] = []
+                pid_issue_to_hits[pid].extend(hits)
+            else:
+                if pid not in platform_to_hits:
+                    platform_to_hits[pid] = []
+                platform_to_hits[pid].extend(hits)
+
+        self._populate_articles(pid_article_to_hits)
+        # self._populate_issues(pid_issue_to_hits)
+        # self._populate_journals(pid_journal_to_hits)
+        # self._populate_platform(platform_to_hits)
 
     def _populate_articles(self, pid_to_hits: dict):
         """
@@ -123,19 +156,60 @@ class CounterStat:
                             map_helper.HIT_TYPE_ARTICLE,
                             map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
 
-    def _populate_journals(self, pid_to_hits: dict):
+    def _populate_issues(self, pid_to_hits: dict):
         """
-        Povoa ``self.journals`` com os acessos nos moldes COUNTER R5
+        Povoa ``self.issues` com os acessos no formato COUNTER R5
 
-        :param pid_to_hits: dicionário que contém pids associados a seus respectivos hits
+        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos hits
         """
         pass
 
+    def _populate_journals(self, pid_to_hits: dict):
+        """
+        Povoa ``self.journals`` com os acessos no formato COUNTER R5
+
+        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
+        """
+        for pid, hits in pid_to_hits.items():
+            datefied_hits = self.get_datefied_hits(hits)
+            for year in datefied_hits:
+                for month in datefied_hits[year]:
+                    for day in datefied_hits[year][month]:
+
+                        if pid not in self.journals:
+                            self.journals[pid] = {year: {}}
+
+                        if month not in self.journals[pid][year]:
+                            self.journals[pid][year][month] = {}
+
+                        if day not in self.journals[pid][year][month]:
+                            self.journals[pid][year][month][day] = METRICS_ITEM.copy()
+
+                        self.journals[pid][year][month][day]['total_item_requests'] = self._get_total(
+                            datefied_hits[year][month][day],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
+
+                        self.journals[pid][year][month][day]['total_item_investigations'] = self._get_total(
+                            datefied_hits[year][month][day],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+
+                        self.journals[pid][year][month][day]['unique_item_requests'] = self._get_unique(
+                            datefied_hits[year][month][day],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
+
+                        self.journals[pid][year][month][day]['unique_item_investigations'] = self._get_unique(
+                            datefied_hits[year][month][day],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+
     def _populate_platform(self, pid_to_hits: dict):
         """
-        Povoa ``self.platform`` com os acessos nos moldes COUNTER R5
+        Povoa ``self.platform`` com os acessos no formato COUNTER R5
 
-        :param pid_to_hits: dicionário que contém pids associados a seus respectivos hits
+        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos hits
         """
         pass
 
@@ -143,7 +217,7 @@ class CounterStat:
         """
         Obtém os hits organizados por data (ANO -> MESES -> DIAS)
 
-        :param hits: lista de hits
+        :param hits: lista de objetos Hit
         :return: dicionário de hits do tipo YYYY -> {M1, M2, ... -> {D1, D2, ... -> [Hit1, Hit2, ...]}}
         """
         date_to_hits = {}
