@@ -34,7 +34,7 @@ ARTICLE_URL_TRANSLATED = 'scielo.br/scieloorg/php/translate.php?'
 # Arquivo PDF relacionado a artigo + nome_do_arquivo.pdf
 ARTICLE_URL_PDF = 'scielo.br/pdf/'
 
-# Tipo indefinido
+# Artigo com tipo de conteúdo indefinido
 ARTICLE_CONTENT_TYPE_UNDEFINED = -1
 
 # Artigo completo
@@ -96,6 +96,27 @@ JOURNAL_URL_INSTRUCTIONS = 'scielo.br/revistas/{}/iinstruc.htm'
 
 # Página sobre inscrição de periódico + revistas/{acrônimo}/...
 JOURNAL_URL_SUBSCRIPTION = 'scielo.br/revistas/{}/isubscrp.htm'
+
+# Periódico com tipo de conteúdo indefinido
+JOURNAL_CONTENT_TYPE_UNDEFINED = -1
+
+# Página principal de Periódico
+JOURNAL_CONTENT_TYPE_MAIN_PAGE = 0
+
+# Página que lista fascículos de Periódico
+JOURNAL_CONTENT_TYPE_LIST = 1
+
+# Página sobre de Periódico
+JOURNAL_CONTENT_TYPE_ABOUT = 2
+
+# Página com conselho editorial de Periódico
+JOURNAL_CONTENT_TYPE_EDITORIAL_BOARD = 3
+
+# Página de Periódico com instruções a autores
+JOURNAL_CONTENT_TYPE_AUTHOR_INSTRUCTIONS = 4
+
+# Página de inscrição a Periódico
+JOURNAL_CONTENT_TYPE_SUBSCRIPTION = 5
 
 # Página que lista todos os periódicos em ordem alfabética + script=sci_alphabetic
 PLATFORM_URL_ALPHABETIC = 'scielo.br/scielo.php?'
