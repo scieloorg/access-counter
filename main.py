@@ -1,4 +1,6 @@
 import argparse
+import json
+import os
 import pickle
 
 from counter import CounterStat
@@ -14,7 +16,7 @@ def main():
         '--raw',
         required=True,
         dest='raw',
-        help='log em formato raw'
+        help='log em formato matomo'
     )
 
     parser.add_argument(
@@ -23,17 +25,31 @@ def main():
         help='dicionário que mapeia caminho de PDF a PID'
     )
 
+    parser.add_argument(
+        '--out',
+        action='store_true',
+        help='salva resultados em arquivo JSON'
+    )
+
     params = parser.parse_args()
+
+    files_queue = []
+    if os.path.isfile(params.raw):
+        files_queue.append(params.raw)
+    elif os.path.isdir(params.raw):
+        files_queue.extend([os.path.join(os.path.abspath(params.raw), f) for f in os.listdir(params.raw)])
 
     time_start = time()
 
     pdf_to_pid = pickle.load(open(params.pdf_to_pid, 'rb'))
 
     iam = HitManager(pdf_to_pid)
-    iam.set_hits(params.raw)
+
+    for f in files_queue:
+        iam.set_hits(f)
 
     print('Removendo cliques-duplos')
-    iam.clean_double_clicks(iam.session_to_actions)
+    iam.remove_double_clicks(iam.session_to_actions)
 
     print('Contando acessos por PID')
     iam.count_hits_by_pid()
@@ -42,8 +58,9 @@ def main():
     cs = CounterStat()
     cs.populate_counter(iam.pid_to_hits)
 
-    for pid in cs.articles:
-        print(pid, cs.articles[pid])
+    if params.out:
+        print(params.raw.replace('.log', '.json'))
+        json.dump(cs.articles, open('results/results.json', 'w'), indent=True)
 
     time_end = time()
     print('Durou %.2f segundos' % (time_end - time_start))
