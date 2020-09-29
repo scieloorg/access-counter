@@ -226,7 +226,25 @@ class HitManager:
         return ''
 
     def get_journal_content_type(self, hit: Hit):
-        return ''
+        """
+        Obtém o tipo de conteúdo acessado com base na URL da ação
+
+        :return: Tipo de conteúdo acessado
+        """
+        if self._journal_content_is_main_page(hit):
+            return map_helper.JOURNAL_CONTENT_TYPE_MAIN_PAGE
+        elif self._journal_content_is_list(hit):
+            return map_helper.JOURNAL_CONTENT_TYPE_LIST
+        elif self._journal_content_is_about(hit):
+            return map_helper.JOURNAL_CONTENT_TYPE_ABOUT
+        elif self._journal_content_is_editorial_board(hit):
+            return map_helper.JOURNAL_CONTENT_TYPE_EDITORIAL_BOARD
+        elif self._journal_content_is_instructions(hit):
+            return map_helper.JOURNAL_CONTENT_TYPE_AUTHOR_INSTRUCTIONS
+        elif self._journal_content_is_subscription(hit):
+            return map_helper.JOURNAL_CONTENT_TYPE_SUBSCRIPTION
+        else:
+            return map_helper.JOURNAL_CONTENT_TYPE_UNDEFINED
 
     def get_platform_content_type(self, hit: Hit):
         return ''
@@ -261,3 +279,37 @@ class HitManager:
     def _article_content_is_xml(self, hit):
         if map_helper.ARTICLE_URL_XML in hit.action_name:
             return True
+
+    def _journal_content_is_main_page(self, hit):
+        if map_helper.JOURNAL_URL_MAIN_PAGE in hit.action_name:
+            if hit.script == 'sci_serial':
+                return True
+
+    def _journal_content_is_list(self, hit):
+        if map_helper.JOURNAL_URL_LIST in hit.action_name:
+            if hit.script == 'sci_issues':
+                return True
+
+    def _journal_content_is_about(self, hit):
+        acronym = self.issn_to_acronym.get(hit.pid)
+        if acronym:
+            if map_helper.JOURNAL_URL_ABOUT.format(acronym) in hit.action_name:
+                return True
+
+    def _journal_content_is_editorial_board(self, hit):
+        acronym = self.issn_to_acronym.get(hit.pid)
+        if acronym:
+            if map_helper.JOURNAL_URL_EDITORIAL_BOARD.format(acronym) in hit.action_name:
+                return True
+
+    def _journal_content_is_subscription(self, hit):
+        acronym = self.issn_to_acronym.get(hit.pid)
+        if acronym:
+            if map_helper.JOURNAL_URL_SUBSCRIPTION.format(acronym) in hit.action_name:
+                return True
+
+    def _journal_content_is_instructions(self, hit):
+        acronym = self.issn_to_acronym.get(hit.pid)
+        if acronym:
+            if map_helper.JOURNAL_URL_INSTRUCTIONS.format(acronym) in hit.action_name:
+                return True
