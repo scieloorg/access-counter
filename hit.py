@@ -1,13 +1,8 @@
 import csv
-import logging
-import re
 
 from datetime import datetime
 from urllib import parse
-from utils import counter_tools, map_helper
-
-
-logging.basicConfig(filename='logs/hit_' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '.log', level=logging.DEBUG)
+from utils import counter_tools, map_helper, pid_tools
 
 
 class Hit:
@@ -71,8 +66,6 @@ class HitManager:
                 hit = self.create_hit_from_log_row(**log_row)
                 self._update_session_to_action(hit)
 
-                logging.debug('Hit.set_hits:importado:%s' % hit)
-
     def _update_session_to_action(self, hit: Hit):
         """
         Atualiza mapa identificador de sessão -> ações
@@ -122,7 +115,11 @@ class HitManager:
 
         :param session_to_actions: dicionário que mapeia sessão a ações
         """
+        counter = 0
+        total = len(self.session_to_actions.keys())
         for session, actions in session_to_actions.items():
+            counter += 1
+            print('\r%d de %d' % (counter, total), end='')
             for action_name, hits in actions.items():
 
                 # Lista de hits sem duplos-cliques
@@ -140,13 +137,10 @@ class HitManager:
                             cleaned_hits.append(past_hit)
                             if i + 2 == len(hits):
                                 cleaned_hits.append(current_hit)
-                                logging.debug('Hit.remove_double_clicks:adicionado:%s' % current_hit)
                         elif i + 2 == len(hits):
                             cleaned_hits.append(current_hit)
-                            logging.debug('Hit.remove_double_clicks:adicionado:%s' % current_hit)
                 else:
                     cleaned_hits.extend(hits)
-                    logging.debug('Hit.remove_double_clicks:adicionado %s' % hits[0])
 
                 # Troca lista de hits para a lista de cliques limpa (sem duplos-cliques)
                 session_to_actions[session][action_name] = cleaned_hits
@@ -175,14 +169,7 @@ class HitManager:
 
         :param hit: um Hit
         """
-        if re.match(map_helper.REGEX_ARTICLE_PID, hit.pid):
-            hit.hit_type = map_helper.HIT_TYPE_ARTICLE
-        elif re.match(map_helper.REGEX_ISSUE_PID, hit.pid):
-            hit.hit_type = map_helper.HIT_TYPE_ISSUE
-        elif re.match(map_helper.REGEX_JOURNAL_PID, hit.pid):
-            hit.hit_type = map_helper.HIT_TYPE_JOURNAL
-        else:
-            hit.hit_type = map_helper.HIT_TYPE_PLATFORM
+        hit.hit_type = pid_tools.get_pid_type(hit.pid)
 
     def set_content_type(self, hit: Hit):
         """
