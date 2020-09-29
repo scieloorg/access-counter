@@ -138,6 +138,7 @@ PLATFORM_URL_TEAM = 'scielo.br/equipe/equipe_i.htm'
 
 # Domínio para coleção
 DOMAINS = {
+    'www.scielo.org.bo': 'bol',
     'www.scielo.cl': 'chi',
     'www.scielosp.org': 'spa',
     'www.scielo.br': 'scl',
