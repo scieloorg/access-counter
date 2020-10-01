@@ -170,8 +170,9 @@ class HitManager:
             if len(extracted_pid) == 1:
                 hit.pid = extracted_pid.pop()
             else:
+                # TODO - À espera de um dicionário corrigido
+                #   Como solução temporária, é considerado o primeiro PID da lista ordenada
                 print('WARNNING:Há mais de um PID %s associado ao PDF %s' % (extracted_pid, url_parsed.path))
-                # Considera o PID mais antigo
                 hit.pid = sorted(extracted_pid)[0]
 
     def set_hit_type(self, hit: Hit):
