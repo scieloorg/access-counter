@@ -15,10 +15,6 @@ COLLECTIONS = ['arg', 'bol', 'chl', 'cic', 'col', 'cri', 'cub', 'esp', 'mex', 'p
                'scl', 'spa', 'sss', 'sza', 'ury', 'ven', 'wid']
 
 
-logging.basicConfig(filename='populate_journals_' + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S') + '.log',
-                    level=logging.DEBUG)
-
-
 def format_publisher_names(publisher_names: list):
     """
     Caso um periódico tenha mais de um publisher a ele associado, separa os seus nomes por ponto e vírgula
@@ -107,7 +103,17 @@ def main():
         help='Usar ArticleMeta Thrift Client ao invés de RestfulClient'
     )
 
+    parser.add_argument(
+        '--logging_level',
+        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
+        dest='logging_level',
+        default='INFO',
+        help='Nível de log'
+    )
+
     params = parser.parse_args()
+
+    logging.basicConfig(level=params.logging_level)
 
     if not params.use_thrift:
         articlemeta = RestfulClient()
