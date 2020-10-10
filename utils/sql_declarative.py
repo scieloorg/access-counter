@@ -16,8 +16,8 @@ class Journal(Base):
     journal_id = Column(Integer, primary_key=True, autoincrement=True)
     collection_acronym = Column(String(3), nullable=False)
     title = Column(String(255), nullable=False)
-    print_issn = Column(String(9))
-    online_issn = Column(String(9))
+    print_issn = Column(String(9), nullable=False)
+    online_issn = Column(String(9), nullable=False)
     uri = Column(String(255))
     publisher_name = Column(String(255))
 
@@ -40,7 +40,7 @@ class MetricArticle(Base):
     __table_args__ += (Index('index_year_month_day', 'year_month_day'),)
 
     metric_id = Column(Integer, primary_key=True, autoincrement=True)
-    fk_article_id = Column(Integer, ForeignKey('counter_article.article_id', name='fk_article_id'))
+    fk_article_id = Column(Integer, ForeignKey('counter_article.article_id', name='fk_article_id'), nullable=False)
     article = relationship(Article)
     year_month_day = Column(Date, nullable=False)
     total_item_requests = Column(Integer, nullable=False)
@@ -56,7 +56,7 @@ class LogAction(Base):
     idaction = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(4096))
     hash = Column(Integer, nullable=False)
-    type = Column(SmallInteger)
+    type = Column(SmallInteger, nullable=False)
     url_prefix = Column(SmallInteger)
 
 
@@ -76,11 +76,11 @@ class LogLinkVisitAction(Base):
     __table_args__ += (Index('index_idsite_servertime', 'idsite', 'server_time'),)
 
     idlink_va = Column(BigInteger, primary_key=True, autoincrement=True)
-    idsite = Column(Integer)
-    server_time = Column(DateTime)
+    idsite = Column(Integer, nullable=False)
+    server_time = Column(DateTime, nullable=False)
 
     idaction_url = Column(Integer, ForeignKey('matomo_log_action.idaction', name='idaction_url'))
     action = relationship(LogAction)
 
-    idvisit = Column(Integer, ForeignKey('matomo_log_visit.idvisit', name='idvisit'))
+    idvisit = Column(Integer, ForeignKey('matomo_log_visit.idvisit', name='idvisit'), nullable=False)
     visit = relationship(LogVisit)
