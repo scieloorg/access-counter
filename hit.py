@@ -1,29 +1,46 @@
 import csv
 
 from datetime import datetime
+from socket import inet_ntoa
 from urllib import parse
 from utils import counter_tools, map_helper, pid_tools
 
 
 class Hit:
     """
-    Classe que representa o acesso a uma página (ação).
+    Classe que representa o acesso a uma página (ação)
     """
+    __slots__ = ['ip',
+                 'server_time',
+                 'browser_name',
+                 'browser_version',
+                 'action_name',
+                 'action_params',
+                 'session_id',
+                 'pid',
+                 'tlng',
+                 'script',
+                 'hit_type',
+                 'content_type']
+
     def __init__(self, **kargs):
         # Endereço IP
-        self.ip = kargs['ip']
+        self.ip = kargs.get('ip', '')
 
         # Data e horário do acesso
-        self.server_time = datetime.strptime(kargs['serverTime'], '%Y-%m-%d %H:%M:%S')
+        if isinstance(kargs.get('serverTime', ''), datetime):
+            self.server_time = kargs.get('serverTime')
+        else:
+            self.server_time = datetime.strptime(kargs.get('serverTime', ''), '%Y-%m-%d %H:%M:%S')
 
         # Nome do navegador utilizado
-        self.browser_name = kargs['browserName'].lower()
+        self.browser_name = kargs.get('browserName', '').lower()
 
         # Versão do navegador utilizado
-        self.browser_version = kargs['browserVersion'].lower()
+        self.browser_version = kargs.get('browserVersion', '').lower()
 
         # URL da ação
-        self.action_name = kargs['actionName'].lower()
+        self.action_name = kargs.get('actionName', '').lower()
 
         # Extrai parâmetros da URL da ação
         self.action_params = dict(parse.parse_qsl(parse.urlsplit(self.action_name).query))
@@ -47,8 +64,10 @@ class Hit:
 
 class HitManager:
     """
-    Classe que gerencia objetos Hit.
+    Classe que gerencia objetos `Hit`
     """
+    __slots__ = ['session_to_actions', 'pid_to_hits', 'pdf_path_to_pid', 'issn_to_acronym']
+
     def __init__(self, path_pdf_to_pid, issn_to_acronym):
         self.session_to_actions = {}
         self.pid_to_hits = {}
@@ -57,23 +76,71 @@ class HitManager:
         self.pdf_path_to_pid = path_pdf_to_pid
         self.issn_to_acronym = issn_to_acronym
 
-    def set_hits(self, log_file_name: str):
+    def create_hit_from_sql_data(self, row):
         """
-        Carrega arquivo de log
+        Cria objeto `Hit` a partir de dados extraídos diretamente o Matomo
+
+        @param row: um objeto `LogLinkActionVisit`
+        @return: um objeto `Hit`
+        """
+        dict_attrs = {
+            'serverTime': row.server_time,
+            'browserName': row.visit.config_browser_name,
+            'browserVersion': row.visit.config_browser_version,
+            'ip': inet_ntoa(row.visit.location_ip),
+            'actionName': row.action.name
+        }
+        new_hit = Hit(**dict_attrs)
+
+        if not new_hit.pid:
+            self.set_pid_from_pdf(new_hit)
+
+        self.set_hit_type(new_hit)
+        self.set_content_type(new_hit)
+
+        return new_hit
+
+    def create_hit_from_log_line(self, **log_row):
+        """
+        Cria um `Hit` a partir de uma linha de log
+
+        :param log_row: linha de log
+        :return: `Hit` povoado com os dados da linha de log
+        """
+        new_hit = Hit(**log_row)
+
+        if not new_hit.pid:
+            self.set_pid_from_pdf(new_hit)
+
+        self.set_hit_type(new_hit)
+        self.set_content_type(new_hit)
+
+        return new_hit
+
+    def set_hits_from_log_file(self, log_file_name: str):
+        """
+        Cria objetos `Hit` a partir de dados de log previamente extraídos do Matomo
 
         :param log_file_name: nome do arquivo de log
         """
         with open(log_file_name) as f:
             csv_file = csv.DictReader(f, delimiter='\t')
             for log_row in csv_file:
-                hit = self.create_hit_from_log_row(**log_row)
-                self._update_session_to_action(hit)
+                hit = self.create_hit_from_log_line(**log_row)
+                self.add_hit(hit)
 
-    def _update_session_to_action(self, hit: Hit):
+    def reset(self):
         """
-        Atualiza mapa identificador de sessão -> ações
+        Limpa registros do `HitManager`
+        """
+        self.pid_to_hits = {}
+        self.session_to_actions = {}
 
-        :param hit: acesso a ser atualizado no mapa de sessões
+    def add_hit(self, hit: Hit):
+        """
+        Adiciona `Hit` em dicionário identificador de sessão -> ações
+
+        :param hit: `Hit` ou acesso a ser adicionado no dicionário de sessões
         """
         if hit.session_id not in self.session_to_actions:
             self.session_to_actions[hit.session_id] = {}
@@ -85,7 +152,7 @@ class HitManager:
 
     def count_hits_by_pid(self):
         """
-        Gera mapa ``pid`` -> ``{tipo de url}`` -> ``[hits]``
+        Gera dicionário ``pid`` -> ``{tipo de url}`` -> ``[hits]``
         """
         counter = 0
         total = len(self.session_to_actions.keys())
@@ -102,23 +169,7 @@ class HitManager:
                     # TODO: situação em que o PID não está definido (acessos à plataforma em geral)
                     else:
                         pass
-
-    def create_hit_from_log_row(self, **log_row):
-        """
-        Cria um item de acesso a partir de uma linha de log
-
-        :param log_row: linha de log
-        :return: Hit povoado com os dados da linha de log
-        """
-        new_hit = Hit(**log_row)
-
-        if not new_hit.pid:
-            self.set_pid_from_pdf(new_hit)
-
-        self.set_hit_type(new_hit)
-        self.set_content_type(new_hit)
-
-        return new_hit
+        print()
 
     def remove_double_clicks(self, session_to_actions):
         """
@@ -155,6 +206,7 @@ class HitManager:
 
                 # Troca lista de hits para a lista de cliques limpa (sem duplos-cliques)
                 session_to_actions[session][action_name] = cleaned_hits
+        print()
 
     def set_pid_from_pdf(self, hit: Hit):
         """
@@ -185,7 +237,8 @@ class HitManager:
 
     def set_content_type(self, hit: Hit):
         """
-        Obtém o tipo de conteúdo acessado (para article, por exemplo, há os seguintes tipos de contéudo: texto completo, página plus do texto completo, pdf, xml, resumo, como citar, texto completo traduzido)
+        Obtém o tipo de conteúdo acessado (para article, por exemplo, há os seguintes tipos de contéudo: texto
+        completo, página plus do texto completo, pdf, xml, resumo, como citar, texto completo traduzido)
 
         :param hit: um Hit
         """
