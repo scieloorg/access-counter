@@ -1,4 +1,5 @@
 import csv
+import logging
 
 from datetime import datetime
 from socket import inet_ntoa
@@ -161,7 +162,6 @@ class HitManager:
         total = len(self.session_to_actions.keys())
         for session_id, actions_names in self.session_to_actions.items():
             counter += 1
-            print('\r%d de %d' % (counter, total), end='')
             for action_name, hits in actions_names.items():
                 for hit in hits:
                     # Caso PID esteja definido
@@ -172,7 +172,6 @@ class HitManager:
                     # TODO: situação em que o PID não está definido (acessos à plataforma em geral)
                     else:
                         pass
-        print()
 
     def remove_double_clicks(self, session_to_actions):
         """
@@ -184,7 +183,6 @@ class HitManager:
         total = len(self.session_to_actions.keys())
         for session, actions in session_to_actions.items():
             counter += 1
-            print('\r%d de %d' % (counter, total), end='')
             for action_name, hits in actions.items():
 
                 # Lista de hits sem duplos-cliques
@@ -209,7 +207,6 @@ class HitManager:
 
                 # Troca lista de hits para a lista de cliques limpa (sem duplos-cliques)
                 session_to_actions[session][action_name] = cleaned_hits
-        print()
 
     def set_pid_from_pdf(self, hit: Hit):
         """
@@ -227,7 +224,7 @@ class HitManager:
             else:
                 # TODO - À espera de um dicionário corrigido
                 #   Como solução temporária, é considerado o primeiro PID da lista ordenada
-                print('WARNNING:Há mais de um PID %s associado ao PDF %s' % (extracted_pid, url_parsed.path))
+                logging.warning('Há mais de um PID %s associado ao PDF %s' % (extracted_pid, url_parsed.path))
                 hit.pid = sorted(extracted_pid)[0]
 
     def set_hit_type(self, hit: Hit):
