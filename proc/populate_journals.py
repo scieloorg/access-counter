@@ -4,11 +4,15 @@ import logging
 import sys
 sys.path.append('..')
 
-from articlemeta.client import RestfulClient
+from articlemeta.client import RestfulClient, ThriftClient
 from sqlalchemy.sql import null
 from sqlalchemy.exc import IntegrityError
 from utils import db_tools
 from utils.sql_declarative import Journal
+
+
+COLLECTIONS = ['arg', 'bol', 'chl', 'cic', 'col', 'cri', 'cub', 'esp', 'mex', 'per', 'prt', 'pry', 'psi', 'rve', 'rvt',
+               'scl', 'spa', 'sss', 'sza', 'ury', 'ven', 'wid']
 
 
 logging.basicConfig(filename='populate_journals_' + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S') + '.log',
@@ -55,17 +59,15 @@ def extract_url(journal):
     return null()
 
 
-def populate(restful_client: RestfulClient, db_session):
+def populate(articlemeta, db_session):
     """
     Povoa tabela `journal` com os dados dos periódicos extraídos do `ArticleMeta`
 
-    @param restful_client: cliente do Restful da API ArticleMeta
+    @param articlemeta: cliente Thrift ou Restful da API ArticleMeta
     @param db_session: sessão de conexão com banco de dados Matomo
     """
-    collections = sorted([c.get('acron', '') for c in restful_client.collections()])
-
-    for col in collections:
-        for journal in restful_client.journals(col):
+    for col in COLLECTIONS:
+        for journal in articlemeta.journals(col):
             new_journal = Journal()
             new_journal.collection_acronym = col
             new_journal.title = journal.title
@@ -97,12 +99,23 @@ def main():
         help='String de conexão a base SQL no formato mysql://username:password@host1:port/database'
     )
 
+    parser.add_argument(
+        '-t',
+        dest='use_thrift',
+        default=False,
+        action='store_true',
+        help='Usar ArticleMeta Thrift Client ao invés de RestfulClient'
+    )
+
     params = parser.parse_args()
 
-    restful_client = RestfulClient()
+    if not params.use_thrift:
+        articlemeta = RestfulClient()
+    else:
+        articlemeta = ThriftClient()
 
     db_session = db_tools.get_db_session(params.matomodb_uri)
-    populate(restful_client=restful_client, db_session=db_session)
+    populate(articlemeta=articlemeta, db_session=db_session)
 
 
 if __name__ == '__main__':
