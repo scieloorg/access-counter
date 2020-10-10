@@ -18,13 +18,13 @@ def main():
     parser.add_argument(
         '-d',
         required=True,
-        dest='mariadb_uri',
+        dest='matomodb_uri',
         help='String de conexão a base SQL no formato mysql://username:password@host1:port/database'
     )
 
     params = parser.parse_args()
 
-    db_tools.create_tables(params.mariadb_uri)
+    db_tools.create_tables(params.matomodb_uri)
 
 
 if __name__ == '__main__':
