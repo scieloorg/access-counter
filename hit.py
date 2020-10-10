@@ -83,22 +83,25 @@ class HitManager:
         @param row: um objeto `LogLinkActionVisit`
         @return: um objeto `Hit`
         """
-        dict_attrs = {
-            'serverTime': row.server_time,
-            'browserName': row.visit.config_browser_name,
-            'browserVersion': row.visit.config_browser_version,
-            'ip': inet_ntoa(row.visit.location_ip),
-            'actionName': row.action.name
-        }
-        new_hit = Hit(**dict_attrs)
+        try:
+            dict_attrs = {
+                'serverTime': row.server_time,
+                'browserName': row.visit.config_browser_name,
+                'browserVersion': row.visit.config_browser_version,
+                'ip': inet_ntoa(row.visit.location_ip),
+                'actionName': row.action.name
+            }
+            new_hit = Hit(**dict_attrs)
 
-        if not new_hit.pid:
-            self.set_pid_from_pdf(new_hit)
+            if not new_hit.pid:
+                self.set_pid_from_pdf(new_hit)
 
-        self.set_hit_type(new_hit)
-        self.set_content_type(new_hit)
+            self.set_hit_type(new_hit)
+            self.set_content_type(new_hit)
 
-        return new_hit
+            return new_hit
+        except AttributeError:
+            raise Exception('Hit inválido: %s' % ([row[attr] for attr in row.__dict__]))
 
     def create_hit_from_log_line(self, **log_row):
         """

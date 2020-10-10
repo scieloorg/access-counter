@@ -89,9 +89,10 @@ def load_hits_from_matomo_db(date: datetime.datetime, idsite, db_session, hit_ma
     for row in query_results:
         try:
             new_hit = hit_manager.create_hit_from_sql_data(row)
-            hit_manager.add_hit(new_hit)
         except AttributeError as e:
-            logging.error('Hit inválido {}: {}'.format(row, e))
+            logging.info(e)
+        else:
+            hit_manager.add_hit(new_hit)
 
 
 def save_metrics_into_db(metrics: dict, db_session, collection: str):
@@ -100,6 +101,7 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
 
     @param metrics: um dicionário contendo métricas COUNTER a serem persistidas
     @param db_session: um objeto Session para conexão com base de dados Matomo
+    @param collection: acrônimo de coleção
     """
     for pid_key, pid_data in metrics.items():
         # Obtém o ISSN associado ao PID
@@ -162,14 +164,15 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
 
     @param hit_manager: um objeto `HitManager` que gerencia objetos `Hit`
     @param db_session: um objeto `Session` para conexão com base de dados Matomo
+    @param collection: acrônimo de coleção
     """
-    print('Removendo cliques-duplos')
+    logging.info('Removendo cliques-duplos')
     hit_manager.remove_double_clicks(hit_manager.session_to_actions)
 
-    print('Contando acessos por PID')
+    logging.info('Contando acessos por PID')
     hit_manager.count_hits_by_pid()
 
-    print('Extraindo métricas COUNTER R5')
+    logging.info('Extraindo métricas COUNTER R5')
     cs = CounterStat()
     cs.populate_counter(hit_manager.pid_to_hits)
 
@@ -213,6 +216,14 @@ def main():
         help='String de conexão a base SQL Matomo no formato mysql://username:password@host1:port/database'
     )
 
+    parser.add_argument(
+        '--logging_level',
+        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
+        dest='logging_level',
+        default='INFO',
+        help='Nível de log'
+    )
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         '-d', '--period',
@@ -231,8 +242,7 @@ def main():
 
     params = parser.parse_args()
 
-    logging.basicConfig(filename='main_' + datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S') + '.log',
-                        level=logging.DEBUG)
+    logging.basicConfig(level=params.logging_level)
 
     time_start = time()
 
@@ -263,7 +273,7 @@ def main():
             run_counter_routines(hit_manager=hit_manager, db_session=db_session, collection=params.collection)
 
     time_end = time()
-    print('Durou %.2f segundos' % (time_end - time_start))
+    logging.info('Durou %.2f segundos' % (time_end - time_start))
 
 
 if __name__ == '__main__':
