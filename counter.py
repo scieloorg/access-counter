@@ -19,10 +19,10 @@ class CounterStat:
     Modelo de dados utilizado para representar as métricas COUNTER R5
     """
     def __init__(self):
-        self.journals = {}
-        self.issues = {}
-        self.articles = {}
-        self.platform = {}
+        self.journals_metrics = {}
+        self.issues_metrics = {}
+        self.articles_metrics = {}
+        self.platform_metrics = {}
 
     def _get_hits_by_session_and_content_type(self, hits: list):
         """
@@ -81,8 +81,6 @@ class CounterStat:
         """
         pid_article_to_hits = {}
         pid_journal_to_hits = {}
-        pid_issue_to_hits = {}
-        platform_to_hits = {}
 
         pid_articles = [pid for pid in pid_to_hits if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_ARTICLE]
         for pid in pid_articles:
@@ -90,30 +88,14 @@ class CounterStat:
                 pid_article_to_hits[pid] = []
             pid_article_to_hits[pid] = pid_to_hits[pid]
 
-        for pid, hits in pid_to_hits.items():
-            pid_type = pid_tools.get_pid_type(pid)
-
-            if pid_type == map_helper.HIT_TYPE_ARTICLE:
-                if pid not in pid_article_to_hits:
-                    pid_article_to_hits[pid] = []
-                pid_article_to_hits[pid].extend(hits)
-            elif pid_type == map_helper.HIT_TYPE_JOURNAL:
-                if pid not in pid_journal_to_hits:
-                    pid_journal_to_hits[pid] = []
-                pid_journal_to_hits[pid].extend(hits)
-            elif pid_type == map_helper.HIT_TYPE_ISSUE:
-                if pid not in pid_issue_to_hits:
-                    pid_issue_to_hits[pid] = []
-                pid_issue_to_hits[pid].extend(hits)
-            else:
-                if pid not in platform_to_hits:
-                    platform_to_hits[pid] = []
-                platform_to_hits[pid].extend(hits)
+        pid_journals = [pid for pid in pid_to_hits if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_JOURNAL]
+        for pid in pid_journals:
+            if pid not in pid_journal_to_hits:
+                pid_journal_to_hits[pid] = []
+            pid_journal_to_hits[pid] = pid_to_hits[pid]
 
         self._populate_articles(pid_article_to_hits)
-        # self._populate_issues(pid_issue_to_hits)
-        # self._populate_journals(pid_journal_to_hits)
-        # self._populate_platform(platform_to_hits)
+        self._populate_journals(pid_journal_to_hits)
 
     def _populate_articles(self, pid_to_hits: dict):
         """
@@ -121,40 +103,31 @@ class CounterStat:
 
         :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
         """
+        # TODO: Contabilizar idioma de acesso (padrão, pdf e html)
         for pid, hits in pid_to_hits.items():
             datefied_hits = self.get_datefied_hits(hits)
-            for year in datefied_hits:
-                for month in datefied_hits[year]:
-                    for day in datefied_hits[year][month]:
+            for ymd in datefied_hits:
+                if pid not in self.articles_metrics:
+                    self.articles_metrics[pid] = {ymd: METRICS_ITEM.copy()}
+                    self.articles_metrics[pid][ymd]['total_item_requests'] = self._get_total(
+                        datefied_hits[ymd],
+                        map_helper.HIT_TYPE_ARTICLE,
+                        map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
 
-                        if pid not in self.articles:
-                            self.articles[pid] = {year: {}}
+                    self.articles_metrics[pid][ymd]['total_item_investigations'] = self._get_total(
+                        datefied_hits[ymd],
+                        map_helper.HIT_TYPE_ARTICLE,
+                        map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
 
-                        if month not in self.articles[pid][year]:
-                            self.articles[pid][year][month] = {}
+                    self.articles_metrics[pid][ymd]['unique_item_requests'] = self._get_unique(
+                        datefied_hits[ymd],
+                        map_helper.HIT_TYPE_ARTICLE,
+                        map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
 
-                        if day not in self.articles[pid][year][month]:
-                            self.articles[pid][year][month][day] = METRICS_ITEM.copy()
-
-                        self.articles[pid][year][month][day]['total_item_requests'] = self._get_total(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                        self.articles[pid][year][month][day]['total_item_investigations'] = self._get_total(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
-
-                        self.articles[pid][year][month][day]['unique_item_requests'] = self._get_unique(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                        self.articles[pid][year][month][day]['unique_item_investigations'] = self._get_unique(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+                    self.articles_metrics[pid][ymd]['unique_item_investigations'] = self._get_unique(
+                        datefied_hits[ymd],
+                        map_helper.HIT_TYPE_ARTICLE,
+                        map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
 
     def _populate_issues(self, pid_to_hits: dict):
         """
@@ -172,38 +145,32 @@ class CounterStat:
         """
         for pid, hits in pid_to_hits.items():
             datefied_hits = self.get_datefied_hits(hits)
-            for year in datefied_hits:
-                for month in datefied_hits[year]:
-                    for day in datefied_hits[year][month]:
+            for ymd in datefied_hits:
+                if pid not in self.journals_metrics:
+                    self.journals_metrics[pid] = {ymd: METRICS_ITEM.copy()}
 
-                        if pid not in self.journals:
-                            self.journals[pid] = {year: {}}
+                # TODO: Adequar maps para URLs de JOURNALS
+                #   Contabilizar, também, acesso às páginas de ISSUE e de ARTICLE para cada ISSN
+                #   Contabilizar que um periódico está associado a mais de um ISSN
+                self.journals_metrics[pid][ymd]['total_item_requests'] = self._get_total(
+                    datefied_hits[ymd],
+                    map_helper.HIT_TYPE_JOURNAL,
+                    map_helper.COUNTER_JOURNAL_ITEM_INVESTIGATIONS)
 
-                        if month not in self.journals[pid][year]:
-                            self.journals[pid][year][month] = {}
+                self.journals_metrics[pid][ymd]['total_item_investigations'] = self._get_total(
+                    datefied_hits[ymd],
+                    map_helper.HIT_TYPE_JOURNAL,
+                    map_helper.COUNTER_JOURNAL_ITEM_INVESTIGATIONS)
 
-                        if day not in self.journals[pid][year][month]:
-                            self.journals[pid][year][month][day] = METRICS_ITEM.copy()
+                self.journals_metrics[pid][ymd]['unique_item_requests'] = self._get_unique(
+                    datefied_hits[ymd],
+                    map_helper.HIT_TYPE_JOURNAL,
+                    map_helper.COUNTER_JOURNAL_ITEM_REQUESTS)
 
-                        self.journals[pid][year][month][day]['total_item_requests'] = self._get_total(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                        self.journals[pid][year][month][day]['total_item_investigations'] = self._get_total(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
-
-                        self.journals[pid][year][month][day]['unique_item_requests'] = self._get_unique(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                        self.journals[pid][year][month][day]['unique_item_investigations'] = self._get_unique(
-                            datefied_hits[year][month][day],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+                self.journals_metrics[pid][ymd]['unique_item_investigations'] = self._get_unique(
+                    datefied_hits[ymd],
+                    map_helper.HIT_TYPE_JOURNAL,
+                    map_helper.COUNTER_JOURNAL_ITEM_REQUESTS)
 
     def _populate_platform(self, pid_to_hits: dict):
         """
@@ -227,15 +194,10 @@ class CounterStat:
             month = hit.server_time.month
             day = hit.server_time.day
 
-            if year not in date_to_hits:
-                date_to_hits[year] = {}
+            year_month_day = '-'.join([str(year), str(month).zfill(2), str(day).zfill(2)])
 
-            if month not in date_to_hits[year]:
-                date_to_hits[year][month] = {}
-
-            if day not in date_to_hits[year][month]:
-                date_to_hits[year][month][day] = []
-
-            date_to_hits[year][month][day].append(hit)
+            if year_month_day not in date_to_hits:
+                date_to_hits[year_month_day] = []
+            date_to_hits[year_month_day].append(hit)
 
         return date_to_hits
