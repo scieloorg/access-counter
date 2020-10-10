@@ -32,7 +32,7 @@ ARTICLE_URL_XML = 'scielo.br/scieloorg/php/articlexml.php?'
 ARTICLE_URL_TRANSLATED = 'scielo.br/scieloorg/php/translate.php?'
 
 # Arquivo PDF relacionado a artigo + nome_do_arquivo.pdf
-ARTICLE_URL_PDF = 'scielo.br/pdf/'
+ARTICLE_URL_PDF = 'http://www.scielo.br/pdf/'
 
 # Artigo com tipo de conteúdo indefinido
 ARTICLE_CONTENT_TYPE_UNDEFINED = -1
@@ -97,6 +97,9 @@ JOURNAL_URL_INSTRUCTIONS = 'scielo.br/revistas/{}/iinstruc.htm'
 # Página sobre inscrição de periódico + revistas/{acrônimo}/...
 JOURNAL_URL_SUBSCRIPTION = 'scielo.br/revistas/{}/isubscrp.htm'
 
+# Página RSS de periódico + pid={}
+JOURNAL_URL_RSS = 'scielo.br/rss.php?'
+
 # Periódico com tipo de conteúdo indefinido
 JOURNAL_CONTENT_TYPE_UNDEFINED = -1
 
@@ -117,6 +120,20 @@ JOURNAL_CONTENT_TYPE_AUTHOR_INSTRUCTIONS = 4
 
 # Página de inscrição a Periódico
 JOURNAL_CONTENT_TYPE_SUBSCRIPTION = 5
+
+# Página RSS de Periódico
+JOURNAL_CONTENT_TYPE_RSS = 6
+
+COUNTER_JOURNAL_ITEM_INVESTIGATIONS = [JOURNAL_CONTENT_TYPE_MAIN_PAGE,
+                                       JOURNAL_CONTENT_TYPE_LIST,
+                                       JOURNAL_CONTENT_TYPE_ABOUT,
+                                       JOURNAL_CONTENT_TYPE_AUTHOR_INSTRUCTIONS,
+                                       JOURNAL_CONTENT_TYPE_SUBSCRIPTION,
+                                       JOURNAL_CONTENT_TYPE_EDITORIAL_BOARD,
+                                       JOURNAL_CONTENT_TYPE_RSS]
+
+COUNTER_JOURNAL_ITEM_REQUESTS = [JOURNAL_CONTENT_TYPE_MAIN_PAGE,
+                                 JOURNAL_CONTENT_TYPE_LIST]
 
 # Página que lista todos os periódicos em ordem alfabética + script=sci_alphabetic
 PLATFORM_URL_ALPHABETIC = 'scielo.br/scielo.php?'
