@@ -84,16 +84,21 @@ class HitManager:
         @param row: um objeto `LogLinkActionVisit`
         @return: um objeto `Hit`
         """
-        try:
-            dict_attrs = {
-                'serverTime': row.server_time,
-                'browserName': row.visit.config_browser_name,
-                'browserVersion': row.visit.config_browser_version,
-                'ip': inet_ntoa(row.visit.location_ip),
-                'actionName': row.action.name
-            }
-            new_hit = Hit(**dict_attrs)
 
+        dict_attrs = {'serverTime': row.server_time}
+
+        if row.visit:
+            dict_attrs['browserName'] = row.visit.config_browser_name
+            dict_attrs['browserVersion'] = row.visit.config_browser_version
+            dict_attrs['ip'] = inet_ntoa(row.visit.location_ip)
+        else:
+            logging.warning('Hit ignorado, campo visit vazio para idlink_va %s' % row.idlink_va)
+            return
+
+        if row.action:
+            dict_attrs['actionName'] = row.action.name
+
+            new_hit = Hit(**dict_attrs)
             if not new_hit.pid:
                 self.set_pid_from_pdf(new_hit)
 
@@ -101,8 +106,9 @@ class HitManager:
             self.set_content_type(new_hit)
 
             return new_hit
-        except AttributeError:
-            raise Exception('Hit inválido: %s' % ([row[attr] for attr in row.__dict__]))
+        else:
+            logging.warning('Hit ignorado, campo action vazio para idlink_va %s' % row.idlink_va)
+            return
 
     def create_hit_from_log_line(self, **log_row):
         """

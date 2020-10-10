@@ -87,11 +87,8 @@ def load_hits_from_matomo_db(date: datetime.datetime, idsite, db_session, hit_ma
     query_results = get_matomo_logs_for_date(db_session=db_session, idsite=idsite, date=date)
 
     for row in query_results:
-        try:
-            new_hit = hit_manager.create_hit_from_sql_data(row)
-        except AttributeError as e:
-            logging.info(e)
-        else:
+        new_hit = hit_manager.create_hit_from_sql_data(row)
+        if new_hit:
             hit_manager.add_hit(new_hit)
 
 
