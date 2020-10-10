@@ -46,18 +46,20 @@ def get_log_files(path_log_files: str):
     return log_files
 
 
-def get_matomo_logs_for_date(db_session, date: datetime.datetime):
+def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
     """
     Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas
 
     @param db_session: um objeto `Session` SQLAlchemy com a base de dados do Matomo
+    @param idsite: um inteiro que representa o identificador do site do qual as informações serão extraídas
     @param date: data a ser utilizada como filtro para obtenção dos dados
     @return: resultados em forma de `Query`
     """
     return db_session \
         .query(LogLinkVisitAction) \
         .filter(and_(LogLinkVisitAction.server_time >= date,
-                     LogLinkVisitAction.server_time < date + datetime.timedelta(days=1))
+                     LogLinkVisitAction.server_time < date + datetime.timedelta(days=1),
+                     LogLinkVisitAction.idsite == idsite)
                 ) \
         .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url, isouter=True) \
         .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit, isouter=True)
@@ -73,15 +75,16 @@ def load_hits_from_log_file(log_file: str, hit_manager: HitManager):
     hit_manager.set_hits_from_log_file(log_file)
 
 
-def load_hits_from_matomo_db(date: datetime.datetime, db_session, hit_manager):
+def load_hits_from_matomo_db(date: datetime.datetime, idsite, db_session, hit_manager):
     """
     Obtém dados do Matomo em relação a um determinado dia e os carrega no `HitManager`
 
     @param date: data da qual serão extraídos dados do Matomo
+    @param idsite: identificador Matomo do site a extrair informações
     @param db_session: um objeto `Session` para conexão com base de dados Matomo
     @param hit_manager: um objeto `HitManager` que gerencia objetos `Hit`
     """
-    query_results = get_matomo_logs_for_date(db_session=db_session, date=date)
+    query_results = get_matomo_logs_for_date(db_session=db_session, idsite=idsite, date=date)
 
     for row in query_results:
         try:
@@ -185,6 +188,13 @@ def main():
     )
 
     parser.add_argument(
+        '-i', '--idsite',
+        dest='idsite',
+        required=True,
+        help='Identificador Matomo do site do qual as informações serão extraídas'
+    )
+
+    parser.add_argument(
         '-p', '--pdf_paths',
         dest='pdf_to_pid',
         help='Dicionário que mapeia caminho de PDF a PID'
@@ -249,7 +259,7 @@ def main():
         for date in dates:
             logging.info('Extraindo dados para data {}'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
-            load_hits_from_matomo_db(date=date, db_session=db_session, hit_manager=hit_manager)
+            load_hits_from_matomo_db(date=date, idsite=params.idsite, db_session=db_session, hit_manager=hit_manager)
             run_counter_routines(hit_manager=hit_manager, db_session=db_session, collection=params.collection)
 
     time_end = time()
