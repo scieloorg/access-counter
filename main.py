@@ -84,8 +84,11 @@ def load_hits_from_matomo_db(date: datetime.datetime, db_session, hit_manager):
     query_results = get_matomo_logs_for_date(db_session=db_session, date=date)
 
     for row in query_results:
-        new_hit = hit_manager.create_hit_from_sql_data(row)
-        hit_manager.add_hit(new_hit)
+        try:
+            new_hit = hit_manager.create_hit_from_sql_data(row)
+            hit_manager.add_hit(new_hit)
+        except AttributeError as e:
+            logging.error('Hit inválido {}: {}'.format(row, e))
 
 
 def save_metrics_into_db(metrics: dict, db_session, collection: str):
