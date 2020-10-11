@@ -32,18 +32,18 @@ class Article(Base):
     collection_acronym = Column(VARCHAR(3), nullable=False)
     pid = Column(VARCHAR(23), nullable=False)
 
-    journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id', name='journal_id'))
+    fk_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id', name='fk_journal_id'))
     journal = relationship(Journal)
 
 
 class MetricArticle(Base):
     __tablename__ = 'counter_metric_article'
-    __table_args__ = (UniqueConstraint('article_id', 'year_month_day'),)
+    __table_args__ = (UniqueConstraint('fk_article_id', 'year_month_day'),)
     __table_args__ += (Index('index_year_month_day', 'year_month_day'),)
 
     metric_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    article_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article.article_id', name='article_id'))
+    fk_article_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article.article_id', name='fk_article_id'))
     article = relationship(Article)
 
     year_month_day = Column(Date, nullable=False)
