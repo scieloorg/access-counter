@@ -164,10 +164,7 @@ class HitManager:
         """
         Gera dicionário ``pid`` -> ``{tipo de url}`` -> ``[hits]``
         """
-        counter = 0
-        total = len(self.session_to_actions.keys())
         for session_id, actions_names in self.session_to_actions.items():
-            counter += 1
             for action_name, hits in actions_names.items():
                 for hit in hits:
                     # Caso PID esteja definido
@@ -185,10 +182,7 @@ class HitManager:
 
         :param session_to_actions: dicionário que mapeia sessão a ações
         """
-        counter = 0
-        total = len(self.session_to_actions.keys())
         for session, actions in session_to_actions.items():
-            counter += 1
             for action_name, hits in actions.items():
 
                 # Lista de hits sem duplos-cliques
