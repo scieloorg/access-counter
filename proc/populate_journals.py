@@ -1,5 +1,4 @@
 import argparse
-import datetime
 import logging
 import sys
 sys.path.append('..')
@@ -85,7 +84,7 @@ def populate(articlemeta, db_session):
 
 
 def main():
-    usage = """Povoa tabela de periódicos para uso da API SUSHI em relatórios COUNTER."""
+    usage = """Povoa tabela de periódicos para uso da API SUSHI em relatórios COUNTER"""
     parser = argparse.ArgumentParser(usage)
 
     parser.add_argument(
