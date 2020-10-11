@@ -1,9 +1,10 @@
+import datetime
 import logging
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
-from utils.sql_declarative import Base
+from utils.sql_declarative import Base, LogLinkVisitAction, LogAction, LogVisit, Journal, Article
 
 
 def create_tables(matomo_db_uri):
@@ -48,3 +49,49 @@ def get_db_session(matomo_db_uri):
     Base.metadata.bind = engine
     db_session = sessionmaker(bind=engine)
     return db_session()
+
+
+def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
+    """
+    Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas
+
+    @param db_session: um objeto `Session` SQLAlchemy com a base de dados do Matomo
+    @param idsite: um inteiro que representa o identificador do site do qual as informações serão extraídas
+    @param date: data a ser utilizada como filtro para obtenção dos dados
+    @return: resultados em forma de `Query`
+    """
+    return db_session \
+        .query(LogLinkVisitAction) \
+        .filter(and_(LogLinkVisitAction.server_time >= date,
+                     LogLinkVisitAction.server_time < date + datetime.timedelta(days=1),
+                     LogLinkVisitAction.idsite == idsite)
+                ) \
+        .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url, isouter=True) \
+        .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit, isouter=True)
+
+
+def get_journal(db_session, issn, collection):
+    """
+    Obtém periódico a partir de `ISSN` e coleção
+
+    @param db_session: sessão de conexão com banco Matomo
+    @param issn: `ISSN` do periódico
+    @param collection: coleção do periódico
+    @return: resultados em forma de `Query`
+    """
+    return db_session.query(Journal).filter(
+        or_(and_(Journal.print_issn == issn, Journal.collection_acronym == collection),
+            and_(Journal.online_issn == issn, Journal.collection_acronym == collection))).one()
+
+
+def get_article(db_session, pid, collection):
+    """
+    Obtém artigo a partir de `PID` e coleção
+    @param db_session: sessão de conexão com banco Matomo
+    @param pid: `PID` do artigo
+    @param collection: coleção do artigo
+    @return: resultados em forma de `Query`
+    """
+    return db_session.query(Article).filter(
+        and_(Article.collection_acronym == collection,
+             Article.pid == pid)).one()
