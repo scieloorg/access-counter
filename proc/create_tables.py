@@ -18,6 +18,13 @@ def main():
     )
 
     parser.add_argument(
+        '--fix_matomo_tables',
+        default=False,
+        action='store_true',
+        help='Adiciona chaves estrangeiras na tabela matomo_log_link_visit_action'
+    )
+
+    parser.add_argument(
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
@@ -32,8 +39,9 @@ def main():
     logging.info('Criando tabelas COUNTER')
     db_tools.create_tables(params.matomo_db_uri)
 
-    logging.info('Alterando tabelas Matomo')
-    db_tools.add_foreign_keys_to_table_matomo_log_link_action(params.matomo_db_uri)
+    if params.fix_matomo_tables:
+        logging.info('Alterando tabelas Matomo')
+        db_tools.add_foreign_keys_to_table_matomo_log_link_action(params.matomo_db_uri)
 
 
 if __name__ == '__main__':
