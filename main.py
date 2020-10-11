@@ -6,12 +6,11 @@ import pickle
 
 from counter import CounterStat
 from hit import HitManager
-from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
 from utils import db_tools, pid_tools
-from utils.sql_declarative import Article, Journal, MetricArticle, LogLinkVisitAction, LogAction, LogVisit
+from utils.sql_declarative import Article, MetricArticle
 
 
 def get_dates(date: str):
@@ -46,25 +45,6 @@ def get_log_files(path_log_files: str):
     return log_files
 
 
-def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
-    """
-    Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas
-
-    @param db_session: um objeto `Session` SQLAlchemy com a base de dados do Matomo
-    @param idsite: um inteiro que representa o identificador do site do qual as informações serão extraídas
-    @param date: data a ser utilizada como filtro para obtenção dos dados
-    @return: resultados em forma de `Query`
-    """
-    return db_session \
-        .query(LogLinkVisitAction) \
-        .filter(and_(LogLinkVisitAction.server_time >= date,
-                     LogLinkVisitAction.server_time < date + datetime.timedelta(days=1),
-                     LogLinkVisitAction.idsite == idsite)
-                ) \
-        .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url, isouter=True) \
-        .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit, isouter=True)
-
-
 def load_hits_from_log_file(log_file: str, hit_manager: HitManager):
     """
     Carrega dados de log no `HitManager`
@@ -84,7 +64,7 @@ def load_hits_from_matomo_db(date: datetime.datetime, idsite, db_session, hit_ma
     @param db_session: um objeto `Session` para conexão com base de dados Matomo
     @param hit_manager: um objeto `HitManager` que gerencia objetos `Hit`
     """
-    query_results = get_matomo_logs_for_date(db_session=db_session, idsite=idsite, date=date)
+    query_results = db_tools.get_matomo_logs_for_date(db_session=db_session, idsite=idsite, date=date)
 
     for row in query_results:
         new_hit = hit_manager.create_hit_from_sql_data(row)
@@ -109,15 +89,11 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
                 new_metric_article = MetricArticle()
 
                 # Procura periódico na base de dados
-                existing_journal = db_session.query(Journal).filter(
-                    or_(and_(Journal.print_issn == issn, Journal.collection_acronym == collection),
-                        and_(Journal.online_issn == issn, Journal.collection_acronym == collection))).one()
+                existing_journal = db_tools.get_journal(db_session=db_session, issn=issn, collection=collection)
 
                 try:
                     # Procura artigo na base de dados
-                    existing_article = db_session.query(Article).filter(
-                        and_(Article.collection_acronym == collection,
-                             Article.pid == pid_key)).one()
+                    existing_article = db_tools.get_article(db_session=db_session, pid=pid_key, collection=collection)
 
                 except NoResultFound:
                     # Cria um novo artigo caso artigo não exista na base de dados
@@ -177,7 +153,7 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
 
 
 def main():
-    usage = 'Extrai informações de log no formato COUNTER R5.'
+    usage = 'Extrai informações de log no formato COUNTER R5'
     parser = argparse.ArgumentParser(usage)
 
     parser.add_argument(
@@ -266,6 +242,7 @@ def main():
         for date in dates:
             logging.info('Extraindo dados para data {}'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
+
             load_hits_from_matomo_db(date=date, idsite=params.idsite, db_session=db_session, hit_manager=hit_manager)
             run_counter_routines(hit_manager=hit_manager, db_session=db_session, collection=params.collection)
 
