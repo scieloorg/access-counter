@@ -1,8 +1,10 @@
 import argparse
+import csv
 import datetime
 import logging
 import os
 import pickle
+from socket import inet_ntoa
 
 from counter import CounterStat
 from hit import HitManager
@@ -45,31 +47,18 @@ def get_log_files(path_log_files: str):
     return log_files
 
 
-def load_hits_from_log_file(log_file: str, hit_manager: HitManager):
-    """
-    Carrega dados de log no `HitManager`
+def update_metrics(metric_article, data):
+    keys = ['total_item_investigations',
+            'total_item_requests',
+            'unique_item_investigations',
+            'unique_item_requests']
 
-    @param log_file: arquivo de log a ser carregado
-    @param hit_manager: objeto `HitManager` que gerencia objetos `Hit`
-    """
-    hit_manager.set_hits_from_log_file(log_file)
-
-
-def load_hits_from_matomo_db(date: datetime.datetime, idsite, db_session, hit_manager):
-    """
-    Obtém dados do Matomo em relação a um determinado dia e os carrega no `HitManager`
-
-    @param date: data da qual serão extraídos dados do Matomo
-    @param idsite: identificador Matomo do site a extrair informações
-    @param db_session: um objeto `Session` para conexão com base de dados Matomo
-    @param hit_manager: um objeto `HitManager` que gerencia objetos `Hit`
-    """
-    query_results = db_tools.get_matomo_logs_for_date(db_session=db_session, idsite=idsite, date=date)
-
-    for row in query_results:
-        new_hit = hit_manager.create_hit_from_sql_data(row)
-        if new_hit:
-            hit_manager.add_hit(new_hit)
+    for k in keys:
+        current_value = metric_article.__getattribute__(k)
+        if current_value:
+            metric_article.__setattr__(k, current_value + data[k])
+        else:
+            metric_article.__setattr__(k, data[k])
 
 
 def save_metrics_into_db(metrics: dict, db_session, collection: str):
@@ -86,8 +75,6 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
 
         for ymd in pid_data:
             try:
-                new_metric_article = MetricArticle()
-
                 # Procura periódico na base de dados
                 existing_journal = db_tools.get_journal(db_session=db_session, issn=issn, collection=collection)
 
@@ -104,22 +91,29 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
 
                     db_session.add(new_article)
                     db_session.commit()
+
                     existing_article = new_article
 
-                # Cria métrica e persiste na base de dados
-                new_metric_article.fk_article_id = existing_article.article_id
-                new_metric_article.year_month_day = ymd
-                new_metric_article.total_item_investigations = pid_data[ymd]['total_item_investigations']
-                new_metric_article.total_item_requests = pid_data[ymd]['total_item_requests']
-                new_metric_article.unique_item_investigations = pid_data[ymd]['unique_item_investigations']
-                new_metric_article.unique_item_requests = pid_data[ymd]['unique_item_requests']
+                try:
+                    existing_metric_article = db_tools.get_metric_article(db_session=db_session,
+                                                                          year_month_day=ymd,
+                                                                          article_id=existing_article.article_id)
+                    update_metrics(existing_metric_article, pid_data[ymd])
+                    logging.info('Atualizado {}'.format(existing_metric_article.metric_id))
 
-                db_session.add(new_metric_article)
+                except NoResultFound:
+                    # Cria um novo registro de métrica, caso não exista na base de dados
+                    new_metric_article = MetricArticle()
+                    new_metric_article.fk_article_id = existing_article.article_id
+                    new_metric_article.year_month_day = ymd
+
+                    update_metrics(new_metric_article, pid_data[ymd])
+
+                    db_session.add(new_metric_article)
+                    logging.info('Adicionado {}-{}'.format(new_metric_article.fk_article_id,
+                                                           new_metric_article.year_month_day))
+
                 db_session.commit()
-
-                logging.info('Adicionado {} - {}'.format(
-                    new_metric_article.article.pid,
-                    new_metric_article.article.collection_acronym))
 
             except NoResultFound as e:
                 logging.error('Nenhum periódico não foi localizado na base de dados: {}, {}'.format(issn, e))
@@ -128,6 +122,45 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
             except IntegrityError as e:
                 db_session.rollback()
                 logging.error('Artigo já está na base: {}'.format(e))
+
+
+def run_for_log_file(log_file: str, hit_manager: HitManager, db_session, collection):
+    with open(log_file) as f:
+        csv_file = csv.DictReader(f, delimiter='\t')
+
+        past_ip = ''
+        for log_row in csv_file:
+            current_ip = log_row.get('ip', '')
+
+            if past_ip != current_ip:
+                run_counter_routines(hit_manager=hit_manager,
+                                     db_session=db_session,
+                                     collection=collection)
+                past_ip = current_ip
+
+            hit = hit_manager.create_hit_from_log_line(**log_row)
+            if hit:
+                hit_manager.add_hit(hit)
+
+
+def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
+    results = db_tools.get_matomo_logs_for_date(db_session=db_session,
+                                                idsite=idsite,
+                                                date=date)
+
+    past_ip = ''
+    for row in results:
+        current_ip = inet_ntoa(row.visit.location_ip)
+
+        if past_ip != current_ip:
+            run_counter_routines(hit_manager=hit_manager,
+                                 db_session=db_session,
+                                 collection=collection)
+            past_ip = current_ip
+
+        hit = hit_manager.create_hit_from_sql_data(row)
+        if hit:
+            hit_manager.add_hit(hit)
 
 
 def run_counter_routines(hit_manager: HitManager, db_session, collection):
@@ -139,17 +172,13 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     @param db_session: um objeto `Session` para conexão com base de dados Matomo
     @param collection: acrônimo de coleção
     """
-    logging.info('Removendo cliques-duplos')
     hit_manager.remove_double_clicks(hit_manager.session_to_actions)
-
-    logging.info('Contando acessos por PID')
     hit_manager.count_hits_by_pid()
 
-    logging.info('Extraindo métricas COUNTER R5')
     cs = CounterStat()
     cs.populate_counter(hit_manager.pid_to_hits)
-
     save_metrics_into_db(metrics=cs.articles_metrics, db_session=db_session, collection=collection)
+    hit_manager.reset()
 
 
 def main():
@@ -234,8 +263,12 @@ def main():
         for lf in log_files:
             logging.info('Extraindo dados do arquivo {}'.format(lf))
             hit_manager.reset()
-            load_hits_from_log_file(log_file=lf, hit_manager=hit_manager)
-            run_counter_routines(hit_manager=hit_manager, db_session=db_session, collection=params.collection)
+
+            run_for_log_file(log_file=lf,
+                             hit_manager=hit_manager,
+                             db_session=db_session,
+                             collection=params.collection)
+
     else:
         logging.info('Iniciado para coletar dados diretamente de banco de dados Matomo')
         dates = get_dates(date=params.period)
@@ -243,8 +276,11 @@ def main():
             logging.info('Extraindo dados para data {}'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
 
-            load_hits_from_matomo_db(date=date, idsite=params.idsite, db_session=db_session, hit_manager=hit_manager)
-            run_counter_routines(hit_manager=hit_manager, db_session=db_session, collection=params.collection)
+            run_for_matomo_db(date=date,
+                              hit_manager=hit_manager,
+                              idsite=params.idsite,
+                              db_session=db_session,
+                              collection=params.collection)
 
     time_end = time()
     logging.info('Durou %.2f segundos' % (time_end - time_start))

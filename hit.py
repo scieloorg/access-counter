@@ -127,18 +127,6 @@ class HitManager:
 
         return new_hit
 
-    def set_hits_from_log_file(self, log_file_name: str):
-        """
-        Cria objetos `Hit` a partir de dados de log previamente extraídos do Matomo
-
-        :param log_file_name: nome do arquivo de log
-        """
-        with open(log_file_name) as f:
-            csv_file = csv.DictReader(f, delimiter='\t')
-            for log_row in csv_file:
-                hit = self.create_hit_from_log_line(**log_row)
-                self.add_hit(hit)
-
     def reset(self):
         """
         Limpa registros do `HitManager`
