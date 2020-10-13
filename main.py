@@ -4,10 +4,10 @@ import datetime
 import logging
 import os
 import pickle
-from socket import inet_ntoa
 
 from counter import CounterStat
 from hit import HitManager
+from socket import inet_ntoa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
