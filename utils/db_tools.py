@@ -53,7 +53,8 @@ def get_db_session(matomo_db_uri):
 
 def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
     """
-    Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas
+    Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas.
+    Ordena os resultados por IP
 
     @param db_session: um objeto `Session` SQLAlchemy com a base de dados do Matomo
     @param idsite: um inteiro que representa o identificador do site do qual as informações serão extraídas
@@ -67,7 +68,8 @@ def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
                      LogLinkVisitAction.idsite == idsite)
                 ) \
         .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url, isouter=True) \
-        .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit, isouter=True).order_by(LogVisit.location_ip)
+        .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit, isouter=True) \
+        .order_by('location_ip')
 
 
 def get_journal(db_session, issn, collection):
