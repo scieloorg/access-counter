@@ -74,7 +74,7 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
     Persiste métricas COUNTER na base de dados Matomo
 
     @param metrics: um dicionário contendo métricas COUNTER a serem persistidas
-    @param db_session: um objeto Session para conexão com base de dados Matomo
+    @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
     for pid_key, pid_data in metrics.items():
@@ -98,7 +98,7 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
                     new_article.pid = pid_key
 
                     db_session.add(new_article)
-                    db_session.commit()
+                    db_session.flush()
 
                     existing_article = new_article
 
@@ -121,10 +121,10 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
                     logging.info('Adicionado {}-{}'.format(new_metric_article.fk_article_id,
                                                            new_metric_article.year_month_day))
 
-                db_session.commit()
+                db_session.flush()
 
             except NoResultFound as e:
-                logging.error('Nenhum periódico não foi localizado na base de dados: {}, {}'.format(issn, e))
+                logging.error('Nenhum periódico foi localizado na base de dados: {}, {}'.format(issn, e))
             except MultipleResultsFound as e:
                 logging.error('Mais de um periódico foi localizado na base de dados: {}, {}'.format(issn, e))
             except IntegrityError as e:
