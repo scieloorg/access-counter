@@ -48,6 +48,14 @@ def get_log_files(path_log_files: str):
 
 
 def update_metrics(metric_article, data):
+    """
+    Atualiza valores de métricas COUNTER para um registro.
+    Caso registro seja novo, considera os valores em data.
+    Caso registro já existe, faz soma valores atuais com valores novos
+
+    @param metric_article: registro de `MetricArticle`
+    @param data: dados a serem adicionados ou atribuídos ao registro
+    """
     keys = ['total_item_investigations',
             'total_item_requests',
             'unique_item_investigations',
