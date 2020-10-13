@@ -15,6 +15,9 @@ from utils import db_tools, pid_tools
 from utils.sql_declarative import Article, MetricArticle
 
 
+MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '50000'))
+
+
 def get_dates(date: str):
     """
     Obtém lista de dias para extrair informações do Matomo
@@ -133,12 +136,35 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
 
 
 def run_for_log_file(log_file: str, hit_manager: HitManager, db_session, collection):
+    """
+    Cria objetos `Hit` e chama rotinas COUNTER a cada 50 mil (valor definido em `BUCKET_LIMIT`) iterações.
+    Por questões de limitação de memória, o método trabalha por IP.
+    Para cada IP, são obtidos os registros a ele relacionados, do arquivo de log pré-extraído da base de dados Matomo
+
+    @param log_file: arquivo a ser lido
+    @param hit_manager: gerenciador de objetos `Hit`
+    @param db_session: sessão com banco de dados
+    @param collection: acrônimo de coleção
+    """
     with open(log_file) as f:
         csv_file = csv.DictReader(f, delimiter='\t')
 
+        # IP atual a ser contabilizado
         past_ip = ''
+
+        # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
+        bucket_counter = 0
+
+        # Verificador da primeira linha
+        line_counter = 0
+
         for log_row in csv_file:
+            bucket_counter += 1
+            line_counter += 1
+
             current_ip = log_row.get('ip', '')
+            if line_counter == 1:
+                past_ip = current_ip
 
             if past_ip != current_ip:
                 run_counter_routines(hit_manager=hit_manager,
@@ -150,15 +176,45 @@ def run_for_log_file(log_file: str, hit_manager: HitManager, db_session, collect
             if hit:
                 hit_manager.add_hit(hit)
 
+            # Se atingiu o limit do bucket, faz commit
+            if bucket_counter >= MATOMO_DB_SESSION_BUCKET_LIMIT:
+                db_session.commit()
+                bucket_counter = 0
+
+    db_session.commit()
+
 
 def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
+    """
+    Cria objetos `Hit` e chama rotinas COUNTER a cada 50 mil (valor definido em `BUCKET_LIMIT`) iterações.
+    Por questões de limitação de memória, o método trabalha por IP.
+    Para cada IP, são obtidos os registros a ele relacionados, diretamente da base de dados Matomo
+
+    @param date: data em format `YYYY-MM-DD` cujos dados serão extraídos
+    @param hit_manager: gerenciador de objetos `Hit`
+    @param idsite: id de site na base de dados
+    @param db_session: sessão com banco de dados
+    @param collection: acrônimo de coleção
+    """
     results = db_tools.get_matomo_logs_for_date(db_session=db_session,
                                                 idsite=idsite,
                                                 date=date)
 
+    # IP atual a ser contabilizado
     past_ip = ''
+
+    # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
+    bucket_counter = 0
+
+    # Verificador da primeira linha
+    line_counter = 0
     for row in results:
+        bucket_counter += 1
+        line_counter += 1
+
         current_ip = inet_ntoa(row.visit.location_ip)
+        if line_counter == 1:
+            past_ip = current_ip
 
         if past_ip != current_ip:
             run_counter_routines(hit_manager=hit_manager,
@@ -170,14 +226,21 @@ def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
         if hit:
             hit_manager.add_hit(hit)
 
+        # Se atingiu o limit do bucket, faz commit
+        if bucket_counter >= MATOMO_DB_SESSION_BUCKET_LIMIT:
+            db_session.commit()
+            bucket_counter = 0
+
+    db_session.commit()
+
 
 def run_counter_routines(hit_manager: HitManager, db_session, collection):
     """
-    Executa métodos COUNTER para remover cliques-duplos, contar acessos por PID e extraír métricas.
+    Executa métodos COUNTER para remover cliques-duplos, contar acessos por PID e extrair métricas.
     Ao final, salva resultados (métricas) na base de dados Matomo
 
-    @param hit_manager: um objeto `HitManager` que gerencia objetos `Hit`
-    @param db_session: um objeto `Session` para conexão com base de dados Matomo
+    @param hit_manager: gerenciador de objetos `Hit`
+    @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
     hit_manager.remove_double_clicks(hit_manager.session_to_actions)
