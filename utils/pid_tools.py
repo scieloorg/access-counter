@@ -41,7 +41,7 @@ def get_pid_type(pid: str):
     Obtém o tipo de hit conforme o PID
 
     :param pid: PID de artigo, fascículo ou periódico
-    :return: o tipo de HIT (artigo, fascículo, periódico ou plataforma)
+    :return: o tipo de `Hit` (artigo, fascículo, periódico ou plataforma)
     """
     if re.match(map_helper.REGEX_ARTICLE_PID, pid):
         return map_helper.HIT_TYPE_ARTICLE
