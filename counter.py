@@ -26,7 +26,7 @@ class CounterStat:
 
     def _get_hits_by_session_and_content_type(self, hits: list):
         """
-        Obtém um mapa de sessão -> ``content_type -> [hits]``
+        Obtém um mapa de sessão -> `content_type -> [hits]`
 
         :param hits: lista de hits
         :return: um mapa de sessão para content_type e lista de hits

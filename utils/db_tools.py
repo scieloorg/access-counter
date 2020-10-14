@@ -69,7 +69,7 @@ def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
                 ) \
         .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url, isouter=True) \
         .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit, isouter=True) \
-        .order_by('location_ip')
+        .order_by('idvisitor')
 
 
 def get_journal(db_session, issn, collection):

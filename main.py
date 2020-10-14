@@ -7,7 +7,6 @@ import pickle
 
 from counter import CounterStat
 from hit import HitManager
-from socket import inet_ntoa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
@@ -201,7 +200,7 @@ def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
                                                 date=date)
 
     # IP atual a ser contabilizado
-    past_ip = ''
+    past_visitor = ''
 
     # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
     bucket_counter = 0
@@ -212,15 +211,15 @@ def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
         bucket_counter += 1
         line_counter += 1
 
-        current_ip = inet_ntoa(row.visit.location_ip)
+        current_visitor = row.visit.idvisitor.hex()
         if line_counter == 1:
-            past_ip = current_ip
+            past_visitor = current_visitor
 
-        if past_ip != current_ip:
+        if past_visitor != current_visitor:
             run_counter_routines(hit_manager=hit_manager,
                                  db_session=db_session,
                                  collection=collection)
-            past_ip = current_ip
+            past_visitor = current_visitor
 
         hit = hit_manager.create_hit_from_sql_data(row)
         if hit:
