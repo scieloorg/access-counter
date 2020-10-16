@@ -18,7 +18,14 @@ def main():
     )
 
     parser.add_argument(
-        '--fix_matomo_tables',
+        '--create_index_ip_on_matomo_log_visit',
+        default=False,
+        action='store_true',
+        help='Cria índice index_ip na tabela matomo_log_link_visit_action'
+    )
+
+    parser.add_argument(
+        '--add_foreign_keys_on_matomo_log_visit_action',
         default=False,
         action='store_true',
         help='Adiciona chaves estrangeiras na tabela matomo_log_link_visit_action'
@@ -39,9 +46,13 @@ def main():
     logging.info('Criando tabelas COUNTER')
     db_tools.create_tables(params.matomo_db_uri)
 
-    if params.fix_matomo_tables:
-        logging.info('Alterando tabelas Matomo')
+    if params.add_foreign_keys_on_matomo_log_visit_action:
+        logging.info('Adicionando chaves estrangeiras na tabela matomo_log_link_visit_action')
         db_tools.add_foreign_keys_to_table_matomo_log_link_action(params.matomo_db_uri)
+
+    if params.create_index_ip_on_matomo_log_visit:
+        logging.info('Criando índice index_ip na tabela matomo_log_visit')
+        db_tools.create_index_ip_on_table_matomo_log_visit(params.matomo_db_uri)
 
 
 if __name__ == '__main__':
