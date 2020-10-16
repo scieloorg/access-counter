@@ -15,11 +15,26 @@ def create_tables(matomo_db_uri):
     """
     engine = create_engine(matomo_db_uri)
     Base.metadata.create_all(engine)
-    
+
+
+def create_index_ip_on_table_matomo_log_visit(matomo_db_uri):
+    """
+    Cria índice index_ip para facilitar recuperação de dados baseado em endereço IP, no Matomo
+
+    @param matomo_db_uri: string de conexão à base do Matomo
+    """
+    engine = create_engine(matomo_db_uri)
+
+    sql_create_index_location_ip = 'CREATE INDEX index_location_ip ON matomo_log_visit (location_ip);'
+    try:
+        engine.execute(sql_create_index_location_ip)
+    except OperationalError:
+        logging.warning('Índice já existe: %s' % sql_create_index_location_ip)
+
 
 def add_foreign_keys_to_table_matomo_log_link_action(matomo_db_uri):
     """
-    Adiciona chaves estrangeiras na tabela matomo_log_link_actino já existente do Matomo
+    Adiciona chaves estrangeiras na tabela matomo_log_link_action já existente do Matomo
      
     @param matomo_db_uri: string de conexão à base do Matomo 
     """
@@ -67,9 +82,9 @@ def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
                      LogLinkVisitAction.server_time < date + datetime.timedelta(days=1),
                      LogLinkVisitAction.idsite == idsite)
                 ) \
-        .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url, isouter=True) \
-        .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit, isouter=True) \
-        .order_by('idvisitor')
+        .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url) \
+        .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit) \
+        .order_by('location_ip')
 
 
 def get_journal(db_session, issn, collection):
