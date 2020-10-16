@@ -7,6 +7,7 @@ import pickle
 
 from counter import CounterStat
 from hit import HitManager
+from socket import inet_ntoa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
@@ -125,10 +126,10 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
 
                 db_session.flush()
 
-            except NoResultFound as e:
-                logging.error('Nenhum periódico foi localizado na base de dados: {}, {}'.format(issn, e))
-            except MultipleResultsFound as e:
-                logging.error('Mais de um periódico foi localizado na base de dados: {}, {}'.format(issn, e))
+            except NoResultFound:
+                logging.error('Nenhum periódico foi localizado na base de dados: {}'.format(issn))
+            except MultipleResultsFound:
+                logging.error('Mais de um periódico foi localizado na base de dados: {}'.format(issn))
             except IntegrityError as e:
                 db_session.rollback()
                 logging.error('Artigo já está na base: {}'.format(e))
@@ -200,7 +201,7 @@ def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
                                                 date=date)
 
     # IP atual a ser contabilizado
-    past_visitor = ''
+    past_ip = ''
 
     # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
     bucket_counter = 0
@@ -211,15 +212,15 @@ def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
         bucket_counter += 1
         line_counter += 1
 
-        current_visitor = row.visit.idvisitor.hex()
+        current_ip = inet_ntoa(row.visit.location_ip)
         if line_counter == 1:
-            past_visitor = current_visitor
+            past_ip = current_ip
 
-        if past_visitor != current_visitor:
+        if past_ip != current_ip:
             run_counter_routines(hit_manager=hit_manager,
                                  db_session=db_session,
                                  collection=collection)
-            past_visitor = current_visitor
+            past_ip = current_ip
 
         hit = hit_manager.create_hit_from_sql_data(row)
         if hit:
