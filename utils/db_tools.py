@@ -93,10 +93,10 @@ def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
     Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas.
     Ordena os resultados por IP
 
-    @param db_session: um objeto `Session` SQLAlchemy com a base de dados do Matomo
+    @param db_session: um objeto Session SQLAlchemy com a base de dados do Matomo
     @param idsite: um inteiro que representa o identificador do site do qual as informações serão extraídas
     @param date: data a ser utilizada como filtro para obtenção dos dados
-    @return: resultados em forma de `Query`
+    @return: resultados em forma de Query
     """
     return db_session \
         .query(LogLinkVisitAction) \
@@ -111,12 +111,12 @@ def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
 
 def get_journal(db_session, issn, collection):
     """
-    Obtém periódico a partir de `ISSN` e coleção
+    Obtém periódico a partir de ISSN e coleção
 
     @param db_session: sessão de conexão com banco Matomo
-    @param issn: `ISSN` do periódico
+    @param issn: ISSN do periódico
     @param collection: coleção do periódico
-    @return: um resultado do tipo `Journal`
+    @return: um resultado do tipo Journal
     """
     return db_session.query(Journal).filter(
         or_(and_(Journal.print_issn == issn, Journal.collection_acronym == collection),
@@ -125,12 +125,12 @@ def get_journal(db_session, issn, collection):
 
 def get_article(db_session, pid, collection):
     """
-    Obtém artigo a partir de `PID` e coleção
+    Obtém artigo a partir de PID e coleção
 
     @param db_session: sessão de conexão com banco Matomo
-    @param pid: `PID` do artigo
+    @param pid: PID do artigo
     @param collection: coleção do artigo
-    @return: um resultado do tipo `Article`
+    @return: um resultado do tipo Article
     """
     return db_session.query(Article).filter(
         and_(Article.collection_acronym == collection,
@@ -144,7 +144,7 @@ def get_metric_article(db_session, year_month_day, article_id):
     @param db_session: sessão de conexão com banco Matomo
     @param year_month_day: uma data em formato de String
     @param article_id: id de artigo
-    @return: um resultado do tipo `MetricArticle`
+    @return: um resultado do tipo MetricArticle
     """
     return db_session.query(MetricArticle).filter(
         and_(MetricArticle.year_month_day == year_month_day,

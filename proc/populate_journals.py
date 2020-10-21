@@ -28,7 +28,7 @@ def format_publisher_names(publisher_names: list):
 def format_issn(issn: str):
     """
     Formata ISSN e evita que inconsistências do ArticleMeta sejam passadas para a base de dados. Caso valor de ISSN
-    seja `None`, retorna string vazia ''
+    seja None, retorna string vazia ''
 
     @param issn: ISSN a ser tratado
     @return: ISSN tratado
@@ -42,7 +42,7 @@ def format_issn(issn: str):
 
 def extract_url(journal):
     """
-    Extrai url de periódico. Caso não encontra nenhuma válida, retorna `sqlalchemy.sql.null()`
+    Extrai url de periódico. Caso não encontra nenhuma válida, retorna sqlalchemy.sql.null()
 
     @param journal: objeto Journal obtido do RestfulClient
     @return: url
@@ -56,7 +56,7 @@ def extract_url(journal):
 
 def populate(articlemeta, db_session):
     """
-    Povoa tabela `journal` com os dados dos periódicos extraídos do `ArticleMeta`
+    Povoa tabela journal com os dados dos periódicos extraídos do ArticleMeta
 
     @param articlemeta: cliente Thrift ou Restful da API ArticleMeta
     @param db_session: sessão de conexão com banco de dados Matomo

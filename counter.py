@@ -26,7 +26,7 @@ class CounterStat:
 
     def _get_hits_by_session_and_content_type(self, hits: list):
         """
-        Obtém um mapa de sessão -> `content_type -> [hits]`
+        Obtém um mapa de sessão -> content_type -> [hits]
 
         :param hits: lista de hits
         :return: um mapa de sessão para content_type e lista de hits
@@ -75,7 +75,7 @@ class CounterStat:
 
     def populate_counter(self, pid_to_hits):
         """
-        Povoa ``self.articles``, ``self.journals``, ``self.platform`` no formato COUNTER R5
+        Povoa self.articles, self.journals, self.platform no formato COUNTER R5
 
         :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
         """
@@ -99,7 +99,7 @@ class CounterStat:
 
     def _populate_articles(self, pid_to_hits: dict):
         """
-        Povoa ``self.articles`` com os acessos no formato COUNTER R5
+        Povoa self.articles com os acessos no formato COUNTER R5
 
         :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
         """
@@ -131,7 +131,7 @@ class CounterStat:
 
     def _populate_issues(self, pid_to_hits: dict):
         """
-        Povoa ``self.issues` com os acessos no formato COUNTER R5
+        Povoa self.issues com os acessos no formato COUNTER R5
 
         :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos hits
         """
@@ -139,7 +139,7 @@ class CounterStat:
 
     def _populate_journals(self, pid_to_hits: dict):
         """
-        Povoa ``self.journals`` com os acessos no formato COUNTER R5
+        Povoa self.journals com os acessos no formato COUNTER R5
 
         :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
         """
@@ -174,7 +174,7 @@ class CounterStat:
 
     def _populate_platform(self, pid_to_hits: dict):
         """
-        Povoa ``self.platform`` com os acessos no formato COUNTER R5
+        Povoa self.platform com os acessos no formato COUNTER R5
 
         :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos hits
         """

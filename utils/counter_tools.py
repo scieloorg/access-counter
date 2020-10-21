@@ -14,7 +14,7 @@ def _extract_user_agent(browser_name: str, browser_version: str):
 
 def _extract_slice(date: datetime):
     """
-    Extrai uma fatia no formato ``YYYY-MM-DD|H``
+    Extrai uma fatia no formato YYYY-MM-DD|H
 
     :param date: um elemento datetime
     :return: uma str no formato YYYY-MM-DD|H
@@ -41,7 +41,7 @@ def generate_session_id(ip: str, browser_name: str, browser_version: str, date: 
 
 def is_double_click(past_action, current_action):
     """
-    Verifica se a ação atual (``current_action``) é um duplo-clique
+    Verifica se a ação atual (current_action) é um duplo-clique
 
     :param past_action: ação mais antiga
     :param current_action: ação atual

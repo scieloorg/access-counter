@@ -22,8 +22,8 @@ def get_dates(date: str):
     """
     Obtém lista de dias para extrair informações do Matomo
 
-    @param date: uma data em formato de `YYYY-MM-DD` ou um período no formato `YYYY-MM-DD,YYYY-MM-DD`
-    @return: lista de data(s) em formato de objeto `datetime`
+    @param date: uma data em formato de YYYY-MM-DD ou um período no formato YYYY-MM-DD,YYYY-MM-DD
+    @return: lista de data(s) em formato de objeto datetime
     """
     if ',' not in date:
         return [datetime.datetime.strptime(date, '%Y-%m-%d')]
@@ -56,7 +56,7 @@ def update_metrics(metric_article, data):
     Caso registro seja novo, considera os valores em data.
     Caso registro já existe, faz soma valores atuais com valores novos
 
-    @param metric_article: registro de `MetricArticle`
+    @param metric_article: registro de MetricArticle
     @param data: dados a serem adicionados ou atribuídos ao registro
     """
     keys = ['total_item_investigations',
@@ -137,12 +137,12 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
 
 def run_for_log_file(log_file: str, hit_manager: HitManager, db_session, collection):
     """
-    Cria objetos `Hit` e chama rotinas COUNTER a cada 50 mil (valor definido em `BUCKET_LIMIT`) iterações.
+    Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
     Por questões de limitação de memória, o método trabalha por IP.
     Para cada IP, são obtidos os registros a ele relacionados, do arquivo de log pré-extraído da base de dados Matomo
 
     @param log_file: arquivo a ser lido
-    @param hit_manager: gerenciador de objetos `Hit`
+    @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
@@ -186,12 +186,12 @@ def run_for_log_file(log_file: str, hit_manager: HitManager, db_session, collect
 
 def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
     """
-    Cria objetos `Hit` e chama rotinas COUNTER a cada 50 mil (valor definido em `BUCKET_LIMIT`) iterações.
+    Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
     Por questões de limitação de memória, o método trabalha por IP.
     Para cada IP, são obtidos os registros a ele relacionados, diretamente da base de dados Matomo
 
-    @param date: data em format `YYYY-MM-DD` cujos dados serão extraídos
-    @param hit_manager: gerenciador de objetos `Hit`
+    @param date: data em format YYYY-MM-DD cujos dados serão extraídos
+    @param hit_manager: gerenciador de objetos Hit
     @param idsite: id de site na base de dados
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
@@ -239,7 +239,7 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     Executa métodos COUNTER para remover cliques-duplos, contar acessos por PID e extrair métricas.
     Ao final, salva resultados (métricas) na base de dados Matomo
 
-    @param hit_manager: gerenciador de objetos `Hit`
+    @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """

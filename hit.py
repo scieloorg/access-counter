@@ -65,7 +65,7 @@ class Hit:
 
 class HitManager:
     """
-    Classe que gerencia objetos `Hit`
+    Classe que gerencia objetos Hit
     """
     __slots__ = ['session_to_actions', 'pid_to_hits', 'pdf_path_to_pid', 'issn_to_acronym']
 
@@ -79,10 +79,10 @@ class HitManager:
 
     def create_hit_from_sql_data(self, row):
         """
-        Cria objeto `Hit` a partir de dados extraídos diretamente o Matomo
+        Cria objeto Hit a partir de dados extraídos diretamente o Matomo
 
-        @param row: um objeto `LogLinkActionVisit`
-        @return: um objeto `Hit`
+        @param row: um objeto LogLinkActionVisit
+        @return: um objeto Hit
         """
 
         dict_attrs = {'serverTime': row.server_time}
@@ -112,10 +112,10 @@ class HitManager:
 
     def create_hit_from_log_line(self, **log_row):
         """
-        Cria um `Hit` a partir de uma linha de log
+        Cria um Hit a partir de uma linha de log
 
         :param log_row: linha de log
-        :return: `Hit` povoado com os dados da linha de log
+        :return: Hit povoado com os dados da linha de log
         """
         new_hit = Hit(**log_row)
 
@@ -129,16 +129,16 @@ class HitManager:
 
     def reset(self):
         """
-        Limpa registros do `HitManager`
+        Limpa registros do HitManager
         """
         self.pid_to_hits = {}
         self.session_to_actions = {}
 
     def add_hit(self, hit: Hit):
         """
-        Adiciona `Hit` em dicionário identificador de sessão -> ações
+        Adiciona Hit em dicionário identificador de sessão -> ações
 
-        :param hit: `Hit` ou acesso a ser adicionado no dicionário de sessões
+        :param hit: Hit ou acesso a ser adicionado no dicionário de sessões
         """
         if hit.session_id not in self.session_to_actions:
             self.session_to_actions[hit.session_id] = {}
@@ -150,7 +150,7 @@ class HitManager:
 
     def count_hits_by_pid(self):
         """
-        Gera dicionário ``pid`` -> ``{tipo de url}`` -> ``[hits]``
+        Gera dicionário pid -> {tipo de url} -> [hits]
         """
         for session_id, actions_names in self.session_to_actions.items():
             for action_name, hits in actions_names.items():
@@ -217,7 +217,7 @@ class HitManager:
 
     def set_hit_type(self, hit: Hit):
         """
-        Seta o tipo de item acessado (article, issue, journal ou platform) conforme o parâmetro ``pid`` de um hit
+        Seta o tipo de item acessado (article, issue, journal ou platform) conforme o parâmetro pid de um hit
 
         :param hit: um Hit
         """
