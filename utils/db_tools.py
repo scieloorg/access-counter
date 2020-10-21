@@ -32,6 +32,28 @@ def create_index_ip_on_table_matomo_log_visit(matomo_db_uri):
         logging.warning('Índice já existe: %s' % sql_create_index_location_ip)
 
 
+def fix_fields_interactions(matomo_db_uri):
+    """
+    Altera campos visit_total_interactions (matamo_log_visit) e interaction_possition (matomo_log_link_visit_action)
+    para MEDIUMINT(5)
+
+    @param matomo_db_uri: string de conexão à base do Matomo
+    """
+    engine = create_engine(matomo_db_uri)
+
+    sql_alter_column_visit_total_interactions = 'ALTER TABLE matomo_log_visit CHANGE visit_total_interactions visit_total_interactions MEDIUMINT(5) UNSIGNED NULL DEFAULT 0;'
+    try:
+        engine.execute(sql_alter_column_visit_total_interactions)
+    except OperationalError:
+        logging.warning('Não foi possível executar: %s' % sql_alter_column_visit_total_interactions)
+
+    sql_alter_column_interaction_position = 'ALTER TABLE matomo_log_link_visit_action CHANGE interaction_position interaction_position MEDIUMINT(5) UNSIGNED NULL DEFAULT NULL;'
+    try:
+        engine.execute(sql_alter_column_interaction_position)
+    except OperationalError:
+        logging.warning('Não foi possível executar: %s' % sql_alter_column_interaction_position)
+
+
 def add_foreign_keys_to_table_matomo_log_link_action(matomo_db_uri):
     """
     Adiciona chaves estrangeiras na tabela matomo_log_link_action já existente do Matomo

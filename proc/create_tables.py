@@ -25,6 +25,14 @@ def main():
     )
 
     parser.add_argument(
+        '--fix_fields_interactions',
+        default=False,
+        action='store_true',
+        help='Corrige colunas visit_total_interactions (matomo_log_visit) e '
+             'interaction_position (matomo_log_link_visit_action) para MEDIUMINT(5)'
+    )
+
+    parser.add_argument(
         '--add_foreign_keys_on_matomo_log_visit_action',
         default=False,
         action='store_true',
@@ -53,6 +61,10 @@ def main():
     if params.create_index_ip_on_matomo_log_visit:
         logging.info('Criando índice index_ip na tabela matomo_log_visit')
         db_tools.create_index_ip_on_table_matomo_log_visit(params.matomo_db_uri)
+
+    if params.fix_fields_interactions:
+        logging.info('Corrigindo colunas visit_total_interactions e interaction_position')
+        db_tools.fix_fields_interactions(params.matomo_db_uri)
 
 
 if __name__ == '__main__':
