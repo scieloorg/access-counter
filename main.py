@@ -325,6 +325,9 @@ def main():
     logging.info('Carregando dicionário de ISSN --> acrônimo de periódico')
     issn_to_acronym = pickle.load(open(params.issn_to_acronym, 'rb'))
 
+    logging.info('Carregando dicionário de PID --> formato --> idioma')
+    pid_to_format_lang = pickle.load(open(params.pid_to_format_lang, 'rb'))
+
     db_session = db_tools.get_db_session(params.matomo_db_uri)
     hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid, issn_to_acronym=issn_to_acronym)
 
