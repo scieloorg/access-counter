@@ -23,16 +23,39 @@ class Journal(Base):
     publisher_name = Column(VARCHAR(255))
 
 
+class ArticleLang(Base):
+    __tablename__ = 'counter_article_lang'
+
+    lang_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    name = Column(VARCHAR(3), nullable=False)
+
+
+class ArticleFormat(Base):
+    __tablename__ = 'counter_article_format'
+
+    format_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    name = Column(VARCHAR(4), nullable=False)
+
+
 class Article(Base):
     __tablename__ = 'counter_article'
-    __table_args__ = (UniqueConstraint('collection_acronym', 'pid', name='uni_col_pid'),)
+    __table_args__ = (UniqueConstraint('collection_acronym',
+                                       'pid',
+                                       'fk_lang_id',
+                                       'fk_format_id',
+                                       name='uni_col_pid_lang_format'),)
     __table_args__ += (Index('index_col_pid', 'collection_acronym', 'pid'),)
+    __table_args__ += (Index('index_col_pid_lang', 'collection_acronym', 'pid', 'fk_lang_id'),)
+    __table_args__ += (Index('index_col_pid_format', 'collection_acronym', 'pid', 'fk_format_id'),)
 
     article_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     collection_acronym = Column(VARCHAR(3), nullable=False)
     pid = Column(VARCHAR(23), nullable=False)
 
+    fk_lang_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_lang.lang_id', name='fk_lang_id'))
+    fk_format_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.format_id', name='fk_format_id'))
     fk_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id', name='fk_journal_id'))
+
     journal = relationship(Journal)
 
 
