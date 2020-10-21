@@ -1,4 +1,3 @@
-import csv
 import logging
 
 from datetime import datetime
@@ -19,10 +18,11 @@ class Hit:
                  'action_params',
                  'session_id',
                  'pid',
-                 'tlng',
+                 'lang',
                  'script',
                  'hit_type',
-                 'content_type']
+                 'content_type',
+                 'format']
 
     def __init__(self, **kargs):
         # Endereço IP
@@ -53,11 +53,12 @@ class Hit:
                                                             self.server_time)
 
         self.pid = self.action_params.get('pid', '')
-        self.tlng = self.action_params.get('tlng', '')
+        self.lang = self.action_params.get('tlng', '')
         self.script = self.action_params.get('script', '')
 
         self.hit_type = ''
         self.content_type = ''
+        self.format = ''
 
     def __str__(self):
         return '|'.join([self.session_id, self.server_time.strftime("%M:%S"), self.action_name])
@@ -67,21 +68,26 @@ class HitManager:
     """
     Classe que gerencia objetos Hit
     """
-    __slots__ = ['session_to_actions', 'pid_to_hits', 'pdf_path_to_pid', 'issn_to_acronym']
+    __slots__ = ['session_to_actions',
+                 'pid_to_hits',
+                 'pdf_path_to_pid',
+                 'issn_to_acronym',
+                 'pid_to_format_lang']
 
-    def __init__(self, path_pdf_to_pid, issn_to_acronym):
+    def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang):
         self.session_to_actions = {}
         self.pid_to_hits = {}
 
         # Dicionários para tratamento de PID
         self.pdf_path_to_pid = path_pdf_to_pid
         self.issn_to_acronym = issn_to_acronym
+        self.pid_to_format_lang = pid_to_format_lang
 
     def create_hit_from_sql_data(self, row):
         """
         Cria objeto Hit a partir de dados extraídos diretamente o Matomo
 
-        @param row: um objeto LogLinkActionVisit
+        @param row: um objeto LogLinkVisitAction
         @return: um objeto Hit
         """
 
@@ -104,6 +110,8 @@ class HitManager:
 
             self.set_hit_type(new_hit)
             self.set_content_type(new_hit)
+            self.set_lang(new_hit)
+            self.set_format(new_hit)
 
             return new_hit
         else:
@@ -198,7 +206,7 @@ class HitManager:
 
     def set_pid_from_pdf(self, hit: Hit):
         """
-        Seta o PID de um artigo a partir de dicionário de path_pdf para PID
+        Atribui o PID de um artigo a partir de dicionário de path_pdf para PID
 
         :param hit: um Hit a arquivo PDF
         """
@@ -217,7 +225,7 @@ class HitManager:
 
     def set_hit_type(self, hit: Hit):
         """
-        Seta o tipo de item acessado (article, issue, journal ou platform) conforme o parâmetro pid de um hit
+        Atribui o tipo de item acessado (article, issue, journal ou platform) conforme o parâmetro pid de um hit
 
         :param hit: um Hit
         """
@@ -225,7 +233,7 @@ class HitManager:
 
     def set_content_type(self, hit: Hit):
         """
-        Obtém o tipo de conteúdo acessado (para article, por exemplo, há os seguintes tipos de contéudo: texto
+        Atribui o tipo de conteúdo acessado (para article, por exemplo, há os seguintes tipos de contéudo: texto
         completo, página plus do texto completo, pdf, xml, resumo, como citar, texto completo traduzido)
 
         :param hit: um Hit
@@ -238,6 +246,50 @@ class HitManager:
             hit.content_type = self.get_journal_content_type(hit)
         elif hit.hit_type == map_helper.HIT_TYPE_PLATFORM:
             hit.content_type = self.get_platform_content_type(hit)
+
+    def set_lang(self, hit: Hit):
+        """
+        Atribui o idioma do recurso acessado com base em dicionário de PIDs, formato e idiomas
+
+        @param hit: um Hit
+        """
+        url_parsed = parse.urlparse(hit.action_name)
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+
+        # Idioma padrão originário do dicionário
+        pid_langs = self.pid_to_format_lang.get(collection, {})
+        if not pid_langs:
+            logging.warning('Não foi possível localizar o PID %s no dicionário' % hit.pid)
+
+        default_lang = self.pid_to_format_lang.get(collection, {}).get(hit.pid, {}).get('default')
+        if not default_lang:
+            logging.warning('Não foi possível localizar o idioma padrão para o PID %s' % hit.pid)
+            default_lang = map_helper.ARTICLE_DEFAULT_LANG
+
+        # Se idioma já está definido, verifica se é válido
+        if hit.lang:
+            # Idiomas possíveis
+            format_possible_langs = self.pid_to_format_lang.get(collection, {}).get(hit.pid, {}).get(hit.format)
+
+            # Se idioma obtido da URL não é válido, atribui idioma padrão
+            if not hit.lang in format_possible_langs:
+                hit.lang = default_lang
+        else:
+            hit.lang = default_lang
+
+    def set_format(self, hit: Hit):
+        """
+        Atribui o formato do recurso acessado. Pode ser PDF ou HTML, conforme ArticleMeta
+
+        @param hit: um Hit
+        """
+        if hit.content_type:
+            if hit.content_type == map_helper.ARTICLE_CONTENT_TYPE_PDF:
+                hit.format = map_helper.ARTICLE_FORMAT_PDF
+            else:
+                hit.format = map_helper.ARTICLE_FORMAT_HTML
+        else:
+            hit.format = map_helper.ARTICLE_DEFAULT_FORMAT
 
     def get_article_content_type(self, hit: Hit):
         """
