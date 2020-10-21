@@ -329,7 +329,9 @@ def main():
     pid_to_format_lang = pickle.load(open(params.pid_to_format_lang, 'rb'))
 
     db_session = db_tools.get_db_session(params.matomo_db_uri)
-    hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid, issn_to_acronym=issn_to_acronym)
+    hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid,
+                             issn_to_acronym=issn_to_acronym,
+                             pid_to_format_lang=pid_to_format_lang)
 
     if params.logs:
         logging.info('Iniciado para usar arquivos de log')
