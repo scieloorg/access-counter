@@ -1,17 +1,21 @@
 import argparse
 import logging
+import re
 import sys
 sys.path.append('..')
 
 from articlemeta.client import RestfulClient, ThriftClient
 from sqlalchemy.sql import null
 from sqlalchemy.exc import IntegrityError
+from urllib import parse
 from utils import db_tools
 from utils.sql_declarative import Journal
 
 
 COLLECTIONS = ['arg', 'bol', 'chl', 'cic', 'col', 'cri', 'cub', 'esp', 'mex', 'per', 'prt', 'pry', 'psi', 'rve', 'rvt',
                'scl', 'spa', 'sss', 'sza', 'ury', 'ven', 'wid']
+
+REGEX_ISSN = re.compile(r'[0-9]{4}-[0-9]{3}[0-9xX]')
 
 
 def format_publisher_names(publisher_names: list):
@@ -27,17 +31,32 @@ def format_publisher_names(publisher_names: list):
 
 def format_issn(issn: str):
     """
-    Formata ISSN e evita que inconsistências do ArticleMeta sejam passadas para a base de dados. Caso valor de ISSN
-    seja None, retorna string vazia ''
+    Procura por padrão correto de ISSN e retorna o primeiro match encontrado.
+    Caso não encontre ISSN, retorna string vazia
 
     @param issn: ISSN a ser tratado
-    @return: ISSN tratado
+    @return: ISSN tratado ou string vazia
     """
-    if not issn:
-        return ''
-    if issn.startswith('L:'):
-        return issn[2:]
-    return issn
+    if issn:
+        search_results = re.search(REGEX_ISSN, issn)
+        if search_results:
+            return issn[search_results.start():search_results.end()]
+        else:
+            if len(issn) == 8:
+                return ''.join([issn[:4], '-', issn[4:]])
+    return ''
+
+
+def extract_issn_from_url(journal):
+    """
+    Extrai issn de periódico com base na URL e do parâmetro pid
+
+    @param journal: objeto Journal
+    @return: issn para usar em pid_issn
+    """
+    parsed_url = dict(parse.parse_qsl(parse.urlsplit(journal.url()).query))
+    pid_issn = parsed_url.get('pid', '')
+    return format_issn(pid_issn)
 
 
 def extract_url(journal):
@@ -65,9 +84,13 @@ def populate(articlemeta, db_session):
         for journal in articlemeta.journals(col):
             new_journal = Journal()
             new_journal.collection_acronym = col
+
             new_journal.title = journal.title
+
             new_journal.online_issn = format_issn(journal.electronic_issn)
             new_journal.print_issn = format_issn(journal.print_issn)
+            new_journal.pid_issn = extract_issn_from_url(journal)
+
             new_journal.publisher_name = format_publisher_names(journal.publisher_name)
             new_journal.uri = extract_url(journal)
 
@@ -75,12 +98,16 @@ def populate(articlemeta, db_session):
                                                                                                new_journal.online_issn,
                                                                                                new_journal.title))
 
-            try:
-                db_session.add(new_journal)
-                db_session.commit()
-            except IntegrityError as e:
-                db_session.rollback()
-                logging.error('Erro ao adicionar periódico: {}'.format(e))
+            if new_journal.online_issn or new_journal.print_issn:
+                try:
+                    db_session.add(new_journal)
+                    db_session.commit()
+                except IntegrityError as e:
+                    db_session.rollback()
+                    logging.error('Erro ao adicionar periódico: {}'.format(e))
+            else:
+                logging.warning('Periódico (%s, %s) não contém ISSN' % (new_journal.collection_acronym,
+                                                                        new_journal.title))
 
 
 def main():
