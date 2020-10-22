@@ -7,22 +7,13 @@ METRICS_ITEM = {'total_item_requests': 0,
                 'total_item_investigations': 0,
                 'unique_item_investigations': 0}
 
-# Métricas para Title (o title de um artigo é o periódico em que foi publicado)
-METRICS_TITLE = {'total_title_requests': 0,
-                 'unique_title_requests': 0,
-                 'total_title_investigations': 0,
-                 'unique_title_investigations': 0}
-
 
 class CounterStat:
     """
     Modelo de dados utilizado para representar as métricas COUNTER R5
     """
     def __init__(self):
-        self.journals_metrics = {}
-        self.issues_metrics = {}
-        self.articles_metrics = {}
-        self.platform_metrics = {}
+        self.metrics = {}
 
     def _get_hits_by_session_and_content_type(self, hits: list):
         """
@@ -73,112 +64,39 @@ class CounterStat:
 
         return unique_requests
 
-    def populate_counter(self, pid_to_hits):
+    def calculate_metrics(self, pid_format_lang_to_hits: dict):
         """
-        Povoa self.articles, self.journals, self.platform no formato COUNTER R5
+        Calcula métricas COUNTER e armazena os resultados no campo self.metrics
 
-        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
+        @param pid_format_lang_to_hits: dicionário (pid, format, language) --> [hit1, hit2, ...]
         """
-        pid_article_to_hits = {}
-        pid_journal_to_hits = {}
+        for pfl, hits in pid_format_lang_to_hits.items():
+            pid, data_format, lang = pfl
+            if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_ARTICLE:
+                datefied_hits = self.get_datefied_hits(hits)
 
-        pid_articles = [pid for pid in pid_to_hits if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_ARTICLE]
-        for pid in pid_articles:
-            if pid not in pid_article_to_hits:
-                pid_article_to_hits[pid] = []
-            pid_article_to_hits[pid] = pid_to_hits[pid]
+                for ymd in datefied_hits:
+                    if pfl not in self.metrics:
+                        self.metrics[pfl] = {ymd: METRICS_ITEM.copy()}
+                        self.metrics[pfl][ymd]['total_item_requests'] = self._get_total(
+                            datefied_hits[ymd],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
 
-        pid_journals = [pid for pid in pid_to_hits if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_JOURNAL]
-        for pid in pid_journals:
-            if pid not in pid_journal_to_hits:
-                pid_journal_to_hits[pid] = []
-            pid_journal_to_hits[pid] = pid_to_hits[pid]
+                        self.metrics[pfl][ymd]['total_item_investigations'] = self._get_total(
+                            datefied_hits[ymd],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
 
-        self._populate_articles(pid_article_to_hits)
-        self._populate_journals(pid_journal_to_hits)
+                        self.metrics[pfl][ymd]['unique_item_requests'] = self._get_unique(
+                            datefied_hits[ymd],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
 
-    def _populate_articles(self, pid_to_hits: dict):
-        """
-        Povoa self.articles com os acessos no formato COUNTER R5
-
-        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
-        """
-        # TODO: Contabilizar idioma de acesso (padrão, pdf e html)
-        for pid, hits in pid_to_hits.items():
-            datefied_hits = self.get_datefied_hits(hits)
-            for ymd in datefied_hits:
-                if pid not in self.articles_metrics:
-                    self.articles_metrics[pid] = {ymd: METRICS_ITEM.copy()}
-                    self.articles_metrics[pid][ymd]['total_item_requests'] = self._get_total(
-                        datefied_hits[ymd],
-                        map_helper.HIT_TYPE_ARTICLE,
-                        map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                    self.articles_metrics[pid][ymd]['total_item_investigations'] = self._get_total(
-                        datefied_hits[ymd],
-                        map_helper.HIT_TYPE_ARTICLE,
-                        map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
-
-                    self.articles_metrics[pid][ymd]['unique_item_requests'] = self._get_unique(
-                        datefied_hits[ymd],
-                        map_helper.HIT_TYPE_ARTICLE,
-                        map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                    self.articles_metrics[pid][ymd]['unique_item_investigations'] = self._get_unique(
-                        datefied_hits[ymd],
-                        map_helper.HIT_TYPE_ARTICLE,
-                        map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
-
-    def _populate_issues(self, pid_to_hits: dict):
-        """
-        Povoa self.issues com os acessos no formato COUNTER R5
-
-        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos hits
-        """
-        pass
-
-    def _populate_journals(self, pid_to_hits: dict):
-        """
-        Povoa self.journals com os acessos no formato COUNTER R5
-
-        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos objetos Hit
-        """
-        for pid, hits in pid_to_hits.items():
-            datefied_hits = self.get_datefied_hits(hits)
-            for ymd in datefied_hits:
-                if pid not in self.journals_metrics:
-                    self.journals_metrics[pid] = {ymd: METRICS_ITEM.copy()}
-
-                # TODO: Adequar maps para URLs de JOURNALS
-                #   Contabilizar, também, acesso às páginas de ISSUE e de ARTICLE para cada ISSN
-                #   Contabilizar que um periódico está associado a mais de um ISSN
-                self.journals_metrics[pid][ymd]['total_item_requests'] = self._get_total(
-                    datefied_hits[ymd],
-                    map_helper.HIT_TYPE_JOURNAL,
-                    map_helper.COUNTER_JOURNAL_ITEM_INVESTIGATIONS)
-
-                self.journals_metrics[pid][ymd]['total_item_investigations'] = self._get_total(
-                    datefied_hits[ymd],
-                    map_helper.HIT_TYPE_JOURNAL,
-                    map_helper.COUNTER_JOURNAL_ITEM_INVESTIGATIONS)
-
-                self.journals_metrics[pid][ymd]['unique_item_requests'] = self._get_unique(
-                    datefied_hits[ymd],
-                    map_helper.HIT_TYPE_JOURNAL,
-                    map_helper.COUNTER_JOURNAL_ITEM_REQUESTS)
-
-                self.journals_metrics[pid][ymd]['unique_item_investigations'] = self._get_unique(
-                    datefied_hits[ymd],
-                    map_helper.HIT_TYPE_JOURNAL,
-                    map_helper.COUNTER_JOURNAL_ITEM_REQUESTS)
-
-    def _populate_platform(self, pid_to_hits: dict):
-        """
-        Povoa self.platform com os acessos no formato COUNTER R5
-
-        :param pid_to_hits: dicionário que contém PIDs associados a seus respectivos hits
-        """
-        pass
+                        self.metrics[pfl][ymd]['unique_item_investigations'] = self._get_unique(
+                            datefied_hits[ymd],
+                            map_helper.HIT_TYPE_ARTICLE,
+                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
 
     def get_datefied_hits(self, hits):
         """
