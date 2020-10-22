@@ -2,18 +2,19 @@ import argparse
 import logging
 import re
 import sys
+
+from sqlalchemy.exc import IntegrityError
+
 sys.path.append('..')
 
 from articlemeta.client import RestfulClient, ThriftClient
+from utils.map_helper import COLLECTION_TO_CODE
 from sqlalchemy.sql import null
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from urllib import parse
 from utils import db_tools
-from utils.sql_declarative import Journal
+from utils.sql_declarative import Journal, JournalCollection
 
-
-COLLECTIONS = ['arg', 'bol', 'chl', 'cic', 'col', 'cri', 'cub', 'esp', 'mex', 'per', 'prt', 'pry', 'psi', 'rve', 'rvt',
-               'scl', 'spa', 'sss', 'sza', 'ury', 'ven', 'wid']
 
 REGEX_ISSN = re.compile(r'[0-9]{4}-[0-9]{3}[0-9xX]')
 
@@ -73,6 +74,27 @@ def extract_url(journal):
     return null()
 
 
+def update_journal_issn(journal, issn_type, new_value):
+    """
+    Atualiza informações de periódico
+
+    @param journal: um objeto Journal
+    @param issn_type: tipo de ISSN
+    @param new_value: novo valor do ISSN
+    """
+    current_value = getattr(journal, issn_type)
+    if new_value:
+        if current_value:
+            if new_value != current_value:
+                logging.error('Houston, we have a problem (%s) %s != %s' % (issn_type, new_value, current_value))
+        else:
+            setattr(journal, issn_type, new_value)
+            logging.info('Atualizado periódico {} ({}), de {} para {}'.format(journal.journal_id,
+                                                                              issn_type,
+                                                                              current_value,
+                                                                              new_value))
+
+
 def populate(articlemeta, db_session):
     """
     Povoa tabela journal com os dados dos periódicos extraídos do ArticleMeta
@@ -80,34 +102,68 @@ def populate(articlemeta, db_session):
     @param articlemeta: cliente Thrift ou Restful da API ArticleMeta
     @param db_session: sessão de conexão com banco de dados Matomo
     """
-    for col in COLLECTIONS:
+    for col in COLLECTION_TO_CODE.keys():
         for journal in articlemeta.journals(col):
-            new_journal = Journal()
-            new_journal.collection_acronym = col
 
-            new_journal.title = journal.title
+            online_issn = format_issn(journal.electronic_issn)
+            print_issn = format_issn(journal.print_issn)
+            pid_issn = extract_issn_from_url(journal)
 
-            new_journal.online_issn = format_issn(journal.electronic_issn)
-            new_journal.print_issn = format_issn(journal.print_issn)
-            new_journal.pid_issn = extract_issn_from_url(journal)
+            possible_issns = [i for i in [online_issn, print_issn, pid_issn] if i != '']
 
-            new_journal.publisher_name = format_publisher_names(journal.publisher_name)
-            new_journal.uri = extract_url(journal)
+            # Tenta localizar registro de Periódico com base nos ISSNs
+            try:
+                existing_journal = db_tools.get_journal_from_issns(db_session, possible_issns)
 
-            logging.info('Adicionado periódico ISSN_PRINT {}, ISSN_ONLINE {}, TITLE {}'.format(new_journal.print_issn,
-                                                                                               new_journal.online_issn,
-                                                                                               new_journal.title))
+                # Atualiza registros. Caso sejam diferentes, há algo muito errado
+                update_journal_issn(existing_journal, 'online_issn', online_issn)
+                update_journal_issn(existing_journal, 'print_issn', print_issn)
+                update_journal_issn(existing_journal, 'pid_issn', pid_issn)
 
-            if new_journal.online_issn or new_journal.print_issn:
-                try:
-                    db_session.add(new_journal)
-                    db_session.commit()
-                except IntegrityError as e:
-                    db_session.rollback()
-                    logging.error('Erro ao adicionar periódico: {}'.format(e))
-            else:
-                logging.warning('Periódico (%s, %s) não contém ISSN' % (new_journal.collection_acronym,
-                                                                        new_journal.title))
+                db_session.commit()
+
+            # Caso não exista registro de periódico, cria um novo
+            except NoResultFound:
+                new_journal = Journal()
+                new_journal.online_issn = online_issn
+                new_journal.print_issn = print_issn
+                new_journal.pid_issn = pid_issn
+
+                db_session.add(new_journal)
+                db_session.flush()
+                logging.info('Adicionado periódico {}, {}, {}'.format(new_journal.print_issn,
+                                                                      new_journal.online_issn,
+                                                                      new_journal.pid_issn))
+
+                existing_journal = new_journal
+
+            except MultipleResultsFound:
+                logging.critical('Há mais de um registro para um mesmo ISSN: {}'.format(online_issn,
+                                                                                        print_issn,
+                                                                                        pid_issn))
+                db_session.rollback()
+                exit(1)
+
+            # Cria novo registro de JournalCollection. Assume que nenhum periódico é repetido para uma mesma coleção
+            new_journal_collection = JournalCollection()
+
+            new_journal_collection.fk_col_journal_id = existing_journal.journal_id
+
+            # O título e demais atributos estão no contexto da coleção associada ao periódico
+            new_journal_collection.title = journal.title
+            new_journal_collection.publisher_name = format_publisher_names(journal.publisher_name)
+            new_journal_collection.uri = extract_url(journal)
+            new_journal_collection.name = col
+
+            try:
+                db_session.add(new_journal_collection)
+                db_session.commit()
+                logging.info('Adicionado informações da coleção {} para o periódico {}'.format(col,
+                                                                                               existing_journal.journal_id))
+            except IntegrityError:
+                logging.error('Entrada duplicada para {}-{}'.format(new_journal_collection.name,
+                                                                    new_journal_collection.fk_col_journal_id))
+                db_session.rollback()
 
 
 def main():

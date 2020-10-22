@@ -4,7 +4,9 @@ import logging
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
-from utils.sql_declarative import Base, LogLinkVisitAction, LogAction, LogVisit, Journal, Article, MetricArticle
+from sqlalchemy.orm.exc import NoResultFound
+
+from utils.sql_declarative import Base, LogLinkVisitAction, LogAction, LogVisit, Journal, Article, MetricArticle, JournalCollection
 
 
 def create_tables(matomo_db_uri):
@@ -119,6 +121,24 @@ def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
         .order_by('location_ip')
 
 
+def get_journal_from_issns(db_session, issns):
+    """
+    Obtém periódico a partir de ISSN e coleção
+
+    @param db_session: sessão de conexão com banco Matomo
+    @param issns: lista de ISSNs do periódico
+    @return: um resultado do tipo Journal
+    """
+    for i in issns:
+        try:
+            journal = get_journal(db_session, i)
+            if journal:
+                return journal
+        except NoResultFound:
+            pass
+    raise NoResultFound()
+
+
 def get_journal(db_session, issn):
     """
     Obtém periódico a partir de ISSN e coleção
@@ -130,6 +150,12 @@ def get_journal(db_session, issn):
     return db_session.query(Journal).filter(or_(Journal.print_issn == issn,
                                                 Journal.online_issn == issn,
                                                 Journal.pid_issn == issn)).one()
+
+
+def get_journal_collection(db_session, journal_collection_id, journal_id):
+    return db_session.query(JournalCollection).filter(
+        and_(JournalCollection.journal_collection_id == journal_collection_id,
+             JournalCollection.fk_journal_id == journal_id)).one()
 
 
 def get_article(db_session, pid, collection):

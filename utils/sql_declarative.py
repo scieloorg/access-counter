@@ -10,11 +10,10 @@ Base = declarative_base()
 class Journal(Base):
     __tablename__ = 'counter_journal'
 
-    __table_args__ = (UniqueConstraint('collection_acronym',
-                                       'print_issn',
+    __table_args__ = (UniqueConstraint('print_issn',
                                        'online_issn',
                                        'pid_issn',
-                                       name='uni_col_print_online_pid_issn'),)
+                                       name='print_online_pid_issn'),)
 
     __table_args__ += (Index('index_print_issn',
                              'print_issn'),)
@@ -26,13 +25,26 @@ class Journal(Base):
                              'pid_issn'),)
 
     journal_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    collection_acronym = Column(VARCHAR(3), nullable=False)
-    title = Column(VARCHAR(255), nullable=False)
     print_issn = Column(VARCHAR(9), nullable=False)
     online_issn = Column(VARCHAR(9), nullable=False)
     pid_issn = Column(VARCHAR(9), nullable=False)
+
+
+class JournalCollection(Base):
+    __tablename__ = 'journal_collection'
+
+    __table_args__ = (UniqueConstraint('name',
+                                       'fk_col_journal_id',
+                                       name='uni_name_fk_col_journal_id'),)
+
+    journal_collection_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    name = Column(VARCHAR(3), nullable=False)
+    title = Column(VARCHAR(255), nullable=False)
     uri = Column(VARCHAR(255))
     publisher_name = Column(VARCHAR(255))
+
+    fk_col_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id',
+                                                                  name='fk_col_journal_id'))
 
 
 class Language(Base):
@@ -64,7 +76,8 @@ class Article(Base):
     collection_acronym = Column(VARCHAR(3), nullable=False)
     pid = Column(VARCHAR(23), nullable=False)
 
-    fk_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id', name='fk_journal_id'))
+    fk_art_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id',
+                                                                  name='fk_art_journal_id'))
     journal = relationship(Journal)
 
 
@@ -74,7 +87,8 @@ class MetricArticle(Base):
     __table_args__ = (UniqueConstraint('fk_article_id',
                                        'fk_format_id',
                                        'fk_language_id',
-                                       'year_month_day'),)
+                                       'year_month_day',
+                                       name='uni_fk_article_id_fk_format_id_fk_language_id_year_month_day'),)
 
     __table_args__ += (Index('index_year_month_day_format_id',
                              'fk_format_id',

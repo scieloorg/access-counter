@@ -205,3 +205,28 @@ FORMAT_TO_CODE = {
     'html': 1,
     'pdf': 2
 }
+
+COLLECTION_TO_CODE = {
+    'arg': 1,
+    'bol': 2,
+    'chl': 3,
+    'cic': 4,
+    'col': 5,
+    'cri': 6,
+    'cub': 7,
+    'esp': 8,
+    'mex': 9,
+    'per': 10,
+    'prt': 11,
+    'pry': 12,
+    'psi': 13,
+    'rve': 14,
+    'rvt': 15,
+    'scl': 16,
+    'spa': 17,
+    'sss': 18,
+    'sza': 19,
+    'ury': 20,
+    'ven': 21,
+    'wid': 22
+}
