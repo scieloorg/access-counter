@@ -107,6 +107,9 @@ JOURNAL_URL_SUBSCRIPTION = 'scielo.br/revistas/{}/isubscrp.htm'
 # Página RSS de periódico + pid={}
 JOURNAL_URL_RSS = 'scielo.br/rss.php?'
 
+# Página de métricas sobre um Periódico + issn={}
+JOURNAL_URL_GOOGLE_METRICS_H5 = 'scielo.br/google_metrics/get_h5_m5.php?'
+
 # Periódico com tipo de conteúdo indefinido
 JOURNAL_CONTENT_TYPE_UNDEFINED = -1
 
@@ -131,13 +134,18 @@ JOURNAL_CONTENT_TYPE_SUBSCRIPTION = 5
 # Página RSS de Periódico
 JOURNAL_CONTENT_TYPE_RSS = 6
 
+# Página de métricas H5 de Periódico
+JOURNAL_CONTENT_TYPE_GOOGLE_METRICS_H5_M5 = 7
+
+
 COUNTER_JOURNAL_ITEM_INVESTIGATIONS = [JOURNAL_CONTENT_TYPE_MAIN_PAGE,
                                        JOURNAL_CONTENT_TYPE_LIST,
                                        JOURNAL_CONTENT_TYPE_ABOUT,
                                        JOURNAL_CONTENT_TYPE_AUTHOR_INSTRUCTIONS,
                                        JOURNAL_CONTENT_TYPE_SUBSCRIPTION,
                                        JOURNAL_CONTENT_TYPE_EDITORIAL_BOARD,
-                                       JOURNAL_CONTENT_TYPE_RSS]
+                                       JOURNAL_CONTENT_TYPE_RSS,
+                                       JOURNAL_CONTENT_TYPE_GOOGLE_METRICS_H5_M5]
 
 COUNTER_JOURNAL_ITEM_REQUESTS = [JOURNAL_CONTENT_TYPE_MAIN_PAGE,
                                  JOURNAL_CONTENT_TYPE_LIST]
@@ -180,7 +188,20 @@ DOMAINS = {
     'scielo.sld.cu': 'cub'
 }
 
+DEFAULT_COLLECTION = 'scl'
+
 # Expressões regulares para identificação de PID, ISSUE e ISSN
-REGEX_ARTICLE_PID = r'^s\d{4}-\d{17}$'
-REGEX_ISSUE_PID = r'^\d{4}-\d{12}$'
-REGEX_JOURNAL_PID = r'^\d{4}-\d{4}$'
+REGEX_ARTICLE_PID = r'^S[0-9]{4}-[0-9]{3}[0-9xX]\d{13}$'
+REGEX_ISSUE_PID = r'^[0-9]{4}-[0-9]{3}[0-9xX]\d{8}$'
+REGEX_JOURNAL_PID = r'^[0-9]{4}-[0-9]{3}[0-9xX]$'
+
+LANG_TO_CODE = {
+    'pt': 1,
+    'es': 2,
+    'en': 3
+}
+
+FORMAT_TO_CODE = {
+    'html': 1,
+    'pdf': 2
+}
