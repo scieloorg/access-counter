@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
 from utils import db_tools, pid_tools
+from utils.map_helper import FORMAT_TO_CODE, LANG_TO_CODE
 from utils.sql_declarative import Article, MetricArticle
 
 
@@ -72,33 +73,39 @@ def update_metrics(metric_article, data):
             metric_article.__setattr__(k, data[k])
 
 
-def save_metrics_into_db(metrics: dict, db_session, collection: str):
+def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     """
-    Persiste métricas COUNTER na base de dados Matomo
+    Exporta métricas para banco de dados
 
-    @param metrics: um dicionário contendo métricas COUNTER a serem persistidas
+    @param metrics: conjunto de métricas COUNTER
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    for pid_key, pid_data in metrics.items():
-        # Obtém o ISSN associado ao PID
-        issn = pid_tools.article_to_journal(pid_key)
+    for pfl_key, pid_data in metrics.items():
+        pid, data_format, lang = pfl_key
+
+        format_id = FORMAT_TO_CODE.get(data_format, 1)
+        language_id = LANG_TO_CODE.get(lang, 1)
+
+        issn = pid_tools.article_to_journal(pid)
 
         for ymd in pid_data:
             try:
                 # Procura periódico na base de dados
-                existing_journal = db_tools.get_journal(db_session=db_session, issn=issn, collection=collection)
+                existing_journal = db_tools.get_journal(db_session=db_session, issn=issn)
 
                 try:
                     # Procura artigo na base de dados
-                    existing_article = db_tools.get_article(db_session=db_session, pid=pid_key, collection=collection)
+                    existing_article = db_tools.get_article(db_session=db_session,
+                                                            pid=pid,
+                                                            collection=collection)
 
                 except NoResultFound:
                     # Cria um novo artigo caso artigo não exista na base de dados
                     new_article = Article()
                     new_article.collection_acronym = collection
                     new_article.fk_journal_id = existing_journal.journal_id
-                    new_article.pid = pid_key
+                    new_article.pid = pid
 
                     db_session.add(new_article)
                     db_session.flush()
@@ -108,21 +115,30 @@ def save_metrics_into_db(metrics: dict, db_session, collection: str):
                 try:
                     existing_metric_article = db_tools.get_metric_article(db_session=db_session,
                                                                           year_month_day=ymd,
-                                                                          article_id=existing_article.article_id)
+                                                                          article_id=existing_article.article_id,
+                                                                          format_id=format_id,
+                                                                          language_id=language_id)
                     update_metrics(existing_metric_article, pid_data[ymd])
-                    logging.info('Atualizado {}'.format(existing_metric_article.metric_id))
+                    logging.info('Atualizada métrica {}-{}-{}-{}'.format(existing_metric_article.fk_article_id,
+                                                                         existing_metric_article.fk_format_id,
+                                                                         existing_metric_article.fk_language_id,
+                                                                         existing_metric_article.year_month_day))
 
                 except NoResultFound:
                     # Cria um novo registro de métrica, caso não exista na base de dados
                     new_metric_article = MetricArticle()
                     new_metric_article.fk_article_id = existing_article.article_id
+                    new_metric_article.fk_format_id = format_id
+                    new_metric_article.fk_language_id = language_id
                     new_metric_article.year_month_day = ymd
 
                     update_metrics(new_metric_article, pid_data[ymd])
 
                     db_session.add(new_metric_article)
-                    logging.info('Adicionado {}-{}'.format(new_metric_article.fk_article_id,
-                                                           new_metric_article.year_month_day))
+                    logging.info('Adicionada métrica {}-{}-{}-{}'.format(new_metric_article.fk_article_id,
+                                                                         new_metric_article.fk_format_id,
+                                                                         new_metric_article.fk_language_id,
+                                                                         new_metric_article.year_month_day))
 
                 db_session.flush()
 
@@ -237,18 +253,18 @@ def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
 def run_counter_routines(hit_manager: HitManager, db_session, collection):
     """
     Executa métodos COUNTER para remover cliques-duplos, contar acessos por PID e extrair métricas.
-    Ao final, salva resultados (métricas) na base de dados Matomo
+    Ao final, salva resultados (métricas) em base de dados
 
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    hit_manager.remove_double_clicks(hit_manager.session_to_actions)
-    hit_manager.count_hits_by_pid()
+    hit_manager.remove_double_clicks()
+    hit_manager.group_by_pid_format_lang()
 
     cs = CounterStat()
-    cs.populate_counter(hit_manager.pid_to_hits)
-    save_metrics_into_db(metrics=cs.articles_metrics, db_session=db_session, collection=collection)
+    cs.calculate_metrics(hit_manager.pid_format_lang_to_hits)
+    export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
     hit_manager.reset()
 
 
@@ -273,13 +289,22 @@ def main():
     parser.add_argument(
         '-p', '--pdf_paths',
         dest='pdf_to_pid',
+        required=True,
         help='Dicionário que mapeia caminho de PDF a PID'
     )
 
     parser.add_argument(
         '-a', '--acronyms',
         dest='issn_to_acronym',
+        required=True,
         help='Dicionário que mapeia ISSN a acrônimo'
+    )
+
+    parser.add_argument(
+        '--langs',
+        dest='pid_to_format_lang',
+        required=True,
+        help='Dicionário que mapeia PID a formato e idioma'
     )
 
     parser.add_argument(
@@ -299,14 +324,14 @@ def main():
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        '-d', '--period',
+        '--period',
         dest='period',
         help='Periódo da qual os dados serão extraídos do Matomo. Caso esteja no formato YYYY-MM-DD,YYYY-MM-DD, '
              'o período entre a primeira e segunda datas será considerado. Caso esteja no formato YYYY-MM-DD, '
              'apenas os dados do dia indicado serão extraídos'
     )
     group.add_argument(
-        '-l', '--logs',
+        '--logs',
         dest='logs',
         default=[],
         help='Carrega dados a partir de uma pasta com arquivos de log ou um único arquivo de log '

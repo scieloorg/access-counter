@@ -22,7 +22,8 @@ class Hit:
                  'script',
                  'hit_type',
                  'content_type',
-                 'format']
+                 'format',
+                 'issn']
 
     def __init__(self, **kargs):
         # Endereço IP
@@ -52,13 +53,14 @@ class Hit:
                                                             self.browser_version,
                                                             self.server_time)
 
-        self.pid = self.action_params.get('pid', '')
+        self.pid = self.action_params.get('pid', '').upper()
         self.lang = self.action_params.get('tlng', '')
         self.script = self.action_params.get('script', '')
 
         self.hit_type = ''
         self.content_type = ''
         self.format = ''
+        self.issn = self.action_params.get('issn', '').upper()
 
     def __str__(self):
         return '|'.join([self.session_id, self.server_time.strftime("%M:%S"), self.action_name])
@@ -68,15 +70,15 @@ class HitManager:
     """
     Classe que gerencia objetos Hit
     """
-    __slots__ = ['session_to_actions',
-                 'pid_to_hits',
+    __slots__ = ['session_to_pid_format_lang',
+                 'pid_format_lang_to_hits',
                  'pdf_path_to_pid',
                  'issn_to_acronym',
                  'pid_to_format_lang']
 
     def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang):
-        self.session_to_actions = {}
-        self.pid_to_hits = {}
+        self.session_to_pid_format_lang = {}
+        self.pid_format_lang_to_hits = {}
 
         # Dicionários para tratamento de PID
         self.pdf_path_to_pid = path_pdf_to_pid
@@ -90,7 +92,6 @@ class HitManager:
         @param row: um objeto LogLinkVisitAction
         @return: um objeto Hit
         """
-
         dict_attrs = {'serverTime': row.server_time}
 
         if row.visit:
@@ -106,12 +107,14 @@ class HitManager:
 
             new_hit = Hit(**dict_attrs)
             if not new_hit.pid:
-                self.set_pid_from_pdf(new_hit)
+                self.set_pid(new_hit)
 
             self.set_hit_type(new_hit)
             self.set_content_type(new_hit)
-            self.set_lang(new_hit)
-            self.set_format(new_hit)
+
+            if new_hit.hit_type == map_helper.HIT_TYPE_ARTICLE:
+                self.set_format(new_hit)
+                self.set_lang(new_hit)
 
             return new_hit
         else:
@@ -126,12 +129,15 @@ class HitManager:
         :return: Hit povoado com os dados da linha de log
         """
         new_hit = Hit(**log_row)
-
         if not new_hit.pid:
-            self.set_pid_from_pdf(new_hit)
+            self.set_pid(new_hit)
 
         self.set_hit_type(new_hit)
         self.set_content_type(new_hit)
+
+        if new_hit.hit_type == map_helper.HIT_TYPE_ARTICLE:
+            self.set_format(new_hit)
+            self.set_lang(new_hit)
 
         return new_hit
 
@@ -139,52 +145,36 @@ class HitManager:
         """
         Limpa registros do HitManager
         """
-        self.pid_to_hits = {}
-        self.session_to_actions = {}
+        self.session_to_pid_format_lang = {}
+        self.pid_format_lang_to_hits = {}
 
     def add_hit(self, hit: Hit):
+        pfl = (hit.pid, hit.format, hit.lang)
+
+        if hit.session_id not in self.session_to_pid_format_lang:
+            self.session_to_pid_format_lang[hit.session_id] = {}
+
+        if pfl not in self.session_to_pid_format_lang[hit.session_id]:
+            self.session_to_pid_format_lang[hit.session_id][pfl] = []
+
+        self.session_to_pid_format_lang[hit.session_id][pfl].append(hit)
+
+    def group_by_pid_format_lang(self):
+        for s, pfl_hits in self.session_to_pid_format_lang.items():
+            for pfl, hits in pfl_hits.items():
+                if pfl not in self.pid_format_lang_to_hits:
+                    self.pid_format_lang_to_hits[pfl] = []
+                self.pid_format_lang_to_hits[pfl].extend(hits)
+
+    def remove_double_clicks(self):
         """
-        Adiciona Hit em dicionário identificador de sessão -> ações
-
-        :param hit: Hit ou acesso a ser adicionado no dicionário de sessões
+        Remove cliques duplos. São comparados os hits dentro de uma sessão e
+        que possuem a mesma trinca (pid, format, language)
         """
-        if hit.session_id not in self.session_to_actions:
-            self.session_to_actions[hit.session_id] = {}
-
-        if hit.action_name not in self.session_to_actions[hit.session_id]:
-            self.session_to_actions[hit.session_id][hit.action_name] = []
-
-        self.session_to_actions[hit.session_id][hit.action_name].append(hit)
-
-    def count_hits_by_pid(self):
-        """
-        Gera dicionário pid -> {tipo de url} -> [hits]
-        """
-        for session_id, actions_names in self.session_to_actions.items():
-            for action_name, hits in actions_names.items():
-                for hit in hits:
-                    # Caso PID esteja definido
-                    if hit.pid:
-                        if hit.pid not in self.pid_to_hits:
-                            self.pid_to_hits[hit.pid] = []
-                        self.pid_to_hits[hit.pid].append(hit)
-                    # TODO: situação em que o PID não está definido (acessos à plataforma em geral)
-                    else:
-                        pass
-
-    def remove_double_clicks(self, session_to_actions):
-        """
-        Remove cliques duplos
-
-        :param session_to_actions: dicionário que mapeia sessão a ações
-        """
-        for session, actions in session_to_actions.items():
-            for action_name, hits in actions.items():
-
-                # Lista de hits sem duplos-cliques
+        for session, pfl_hits in self.session_to_pid_format_lang.items():
+            for pfl, hits in pfl_hits.items():
                 cleaned_hits = []
 
-                # Caso haja mais de um Hit a uma mesma ação, dentro da sessão, remove os cliques-duplos
                 if len(hits) > 1:
                     hits = sorted(hits, key=lambda x: x.server_time)
 
@@ -201,17 +191,29 @@ class HitManager:
                 else:
                     cleaned_hits.extend(hits)
 
-                # Troca lista de hits para a lista de cliques limpa (sem duplos-cliques)
-                session_to_actions[session][action_name] = cleaned_hits
+                pfl_hits[pfl] = cleaned_hits
 
-    def set_pid_from_pdf(self, hit: Hit):
+    def set_pid(self, hit: Hit):
+        """
+        Atribui o valor de pid a um Hit. Primeiro tenta obter por meio de caminho de PDF, após, por parâmetro ISSN.
+        E nesse caso, o Hit é a uma URL de periódico o PID armazena o ISSN
+
+        @param hit: Hit a ser atribuído
+        """
+        if not hit.pid:
+            self._set_pid_from_pdf(hit)
+
+        if not hit.pid:
+            self._set_pid_as_issn(hit)
+
+    def _set_pid_from_pdf(self, hit: Hit):
         """
         Atribui o PID de um artigo a partir de dicionário de path_pdf para PID
 
         :param hit: um Hit a arquivo PDF
         """
         url_parsed = parse.urlparse(hit.action_name)
-        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
 
         extracted_pid = self.pdf_path_to_pid.get(collection, {}).get(url_parsed.path)
         if extracted_pid:
@@ -223,9 +225,20 @@ class HitManager:
                 logging.warning('Há mais de um PID %s associado ao PDF %s' % (extracted_pid, url_parsed.path))
                 hit.pid = sorted(extracted_pid)[0]
 
+    def _set_pid_as_issn(self, hit: Hit):
+        """
+        Caso PID seja nulo ou vazio e se há ISSN, atribui ISSN ao PID (o Hit é a uma URL de periódico)
+
+        @param hit: um objeto Hit
+        """
+        if not hit.pid:
+            if hit.issn:
+                hit.pid = hit.issn
+
     def set_hit_type(self, hit: Hit):
         """
-        Atribui o tipo de item acessado (article, issue, journal ou platform) conforme o parâmetro pid de um hit
+        Atribui o tipo de item acessado (article, issue, journal ou platform) conforme o parâmetro PID de um hit.
+        Também procura por ISSN caso PID seja vazio
 
         :param hit: um Hit
         """
@@ -254,10 +267,10 @@ class HitManager:
         @param hit: um Hit
         """
         url_parsed = parse.urlparse(hit.action_name)
-        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
 
         # Idioma padrão originário do dicionário
-        pid_langs = self.pid_to_format_lang.get(collection, {})
+        pid_langs = self.pid_to_format_lang.get(collection, {}).get(hit.pid)
         if not pid_langs:
             logging.warning('Não foi possível localizar o PID %s no dicionário' % hit.pid)
 
@@ -269,10 +282,10 @@ class HitManager:
         # Se idioma já está definido, verifica se é válido
         if hit.lang:
             # Idiomas possíveis
-            format_possible_langs = self.pid_to_format_lang.get(collection, {}).get(hit.pid, {}).get(hit.format)
+            format_possible_langs = self.pid_to_format_lang.get(collection, {}).get(hit.pid, {}).get(hit.format, [])
 
             # Se idioma obtido da URL não é válido, atribui idioma padrão
-            if not hit.lang in format_possible_langs:
+            if hit.lang not in format_possible_langs:
                 hit.lang = default_lang
         else:
             hit.lang = default_lang
@@ -293,9 +306,9 @@ class HitManager:
 
     def get_article_content_type(self, hit: Hit):
         """
-        Obtém o tipo de conteúdo acessado com base na URL da ação
+        Obtém o tipo de conteúdo acessado relacionado a artigo e com base na URL da ação
 
-        :return: Tipo de conteúdo acessado
+        :return: tipo de conteúdo acessado
         """
         if self._article_content_is_full_text(hit):
             return map_helper.ARTICLE_CONTENT_TYPE_FULL_TEXT
@@ -315,13 +328,30 @@ class HitManager:
             return map_helper.ARTICLE_CONTENT_TYPE_UNDEFINED
 
     def get_issue_content_type(self, hit: Hit):
-        return ''
+        """
+        Obtém o tipo de conteúdo acessado relacionado a fascículo e com base na URL da ação
+
+        @param hit: um objeto do tipo Hit
+        @return: tipo de conteúdo acessado
+        """
+        # TODO: rastrear URLs de fascículo
+        return
+
+    def get_platform_content_type(self, hit: Hit):
+        """
+        Obtém o tipo de conteúdo acessado relacionado a plataforma e com base na URL da ação
+
+        @param hit: um objeto do tipo Hit
+        @return: tipo de conteúdo acessado
+        """
+        # TODO: rastrear URLs de plataforma
+        return
 
     def get_journal_content_type(self, hit: Hit):
         """
-        Obtém o tipo de conteúdo acessado com base na URL da ação
+        Obtém o tipo de conteúdo acessado relacionado com periódico e com base na URL da ação
 
-        :return: Tipo de conteúdo acessado
+        :return: tipo de conteúdo acessado
         """
         if self._journal_content_is_main_page(hit):
             return map_helper.JOURNAL_CONTENT_TYPE_MAIN_PAGE
@@ -335,11 +365,10 @@ class HitManager:
             return map_helper.JOURNAL_CONTENT_TYPE_AUTHOR_INSTRUCTIONS
         elif self._journal_content_is_subscription(hit):
             return map_helper.JOURNAL_CONTENT_TYPE_SUBSCRIPTION
+        elif self._journal_content_is_google_metrics_h5_m5(hit):
+            return map_helper.JOURNAL_CONTENT_TYPE_GOOGLE_METRICS_H5_M5
         else:
             return map_helper.JOURNAL_CONTENT_TYPE_UNDEFINED
-
-    def get_platform_content_type(self, hit: Hit):
-        return ''
 
     def _article_content_is_pdf(self, hit):
         if map_helper.ARTICLE_URL_PDF in hit.action_name:
@@ -384,7 +413,7 @@ class HitManager:
 
     def _journal_content_is_about(self, hit):
         url_parsed = parse.urlparse(hit.action_name)
-        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
         acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_ABOUT.format(acronym) in hit.action_name:
@@ -392,7 +421,7 @@ class HitManager:
 
     def _journal_content_is_editorial_board(self, hit):
         url_parsed = parse.urlparse(hit.action_name)
-        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
         acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_EDITORIAL_BOARD.format(acronym) in hit.action_name:
@@ -400,7 +429,7 @@ class HitManager:
 
     def _journal_content_is_subscription(self, hit):
         url_parsed = parse.urlparse(hit.action_name)
-        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
         acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_SUBSCRIPTION.format(acronym) in hit.action_name:
@@ -408,8 +437,12 @@ class HitManager:
 
     def _journal_content_is_instructions(self, hit):
         url_parsed = parse.urlparse(hit.action_name)
-        collection = map_helper.DOMAINS.get(url_parsed.hostname, '')
+        collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
         acronym = self.issn_to_acronym.get(collection, {}).get(hit.pid, '')
         if acronym:
             if map_helper.JOURNAL_URL_INSTRUCTIONS.format(acronym) in hit.action_name:
                 return True
+
+    def _journal_content_is_google_metrics_h5_m5(self, hit):
+        if map_helper.JOURNAL_URL_GOOGLE_METRICS_H5 in hit.action_name:
+            return True

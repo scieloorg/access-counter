@@ -41,13 +41,17 @@ def fix_fields_interactions(matomo_db_uri):
     """
     engine = create_engine(matomo_db_uri)
 
-    sql_alter_column_visit_total_interactions = 'ALTER TABLE matomo_log_visit CHANGE visit_total_interactions visit_total_interactions MEDIUMINT(5) UNSIGNED NULL DEFAULT 0;'
+    sql_alter_column_visit_total_interactions = 'ALTER TABLE matomo_log_visit ' \
+                                                'CHANGE visit_total_interactions visit_total_interactions ' \
+                                                'MEDIUMINT(5) UNSIGNED NULL DEFAULT 0;'
     try:
         engine.execute(sql_alter_column_visit_total_interactions)
     except OperationalError:
         logging.warning('Não foi possível executar: %s' % sql_alter_column_visit_total_interactions)
 
-    sql_alter_column_interaction_position = 'ALTER TABLE matomo_log_link_visit_action CHANGE interaction_position interaction_position MEDIUMINT(5) UNSIGNED NULL DEFAULT NULL;'
+    sql_alter_column_interaction_position = 'ALTER TABLE matomo_log_link_visit_action ' \
+                                            'CHANGE interaction_position interaction_position ' \
+                                            'MEDIUMINT(5) UNSIGNED NULL DEFAULT NULL;'
     try:
         engine.execute(sql_alter_column_interaction_position)
     except OperationalError:
@@ -62,13 +66,19 @@ def add_foreign_keys_to_table_matomo_log_link_action(matomo_db_uri):
     """
     engine = create_engine(matomo_db_uri)
 
-    sql_foreign_key_idaction = 'ALTER TABLE matomo_log_link_visit_action ADD CONSTRAINT idaction_url FOREIGN KEY(idaction_url) REFERENCES matomo_log_action (idaction);'
+    sql_foreign_key_idaction = 'ALTER TABLE matomo_log_link_visit_action ' \
+                               'ADD CONSTRAINT idaction_url ' \
+                               'FOREIGN KEY(idaction_url) ' \
+                               'REFERENCES matomo_log_action (idaction);'
     try:
         engine.execute(sql_foreign_key_idaction)
     except OperationalError:
         logging.warning('Chave estrangeira já existe: %s' % sql_foreign_key_idaction)
 
-    sql_foreign_key_idvisit = 'ALTER TABLE matomo_log_link_visit_action ADD CONSTRAINT idvisit FOREIGN KEY(idvisit) REFERENCES matomo_log_visit (idvisit);'
+    sql_foreign_key_idvisit = 'ALTER TABLE matomo_log_link_visit_action ' \
+                              'ADD CONSTRAINT idvisit ' \
+                              'FOREIGN KEY(idvisit) ' \
+                              'REFERENCES matomo_log_visit (idvisit);'
     try:
         engine.execute(sql_foreign_key_idvisit)
     except OperationalError:
@@ -109,18 +119,17 @@ def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
         .order_by('location_ip')
 
 
-def get_journal(db_session, issn, collection):
+def get_journal(db_session, issn):
     """
     Obtém periódico a partir de ISSN e coleção
 
     @param db_session: sessão de conexão com banco Matomo
     @param issn: ISSN do periódico
-    @param collection: coleção do periódico
     @return: um resultado do tipo Journal
     """
-    return db_session.query(Journal).filter(
-        or_(and_(Journal.print_issn == issn, Journal.collection_acronym == collection),
-            and_(Journal.online_issn == issn, Journal.collection_acronym == collection))).one()
+    return db_session.query(Journal).filter(or_(Journal.print_issn == issn,
+                                                Journal.online_issn == issn,
+                                                Journal.pid_issn == issn)).one()
 
 
 def get_article(db_session, pid, collection):
@@ -137,15 +146,19 @@ def get_article(db_session, pid, collection):
              Article.pid == pid)).one()
 
 
-def get_metric_article(db_session, year_month_day, article_id):
+def get_metric_article(db_session, year_month_day, article_id, format_id, language_id):
     """
-    Obtém métrica de artigo a partir de data e id de artigo
+    Obtém métrica de artigo a partir de data, id de artigo, id de formato e id de idioma
 
     @param db_session: sessão de conexão com banco Matomo
     @param year_month_day: uma data em formato de String
     @param article_id: id de artigo
+    @param format_id: id de formato do artigo
+    @param language_id: id de idioma do artigo
     @return: um resultado do tipo MetricArticle
     """
     return db_session.query(MetricArticle).filter(
         and_(MetricArticle.year_month_day == year_month_day,
-             MetricArticle.fk_article_id == article_id)).one()
+             MetricArticle.fk_article_id == article_id,
+             MetricArticle.fk_format_id == format_id,
+             MetricArticle.fk_language_id == language_id)).one()
