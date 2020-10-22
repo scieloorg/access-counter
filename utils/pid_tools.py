@@ -9,7 +9,7 @@ def article_to_issue(pid: str):
 
     :param pid: o PID de um artigo
     """
-    if pid.startswith('s'):
+    if pid.startswith('S'):
         if len(pid) == 23:
             return pid[1:18]
 
@@ -20,7 +20,7 @@ def article_to_journal(pid: str):
 
     :param pid: o PID de um artigo
     """
-    if pid.startswith('s'):
+    if pid.startswith('S'):
         if len(pid) == 23:
             return pid[1:10]
 
@@ -31,7 +31,7 @@ def issue_to_journal(pid: str):
 
     :param pid: o PID de um artigo
     """
-    if not pid.startswith('s'):
+    if not pid.startswith('S'):
         if len(pid) == 17:
             return pid[:10]
 
