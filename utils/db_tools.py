@@ -6,7 +6,8 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
-from utils.sql_declarative import Base, LogLinkVisitAction, LogAction, LogVisit, Journal, Article, MetricArticle, JournalCollection
+from utils.sql_declarative import Base, LogLinkVisitAction, LogAction, LogVisit, Journal, Article, ArticleMetric, \
+    ArticleLanguage, ArticleFormat
 
 
 def create_tables(matomo_db_uri):
@@ -17,6 +18,27 @@ def create_tables(matomo_db_uri):
     """
     engine = create_engine(matomo_db_uri)
     Base.metadata.create_all(engine)
+
+    db_session = sessionmaker(bind=engine)
+
+    _add_basic_article_languages(db_session())
+    _add_basic_article_formats(db_session())
+
+
+def _add_basic_article_languages(db_session):
+    for l in ('pt', 'es', 'en'):
+        art_lang = ArticleLanguage()
+        art_lang.name = l
+        db_session.add(art_lang)
+    db_session.commit()
+
+
+def _add_basic_article_formats(db_session):
+    for fmt in ('html', 'pdf'):
+        art_fmt = ArticleFormat()
+        art_fmt.name = fmt
+        db_session.add(art_fmt)
+    db_session.commit()
 
 
 def create_index_ip_on_table_matomo_log_visit(matomo_db_uri):
@@ -152,12 +174,6 @@ def get_journal(db_session, issn):
                                                 Journal.pid_issn == issn)).one()
 
 
-def get_journal_collection(db_session, journal_collection_id, journal_id):
-    return db_session.query(JournalCollection).filter(
-        and_(JournalCollection.journal_collection_id == journal_collection_id,
-             JournalCollection.fk_journal_id == journal_id)).one()
-
-
 def get_article(db_session, pid, collection):
     """
     Obtém artigo a partir de PID e coleção
@@ -172,19 +188,19 @@ def get_article(db_session, pid, collection):
              Article.pid == pid)).one()
 
 
-def get_metric_article(db_session, year_month_day, article_id, format_id, language_id):
+def get_article_metric(db_session, year_month_day, article_id, article_format_id, article_language_id):
     """
     Obtém métrica de artigo a partir de data, id de artigo, id de formato e id de idioma
 
     @param db_session: sessão de conexão com banco Matomo
     @param year_month_day: uma data em formato de String
     @param article_id: id de artigo
-    @param format_id: id de formato do artigo
-    @param language_id: id de idioma do artigo
+    @param article_format_id: id de formato do artigo
+    @param article_language_id: id de idioma do artigo
     @return: um resultado do tipo MetricArticle
     """
-    return db_session.query(MetricArticle).filter(
-        and_(MetricArticle.year_month_day == year_month_day,
-             MetricArticle.fk_article_id == article_id,
-             MetricArticle.fk_format_id == format_id,
-             MetricArticle.fk_language_id == language_id)).one()
+    return db_session.query(ArticleMetric).filter(
+        and_(ArticleMetric.year_month_day == year_month_day,
+             ArticleMetric.fk_article_id == article_id,
+             ArticleMetric.fk_article_format_id == article_format_id,
+             ArticleMetric.fk_article_language_id == article_language_id)).one()

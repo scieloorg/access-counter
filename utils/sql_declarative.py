@@ -13,7 +13,7 @@ class Journal(Base):
     __table_args__ = (UniqueConstraint('print_issn',
                                        'online_issn',
                                        'pid_issn',
-                                       name='print_online_pid_issn'),)
+                                       name='uni_issn'),)
 
     __table_args__ += (Index('index_print_issn',
                              'print_issn'),)
@@ -31,7 +31,7 @@ class Journal(Base):
 
 
 class JournalCollection(Base):
-    __tablename__ = 'journal_collection'
+    __tablename__ = 'counter_journal_collection'
 
     __table_args__ = (UniqueConstraint('name',
                                        'fk_col_journal_id',
@@ -47,15 +47,15 @@ class JournalCollection(Base):
                                                                   name='fk_col_journal_id'))
 
 
-class Language(Base):
-    __tablename__ = 'counter_language'
+class ArticleLanguage(Base):
+    __tablename__ = 'counter_article_language'
 
     language_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     name = Column(VARCHAR(3), nullable=False)
 
 
-class Format(Base):
-    __tablename__ = 'counter_format'
+class ArticleFormat(Base):
+    __tablename__ = 'counter_article_format'
 
     format_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     name = Column(VARCHAR(4), nullable=False)
@@ -81,26 +81,26 @@ class Article(Base):
     journal = relationship(Journal)
 
 
-class MetricArticle(Base):
-    __tablename__ = 'counter_metric_article'
+class ArticleMetric(Base):
+    __tablename__ = 'counter_article_metric'
 
     __table_args__ = (UniqueConstraint('fk_article_id',
-                                       'fk_format_id',
-                                       'fk_language_id',
+                                       'fk_article_format_id',
+                                       'fk_article_language_id',
                                        'year_month_day',
-                                       name='uni_fk_article_id_fk_format_id_fk_language_id_year_month_day'),)
+                                       name='uni_art_for_lan_id_ymd'),)
 
-    __table_args__ += (Index('index_year_month_day_format_id',
-                             'fk_format_id',
+    __table_args__ += (Index('index_ymd_art_for_id',
+                             'fk_article_format_id',
                              'year_month_day'),)
 
-    __table_args__ += (Index('index_year_month_day_language_id',
-                             'fk_language_id',
+    __table_args__ += (Index('index_ymd_art_lan_id',
+                             'fk_article_language_id',
                              'year_month_day'),)
 
-    __table_args__ += (Index('index_year_month_day_format_id_language_id',
-                             'fk_format_id',
-                             'fk_language_id',
+    __table_args__ += (Index('index_ymd_art_for_lan_id',
+                             'fk_article_format_id',
+                             'fk_article_language_id',
                              'year_month_day'),)
 
     metric_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
@@ -108,8 +108,10 @@ class MetricArticle(Base):
     fk_article_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article.article_id', name='fk_article_id'))
     article = relationship(Article)
 
-    fk_language_id = Column(INTEGER(unsigned=True), ForeignKey('counter_language.language_id', name='fk_language_id'))
-    fk_format_id = Column(INTEGER(unsigned=True), ForeignKey('counter_format.format_id', name='fk_format_id'))
+    fk_article_language_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.language_id',
+                                                                       name='fk_article_language_id'))
+    fk_article_format_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.format_id',
+                                                                     name='fk_article_format_id'))
 
     year_month_day = Column(Date, nullable=False)
 

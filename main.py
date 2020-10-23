@@ -13,7 +13,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
 from utils import db_tools, pid_tools
 from utils.map_helper import FORMAT_TO_CODE, LANG_TO_CODE
-from utils.sql_declarative import Article, MetricArticle
+from utils.sql_declarative import Article, ArticleMetric
 
 
 MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '50000'))
@@ -51,13 +51,13 @@ def get_log_files(path_log_files: str):
     return log_files
 
 
-def update_metrics(metric_article, data):
+def update_metrics(article_metric, data):
     """
     Atualiza valores de métricas COUNTER para um registro.
     Caso registro seja novo, considera os valores em data.
     Caso registro já existe, faz soma valores atuais com valores novos
 
-    @param metric_article: registro de MetricArticle
+    @param article_metric: registro de ArticleMetric
     @param data: dados a serem adicionados ou atribuídos ao registro
     """
     keys = ['total_item_investigations',
@@ -66,11 +66,11 @@ def update_metrics(metric_article, data):
             'unique_item_requests']
 
     for k in keys:
-        current_value = metric_article.__getattribute__(k)
+        current_value = article_metric.__getattribute__(k)
         if current_value:
-            metric_article.__setattr__(k, current_value + data[k])
+            article_metric.__setattr__(k, current_value + data[k])
         else:
-            metric_article.__setattr__(k, data[k])
+            article_metric.__setattr__(k, data[k])
 
 
 def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
@@ -84,8 +84,8 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     for pfl_key, pid_data in metrics.items():
         pid, data_format, lang = pfl_key
 
-        format_id = FORMAT_TO_CODE.get(data_format, 1)
-        language_id = LANG_TO_CODE.get(lang, 1)
+        article_format_id = FORMAT_TO_CODE.get(data_format, 1)
+        article_language_id = LANG_TO_CODE.get(lang, 1)
 
         issn = pid_tools.article_to_journal(pid)
 
@@ -104,7 +104,7 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                     # Cria um novo artigo caso artigo não exista na base de dados
                     new_article = Article()
                     new_article.collection_acronym = collection
-                    new_article.fk_journal_id = existing_journal.journal_id
+                    new_article.fk_art_journal_id = existing_journal.journal_id
                     new_article.pid = pid
 
                     db_session.add(new_article)
@@ -113,31 +113,31 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                     existing_article = new_article
 
                 try:
-                    existing_metric_article = db_tools.get_metric_article(db_session=db_session,
+                    existing_article_metric = db_tools.get_article_metric(db_session=db_session,
                                                                           year_month_day=ymd,
                                                                           article_id=existing_article.article_id,
-                                                                          format_id=format_id,
-                                                                          language_id=language_id)
-                    update_metrics(existing_metric_article, pid_data[ymd])
-                    logging.info('Atualizada métrica {}-{}-{}-{}'.format(existing_metric_article.fk_article_id,
-                                                                         existing_metric_article.fk_format_id,
-                                                                         existing_metric_article.fk_language_id,
-                                                                         existing_metric_article.year_month_day))
+                                                                          article_format_id=article_format_id,
+                                                                          article_language_id=article_language_id)
+                    update_metrics(existing_article_metric, pid_data[ymd])
+                    logging.info('Atualizada métrica {}-{}-{}-{}'.format(existing_article_metric.fk_article_id,
+                                                                         existing_article_metric.fk_article_format_id,
+                                                                         existing_article_metric.fk_article_language_id,
+                                                                         existing_article_metric.year_month_day))
 
                 except NoResultFound:
                     # Cria um novo registro de métrica, caso não exista na base de dados
-                    new_metric_article = MetricArticle()
+                    new_metric_article = ArticleMetric()
                     new_metric_article.fk_article_id = existing_article.article_id
-                    new_metric_article.fk_format_id = format_id
-                    new_metric_article.fk_language_id = language_id
+                    new_metric_article.fk_article_format_id = article_format_id
+                    new_metric_article.fk_article_language_id = article_language_id
                     new_metric_article.year_month_day = ymd
 
                     update_metrics(new_metric_article, pid_data[ymd])
 
                     db_session.add(new_metric_article)
                     logging.info('Adicionada métrica {}-{}-{}-{}'.format(new_metric_article.fk_article_id,
-                                                                         new_metric_article.fk_format_id,
-                                                                         new_metric_article.fk_language_id,
+                                                                         new_metric_article.fk_article_format_id,
+                                                                         new_metric_article.fk_article_language_id,
                                                                          new_metric_article.year_month_day))
 
                 db_session.flush()
@@ -318,7 +318,7 @@ def main():
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
-        default='INFO',
+        default='WARNING',
         help='Nível de log'
     )
 
