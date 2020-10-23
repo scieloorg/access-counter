@@ -215,15 +215,11 @@ class HitManager:
         url_parsed = parse.urlparse(hit.action_name)
         collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
 
-        extracted_pid = self.pdf_path_to_pid.get(collection, {}).get(url_parsed.path)
+        extracted_pid = sorted(self.pdf_path_to_pid.get(collection, {}).get(url_parsed.path, set()))
         if extracted_pid:
-            if len(extracted_pid) == 1:
-                hit.pid = extracted_pid.pop()
-            else:
-                # TODO - À espera de um dicionário corrigido
-                #   Como solução temporária, é considerado o primeiro PID da lista ordenada
-                logging.warning('Há mais de um PID %s associado ao PDF %s' % (extracted_pid, url_parsed.path))
-                hit.pid = sorted(extracted_pid)[0]
+            # TODO - À espera de um dicionário corrigido
+            #   Como solução temporária, é considerado o primeiro PID da lista ordenada
+            hit.pid = extracted_pid[0]
 
     def _set_pid_as_issn(self, hit: Hit):
         """
