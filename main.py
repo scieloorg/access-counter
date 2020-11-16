@@ -13,8 +13,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
 from utils import db_tools, pid_tools
 from utils.map_helper import FORMAT_TO_CODE, LANG_TO_CODE
-from utils.sql_declarative import Article, ArticleMetric
-
+from utils.sql_declarative import Article, ArticleMetric, Localization
 
 MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '50000'))
 
@@ -81,8 +80,8 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    for pfl_key, pid_data in metrics.items():
-        pid, data_format, lang = pfl_key
+    for pflll_key, pid_data in metrics.items():
+        pid, data_format, lang, latitude, longitude = pflll_key
 
         article_format_id = FORMAT_TO_CODE.get(data_format, 1)
         article_language_id = LANG_TO_CODE.get(lang, 1)
@@ -113,16 +112,36 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                     existing_article = new_article
 
                 try:
+                    # Procura origem do acesso (latitude e longitude) na base de dados
+                    existing_localization = db_tools.get_localization(db_session=db_session,
+                                                                      latitude=latitude,
+                                                                      longitude=longitude)
+                except NoResultFound:
+                    # Cria uma nova localização
+                    new_localization = Localization()
+                    new_localization.latitude = latitude
+                    new_localization.longitude = longitude
+
+                    db_session.add(new_localization)
+                    db_session.flush()
+
+                    existing_localization = new_localization
+
+                try:
                     existing_article_metric = db_tools.get_article_metric(db_session=db_session,
                                                                           year_month_day=ymd,
                                                                           article_id=existing_article.article_id,
                                                                           article_format_id=article_format_id,
-                                                                          article_language_id=article_language_id)
+                                                                          article_language_id=article_language_id,
+                                                                          localization_id=existing_localization.localization_id
+                                                                          )
+
                     update_metrics(existing_article_metric, pid_data[ymd])
-                    logging.info('Atualizada métrica {}-{}-{}-{}'.format(existing_article_metric.fk_article_id,
-                                                                         existing_article_metric.fk_article_format_id,
-                                                                         existing_article_metric.fk_article_language_id,
-                                                                         existing_article_metric.year_month_day))
+                    logging.info('Atualizada métrica {}-{}-{}-{}-{}'.format(existing_article_metric.fk_article_id,
+                                                                            existing_article_metric.fk_article_format_id,
+                                                                            existing_article_metric.fk_article_language_id,
+                                                                            existing_article_metric.fk_localization_id,
+                                                                            existing_article_metric.year_month_day))
 
                 except NoResultFound:
                     # Cria um novo registro de métrica, caso não exista na base de dados
@@ -130,15 +149,17 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                     new_metric_article.fk_article_id = existing_article.article_id
                     new_metric_article.fk_article_format_id = article_format_id
                     new_metric_article.fk_article_language_id = article_language_id
+                    new_metric_article.fk_localization_id = existing_localization.localization_id
                     new_metric_article.year_month_day = ymd
 
                     update_metrics(new_metric_article, pid_data[ymd])
 
                     db_session.add(new_metric_article)
-                    logging.info('Adicionada métrica {}-{}-{}-{}'.format(new_metric_article.fk_article_id,
-                                                                         new_metric_article.fk_article_format_id,
-                                                                         new_metric_article.fk_article_language_id,
-                                                                         new_metric_article.year_month_day))
+                    logging.info('Adicionada métrica {}-{}-{}-{}-{}'.format(new_metric_article.fk_article_id,
+                                                                            new_metric_article.fk_article_format_id,
+                                                                            new_metric_article.fk_article_language_id,
+                                                                            new_metric_article.fk_localization_id,
+                                                                            new_metric_article.year_month_day))
 
                 db_session.flush()
 
@@ -260,10 +281,10 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     @param collection: acrônimo de coleção
     """
     hit_manager.remove_double_clicks()
-    hit_manager.group_by_pid_format_lang()
+    hit_manager.group_by_pid_format_lang_localization()
 
     cs = CounterStat()
-    cs.calculate_metrics(hit_manager.pid_format_lang_to_hits)
+    cs.calculate_metrics(hit_manager.pid_format_lang_localization_to_hits)
     export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
     hit_manager.reset()
 

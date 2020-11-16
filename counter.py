@@ -64,39 +64,44 @@ class CounterStat:
 
         return unique_requests
 
-    def calculate_metrics(self, pid_format_lang_to_hits: dict):
+    def _calculate(self, datefied_hits: dict, key, target: dict):
+        for ymd in datefied_hits:
+            if key not in target:
+                target[key] = {ymd: METRICS_ITEM.copy()}
+
+            target[key][ymd]['total_item_requests'] = self._get_total(
+                datefied_hits[ymd],
+                map_helper.HIT_TYPE_ARTICLE,
+                map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
+
+            target[key][ymd]['total_item_investigations'] = self._get_total(
+                datefied_hits[ymd],
+                map_helper.HIT_TYPE_ARTICLE,
+                map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+
+            target[key][ymd]['unique_item_requests'] = self._get_unique(
+                datefied_hits[ymd],
+                map_helper.HIT_TYPE_ARTICLE,
+                map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
+
+            target[key][ymd]['unique_item_investigations'] = self._get_unique(
+                datefied_hits[ymd],
+                map_helper.HIT_TYPE_ARTICLE,
+                map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+
+    def calculate_metrics(self, pid_format_lang_localization_to_hits):
         """
         Calcula métricas COUNTER e armazena os resultados no campo self.metrics
 
-        @param pid_format_lang_to_hits: dicionário (pid, format, language) --> [hit1, hit2, ...]
+        @param pid_format_lang_localization_to_hits: dicionário
+            (pid, format, language, localization) --> [hit1, hit2, ...]
         """
-        for pfl, hits in pid_format_lang_to_hits.items():
-            pid, data_format, lang = pfl
+        for pflll, hits in pid_format_lang_localization_to_hits.items():
+            pid, data_format, lang, latitude, longitude = pflll
+
             if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_ARTICLE:
                 datefied_hits = self.get_datefied_hits(hits)
-
-                for ymd in datefied_hits:
-                    if pfl not in self.metrics:
-                        self.metrics[pfl] = {ymd: METRICS_ITEM.copy()}
-                        self.metrics[pfl][ymd]['total_item_requests'] = self._get_total(
-                            datefied_hits[ymd],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                        self.metrics[pfl][ymd]['total_item_investigations'] = self._get_total(
-                            datefied_hits[ymd],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
-
-                        self.metrics[pfl][ymd]['unique_item_requests'] = self._get_unique(
-                            datefied_hits[ymd],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
-
-                        self.metrics[pfl][ymd]['unique_item_investigations'] = self._get_unique(
-                            datefied_hits[ymd],
-                            map_helper.HIT_TYPE_ARTICLE,
-                            map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+                self._calculate(datefied_hits, pflll, self.metrics)
 
     def get_datefied_hits(self, hits):
         """

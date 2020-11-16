@@ -11,6 +11,8 @@ class Hit:
     Classe que representa o acesso a uma página (ação)
     """
     __slots__ = ['ip',
+                 'latitude',
+                 'longitude',
                  'server_time',
                  'browser_name',
                  'browser_version',
@@ -28,6 +30,10 @@ class Hit:
     def __init__(self, **kargs):
         # Endereço IP
         self.ip = kargs.get('ip', '')
+
+        # Localização associada ao IP
+        self.latitude = kargs.get('latitude', '')
+        self.longitude = kargs.get('longitude', '')
 
         # Data e horário do acesso
         if isinstance(kargs.get('serverTime', ''), datetime):
@@ -71,14 +77,14 @@ class HitManager:
     Classe que gerencia objetos Hit
     """
     __slots__ = ['session_to_pid_format_lang',
-                 'pid_format_lang_to_hits',
+                 'pid_format_lang_localization_to_hits',
                  'pdf_path_to_pid',
                  'issn_to_acronym',
                  'pid_to_format_lang']
 
     def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang):
         self.session_to_pid_format_lang = {}
-        self.pid_format_lang_to_hits = {}
+        self.pid_format_lang_localization_to_hits = {}
 
         # Dicionários para tratamento de PID
         self.pdf_path_to_pid = path_pdf_to_pid
@@ -98,6 +104,8 @@ class HitManager:
             dict_attrs['browserName'] = row.visit.config_browser_name
             dict_attrs['browserVersion'] = row.visit.config_browser_version
             dict_attrs['ip'] = inet_ntoa(row.visit.location_ip)
+            dict_attrs['latitude'] = row.visit.location_latitude
+            dict_attrs['longitude'] = row.visit.location_longitude
         else:
             logging.warning('Hit ignorado, campo visit vazio para idlink_va %s' % row.idlink_va)
             return
@@ -146,7 +154,7 @@ class HitManager:
         Limpa registros do HitManager
         """
         self.session_to_pid_format_lang = {}
-        self.pid_format_lang_to_hits = {}
+        self.pid_format_lang_localization_to_hits = {}
 
     def add_hit(self, hit: Hit):
         pfl = (hit.pid, hit.format, hit.lang)
@@ -159,12 +167,14 @@ class HitManager:
 
         self.session_to_pid_format_lang[hit.session_id][pfl].append(hit)
 
-    def group_by_pid_format_lang(self):
+    def group_by_pid_format_lang_localization(self):
         for s, pfl_hits in self.session_to_pid_format_lang.items():
             for pfl, hits in pfl_hits.items():
-                if pfl not in self.pid_format_lang_to_hits:
-                    self.pid_format_lang_to_hits[pfl] = []
-                self.pid_format_lang_to_hits[pfl].extend(hits)
+                for h in hits:
+                    pflll = pfl + (h.latitude, h.longitude)
+                    if pflll not in self.pid_format_lang_localization_to_hits:
+                        self.pid_format_lang_localization_to_hits[pflll] = []
+                    self.pid_format_lang_localization_to_hits[pflll].append(h)
 
     def remove_double_clicks(self):
         """

@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
 from utils.sql_declarative import Base, LogLinkVisitAction, LogAction, LogVisit, Journal, Article, ArticleMetric, \
-    ArticleLanguage, ArticleFormat
+    ArticleLanguage, ArticleFormat, Localization
 
 
 def create_tables(matomo_db_uri):
@@ -188,7 +188,7 @@ def get_article(db_session, pid, collection):
              Article.pid == pid)).one()
 
 
-def get_article_metric(db_session, year_month_day, article_id, article_format_id, article_language_id):
+def get_article_metric(db_session, year_month_day, article_id, article_format_id, article_language_id, localization_id):
     """
     Obtém métrica de artigo a partir de data, id de artigo, id de formato e id de idioma
 
@@ -197,10 +197,18 @@ def get_article_metric(db_session, year_month_day, article_id, article_format_id
     @param article_id: id de artigo
     @param article_format_id: id de formato do artigo
     @param article_language_id: id de idioma do artigo
+    @param localization_id: latitude|longitude de origem do acesso
     @return: um resultado do tipo MetricArticle
     """
     return db_session.query(ArticleMetric).filter(
         and_(ArticleMetric.year_month_day == year_month_day,
              ArticleMetric.fk_article_id == article_id,
              ArticleMetric.fk_article_format_id == article_format_id,
-             ArticleMetric.fk_article_language_id == article_language_id)).one()
+             ArticleMetric.fk_article_language_id == article_language_id,
+             ArticleMetric.fk_localization_id == localization_id)).one()
+
+
+def get_localization(db_session, latitude, longitude):
+    return db_session.query(Localization).filter(and_(
+        Localization.latitude == latitude,
+        Localization.longitude == longitude)).one()

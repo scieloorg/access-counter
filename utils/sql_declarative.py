@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DateTime
+from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DateTime, DECIMAL
 from sqlalchemy.dialects.mysql import BIGINT, BINARY, INTEGER, TINYINT, VARBINARY, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -87,8 +87,9 @@ class ArticleMetric(Base):
     __table_args__ = (UniqueConstraint('fk_article_id',
                                        'fk_article_format_id',
                                        'fk_article_language_id',
+                                       'fk_localization_id',
                                        'year_month_day',
-                                       name='uni_art_for_lan_id_ymd'),)
+                                       name='uni_art_for_lan_loc_id_ymd'),)
 
     __table_args__ += (Index('index_ymd_art_for_id',
                              'fk_article_format_id',
@@ -103,6 +104,12 @@ class ArticleMetric(Base):
                              'fk_article_language_id',
                              'year_month_day'),)
 
+    __table_args__ += (Index('index_ymd_art_for_lan_loc_id',
+                             'fk_article_format_id',
+                             'fk_article_language_id',
+                             'fk_localization_id',
+                             'year_month_day'),)
+
     metric_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
     fk_article_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article.article_id', name='fk_article_id'))
@@ -113,12 +120,30 @@ class ArticleMetric(Base):
     fk_article_format_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.format_id',
                                                                      name='fk_article_format_id'))
 
+    fk_localization_id = Column(INTEGER(unsigned=True), ForeignKey('counter_localization.localization_id',
+                                                                   name='fk_localization_id'))
+
     year_month_day = Column(Date, nullable=False)
 
     total_item_requests = Column(Integer, nullable=False)
     total_item_investigations = Column(Integer, nullable=False)
     unique_item_requests = Column(Integer, nullable=False)
     unique_item_investigations = Column(Integer, nullable=False)
+
+
+class Localization(Base):
+    __tablename__ = 'counter_localization'
+    __table_args__ = (UniqueConstraint('latitude',
+                                       'longitude',
+                                       name='uni_lat_lon'),)
+    __table_args__ += (Index('index_lat_long',
+                             'latitude',
+                             'longitude'),)
+
+    localization_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    latitude = Column(DECIMAL(9, 6))
+    longitude = Column(DECIMAL(9, 6))
 
 
 class LogAction(Base):
@@ -148,6 +173,8 @@ class LogVisit(Base):
     config_browser_name = Column(VARCHAR(10))
     config_browser_version = Column(VARCHAR(20))
     location_ip = Column(VARBINARY(16), nullable=False)
+    location_latitude = Column(DECIMAL(9, 6))
+    location_longitude = Column(DECIMAL(9, 6))
 
 
 class LogLinkVisitAction(Base):
