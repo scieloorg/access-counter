@@ -30,5 +30,5 @@ for i in $(seq 1 31); do
         fi
     fi
     echo "Extraindo dados de $start..."
-    mysql -u $user -p matomo --password=$pass -e "SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE server_time >= '$start' AND server_time < '$end' order by location_ip;" > "results_$start.tsv"
+    mysql -u $user -p matomo --password=$pass -e "SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, location_latitude as latitude, location_longitude as longitude, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE server_time >= '$start' AND server_time < '$end' order by location_ip;" > "results_$start.tsv"
 done
