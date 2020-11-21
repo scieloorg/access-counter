@@ -15,7 +15,7 @@ from utils import db_tools, pid_tools
 from utils.map_helper import FORMAT_TO_CODE, LANG_TO_CODE
 from utils.sql_declarative import Article, ArticleMetric, Localization
 
-MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '50000'))
+MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '200000'))
 
 
 def get_dates(date: str):
@@ -361,7 +361,7 @@ def main():
 
     params = parser.parse_args()
 
-    logging.basicConfig(level=params.logging_level)
+    logging.basicConfig(filename='r5_' + time().__str__() + '.log', level=params.logging_level)
 
     time_start = time()
 
