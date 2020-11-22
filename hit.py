@@ -68,6 +68,11 @@ class Hit:
         self.format = ''
         self.issn = self.action_params.get('issn', '').upper()
 
+        # Atribui latitude e longitude 999.99 caso seja acesso da rede local
+        if self.latitude == 'NULL' or self.longitude == 'NULL':
+            self.latitude = -999.00
+            self.longitude = -999.99
+
     def __str__(self):
         return '|'.join([self.session_id, self.server_time.strftime("%M:%S"), self.action_name])
 
@@ -137,17 +142,22 @@ class HitManager:
         :return: Hit povoado com os dados da linha de log
         """
         new_hit = Hit(**log_row)
-        if not new_hit.pid:
-            self.set_pid(new_hit)
 
-        self.set_hit_type(new_hit)
-        self.set_content_type(new_hit)
+        if new_hit.action_name != 'NULL':
+            if not new_hit.pid:
+                self.set_pid(new_hit)
 
-        if new_hit.hit_type == map_helper.HIT_TYPE_ARTICLE:
-            self.set_format(new_hit)
-            self.set_lang(new_hit)
+            self.set_hit_type(new_hit)
+            self.set_content_type(new_hit)
 
-        return new_hit
+            if new_hit.hit_type == map_helper.HIT_TYPE_ARTICLE:
+                self.set_format(new_hit)
+                self.set_lang(new_hit)
+
+            return new_hit
+        else:
+            logging.warning('Hit ignorado, campo action vazio para session_id %s' % new_hit.session_id)
+            return
 
     def reset(self):
         """
