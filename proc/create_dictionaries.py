@@ -107,12 +107,12 @@ def export_issn_to_acronym(issn_to_acronyms: dict, filename: str):
 
 def export_path_pdf_to_pid(path_pdf_to_pid: dict, filename: str):
     with open(filename, 'w') as f:
-        f.write('collection_acronym,pid,pdf\n')
+        f.write('collection_acronym\tpid\tpdf\n')
 
         for col, values in path_pdf_to_pid.items():
             for pdf, v in values.items():
                 for vi in v:
-                    f.write(','.join([col, vi, pdf]) + '\n')
+                    f.write('\t'.join([col, vi, pdf]) + '\n')
 
 
 def export_lang_format_to_pid(pid_to_langs: dict, filename: str):
