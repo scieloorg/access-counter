@@ -43,9 +43,9 @@ def fix_issn_to_acronym_errors(issn_to_acronym: dict):
 
     :param issn_to_acronym: dicionário a ser corrigido
     """
-    issn_to_acronym['bol']['2077-3323'] = ['rcc']
-    issn_to_acronym['bol']['1817-7433'] = ['rccm']
-    issn_to_acronym['bol']['2220-2234'] = ['rccm']
+    issn_to_acronym['bol']['2077-3323'] = 'rcc'
+    issn_to_acronym['bol']['1817-7433'] = 'rccm'
+    issn_to_acronym['bol']['2220-2234'] = 'rccm'
 
 
 def get_journal_acronym(article: dict):
@@ -71,6 +71,69 @@ def get_fulltext_langs(article: dict):
             DOMAINS.add(url_host)
 
     return ftls
+
+
+def export_pid_to_dates(pid_to_dates: dict, filename: str):
+    with open(filename, 'w') as f:
+        keys = ['created_at', 'processing_date', 'publication_year', 'updated_at', 'publication_date']
+
+        f.write('collection_acronym,pid,' + ','.join(keys) + '\n')
+
+        for col, pid_values in pid_to_dates.items():
+            for pid, values in pid_values.items():
+                date_values = [values[k] for k in keys]
+
+                f.write(','.join([col, pid, ','.join(date_values)]) + '\n')
+
+
+def export_pid_to_issn(pid_to_issns: dict, filename: str):
+    with open(filename, 'w') as f:
+        f.write('collection_acronym,pid,issn\n')
+
+        for col, values in pid_to_issns.items():
+            for k, issns in values.items():
+                for i in issns:
+                    f.write(','.join([col, k, i]) + '\n')
+
+
+def export_issn_to_acronym(issn_to_acronyms: dict, filename: str):
+    with open(filename, 'w') as f:
+        f.write('collection_acronym,issn,journal_acronym\n')
+
+        for col, values in issn_to_acronyms.items():
+            for issn, acronym in values.items():
+                f.write(','.join([col, issn, acronym]) + '\n')
+
+
+def export_path_pdf_to_pid(path_pdf_to_pid: dict, filename: str):
+    with open(filename, 'w') as f:
+        f.write('collection_acronym,pid,pdf\n')
+
+        for col, values in path_pdf_to_pid.items():
+            for pdf, v in values.items():
+                for vi in v:
+                    f.write(','.join([col, vi, pdf]) + '\n')
+
+
+def export_lang_format_to_pid(pid_to_langs: dict, filename: str):
+    with open(filename, 'w') as f:
+        f.write('collection_acronym,pid,format,language,is_default\n')
+
+        for col, values in pid_to_langs.items():
+            for pid, format_langs in values.items():
+                default_value = format_langs['default']
+
+                for ki, vi in format_langs.items():
+                    if ki != 'default':
+                        for vii in vi:
+                            line = ','.join([col, pid, ki, vii])
+
+                            if vii == default_value:
+                                line += ',1'
+                            else:
+                                line += ',0'
+
+                            f.write(line + '\n')
 
 
 def main():
@@ -112,7 +175,7 @@ def main():
     print('Coletando dados...')
     for article in mc[MONGO_DATABASE][MONGO_COLLECTION].find({}):
         pid = article.get('code')
-        issns = article.get('code_title')
+        issns = [i for i in article.get('code_title') if i is not None]
         collection = article.get('collection')
         if not collection:
             print('WARNING:coleção indefinida para pid (%s) e issns (%s)' % (pid, issns))
@@ -181,10 +244,19 @@ def main():
     fix_issn_to_acronym_errors(issn_to_acronym)
 
     pickle.dump(pid_to_issns, open('pid_to_issns.data', 'wb'))
+    export_pid_to_issn(pid_to_issns, 'pid_to_issns.csv')
+
     pickle.dump(pid_to_langs, open('pid_to_format_lang.data', 'wb'))
+    export_lang_format_to_pid(pid_to_langs, 'pid_to_format_lang.csv')
+
     pickle.dump(path_pdf_to_pid, open('path_pdf_to_pid.data', 'wb'))
+    export_path_pdf_to_pid(path_pdf_to_pid, 'path_pdf_to_pid.csv')
+
     pickle.dump(issn_to_acronym, open('issn_to_acronym.data', 'wb'))
+    export_issn_to_acronym(issn_to_acronym, 'issn_to_acronym.csv')
+
     pickle.dump(pid_to_dates, open('pid_to_dates.data', 'wb'))
+    export_pid_to_dates(pid_to_dates, 'pid_to_dates.csv')
 
 
 if __name__ == '__main__':
