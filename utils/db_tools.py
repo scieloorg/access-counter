@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from sqlalchemy import create_engine, and_, or_
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -26,19 +26,27 @@ def create_tables(matomo_db_uri):
 
 
 def _add_basic_article_languages(db_session):
-    for l in ('pt', 'es', 'en'):
+    for ind, l in enumerate(['pt', 'es', 'en', 'fr', 'de', 'it']):
         art_lang = ArticleLanguage()
         art_lang.name = l
         db_session.add(art_lang)
-    db_session.commit()
+
+    try:
+        db_session.commit()
+    except IntegrityError as ie:
+        logging.warning('Idioma já existe: %s' % ie)
 
 
 def _add_basic_article_formats(db_session):
-    for fmt in ('html', 'pdf'):
+    for ind, fmt in enumerate(['html', 'pdf']):
         art_fmt = ArticleFormat()
         art_fmt.name = fmt
         db_session.add(art_fmt)
-    db_session.commit()
+
+    try:
+        db_session.commit()
+    except IntegrityError as ie:
+        logging.warning('Formato já existe: %s' % ie)
 
 
 def create_index_ip_on_table_matomo_log_visit(matomo_db_uri):
@@ -209,6 +217,36 @@ def get_article_metric(db_session, year_month_day, article_id, article_format_id
 
 
 def get_localization(db_session, latitude, longitude):
+    """
+    Obtém um par latitude longitude a partir de latitude e longitude
+
+    @param db_session: sessão de conexão com banco Matomo
+    @param latitude: decimal representante da latitude
+    @param longitude: decimal representante da longitude
+    @return: um resultado do tipo ArticleLocalization
+    """
     return db_session.query(Localization).filter(and_(
         Localization.latitude == latitude,
         Localization.longitude == longitude)).one()
+
+
+def get_article_format(db_session, format_name):
+    """
+    Obtém um formato
+
+    @param db_session: sessão de conexão com banco Matomo
+    @param format_name: nome do formato
+    @return: um resultado do tipo ArticleFormat
+    """
+    return db_session.query(ArticleFormat).filter(ArticleFormat.name == format_name).one()
+
+
+def get_article_language(db_session, language_name):
+    """
+    Obtém um par latitude longitude a partir de latitude e longitude
+
+    @param db_session: sessão de conexão com banco Matomo
+    @param language_name: um nome abreviado de idioma
+    @return: um resultado do tipo ArticleLanguage
+    """
+    return db_session.query(ArticleLanguage).filter(ArticleLanguage.name == language_name).one()
