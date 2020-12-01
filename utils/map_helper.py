@@ -89,7 +89,6 @@ ARTICLE_CONTENT_TYPE_REFERENCE_LIST = 10
 ARTICLE_LANG_PT = 'pt'
 ARTICLE_FORMAT_HTML = 'html'
 ARTICLE_FORMAT_PDF = 'pdf'
-ARTICLE_FORMAT_UNDEFINED = 'und'
 
 ARTICLE_DEFAULT_FORMAT = ARTICLE_FORMAT_HTML
 ARTICLE_DEFAULT_LANG = ARTICLE_LANG_PT
@@ -118,6 +117,22 @@ ISSUE_URL_MAIN_PAGE = 'scielo.br/scielo.php?'
 
 # Página RSS de issue + pid={}
 ISSUE_URL_RSS = 'scielo.br/rss.php?'
+
+# Conteúdo indefinido de fascículo
+ISSUE_CONTENT_TYPE_UNDEFINED = -1
+
+# Table of contents de fascículo
+ISSUE_CONTENT_TYPE_TOC = 0
+
+# Página RSS de fascículo
+ISSUE_CONTENT_TYPE_RSS = 1
+
+
+COUNTER_ISSUE_ITEM_INVESTIGATIONS = [ISSUE_CONTENT_TYPE_TOC,
+                                     ISSUE_CONTENT_TYPE_RSS]
+
+COUNTER_ISSUE_ITEM_REQUESTS = [ISSUE_CONTENT_TYPE_TOC]
+
 
 # Página principal de periódico + script=sci_serial, pid={}
 JOURNAL_URL_MAIN_PAGE = 'scielo.br/scielo.php?'

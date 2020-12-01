@@ -383,8 +383,12 @@ class HitManager:
         @param hit: um objeto do tipo Hit
         @return: tipo de conteúdo acessado
         """
-        # TODO: rastrear URLs de fascículo
-        return
+        if self._issue_content_is_toc(hit):
+            return map_helper.ISSUE_CONTENT_TYPE_TOC
+        elif self._issue_content_is_rss(hit):
+            return map_helper.ISSUE_CONTENT_TYPE_RSS
+        else:
+            return map_helper.ISSUE_CONTENT_TYPE_UNDEFINED
 
     def get_platform_content_type(self, hit: Hit):
         """
@@ -518,3 +522,12 @@ class HitManager:
     def _journal_content_is_google_metrics_h5_m5(self, hit):
         if map_helper.JOURNAL_URL_GOOGLE_METRICS_H5 in hit.action_name:
             return True
+
+    def _issue_content_is_rss(self, hit):
+        if map_helper.ISSUE_URL_RSS in hit.action_name:
+            return True
+
+    def _issue_content_is_toc(self, hit):
+        if map_helper.ISSUE_URL_MAIN_PAGE in hit.action_name:
+            if hit.script == 'sci_issuetoc':
+                return True
