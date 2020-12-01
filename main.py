@@ -54,7 +54,7 @@ def get_pretables(path_pretables: str):
 def update_metrics(article_metric, data):
     """
     Atualiza valores de métricas COUNTER para um registro.
-    Caso registro seja novo, considera os valores em data.
+    Caso registro seja novo, considera os valores no objeto data.
     Caso registro já existe, faz soma valores atuais com valores novos
 
     @param article_metric: registro de ArticleMetric
@@ -210,94 +210,59 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                 logging.error('Artigo já está na base: {}'.format(e))
 
 
-def run_for_pretable(pretable: str, hit_manager: HitManager, db_session, collection):
+def run(data, mode, hit_manager: HitManager, db_session, collection):
     """
     Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
     Por questões de limitação de memória, o método trabalha por IP.
     Para cada IP, são obtidos os registros a ele relacionados, de tabela pré-extraída da base de dados Matomo
 
-    @param pretable: arquivo a ser lido
+    @param data: arquivo de pré-tabela ou result query
+    @param mode: modo de execução (via pretables ou database)
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    with open(pretable) as f:
-        csv_file = csv.DictReader(f, delimiter='\t')
-
-        # IP atual a ser contabilizado
-        past_ip = ''
-
-        # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
-        bucket_counter = 0
-
-        # Verificador da primeira linha
-        line_counter = 0
-
-        for log_row in csv_file:
-            bucket_counter += 1
-            line_counter += 1
-
-            current_ip = log_row.get('ip', '')
-            if line_counter == 1:
-                past_ip = current_ip
-
-            if past_ip != current_ip:
-                run_counter_routines(hit_manager=hit_manager,
-                                     db_session=db_session,
-                                     collection=collection)
-                past_ip = current_ip
-
-            hit = hit_manager.create_hit_from_log_line(**log_row)
-            if hit:
-                hit_manager.add_hit(hit)
-
-            # Se atingiu o limit do bucket, faz commit
-            if bucket_counter >= MATOMO_DB_SESSION_BUCKET_LIMIT:
-                db_session.commit()
-                bucket_counter = 0
-
-    db_session.commit()
-
-
-def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
-    """
-    Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
-    Por questões de limitação de memória, o método trabalha por IP.
-    Para cada IP, são obtidos os registros a ele relacionados, diretamente da base de dados Matomo
-
-    @param date: data em format YYYY-MM-DD cujos dados serão extraídos
-    @param hit_manager: gerenciador de objetos Hit
-    @param idsite: id de site na base de dados
-    @param db_session: sessão com banco de dados
-    @param collection: acrônimo de coleção
-    """
-    results = db_tools.get_matomo_logs_for_date(db_session=db_session,
-                                                idsite=idsite,
-                                                date=date)
-
     # IP atual a ser contabilizado
     past_ip = ''
+
+    # Contador para rodar rotinas counter a cada IP_LIMIT
+    ip_counter = 0
 
     # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
     bucket_counter = 0
 
     # Verificador da primeira linha
     line_counter = 0
-    for row in results:
+
+    for d in data:
         bucket_counter += 1
         line_counter += 1
+        ip_counter += 1
 
-        current_ip = inet_ntoa(row.visit.location_ip)
+        if mode == 'pretable':
+            current_ip = d.get('ip', '')
+        else:
+            current_ip = inet_ntoa(d.visit.location_ip)
+
         if line_counter == 1:
             past_ip = current_ip
 
         if past_ip != current_ip:
-            run_counter_routines(hit_manager=hit_manager,
-                                 db_session=db_session,
-                                 collection=collection)
+            ip_counter += 1
+
+            if ip_counter >= MATOMO_DB_IP_COUNTER_LIMIT:
+                run_counter_routines(hit_manager=hit_manager,
+                                     db_session=db_session,
+                                     collection=collection)
+                ip_counter = 0
+
             past_ip = current_ip
 
-        hit = hit_manager.create_hit_from_sql_data(row)
+        if mode == 'pretable':
+            hit = hit_manager.create_hit_from_log_line(**d)
+        else:
+            hit = hit_manager.create_hit_from_sql_data(d)
+
         if hit:
             hit_manager.add_hit(hit)
 
@@ -306,6 +271,9 @@ def run_for_matomo_db(date, hit_manager, idsite, db_session, collection):
             db_session.commit()
             bucket_counter = 0
 
+    run_counter_routines(hit_manager=hit_manager,
+                         db_session=db_session,
+                         collection=collection)
     db_session.commit()
 
 
@@ -390,11 +358,11 @@ def main():
              'apenas os dados do dia indicado serão extraídos'
     )
     group.add_argument(
-        '--dir_pretables',
+        '--pretables',
         dest='pretables',
         default=[],
-        help='Carrega dados a partir de uma pasta com arquivos de log ou um único arquivo de log '
-             'prevhit_managerente extraído(s) do Matomo'
+        help='Carrega dados a partir de uma pasta com arquivos de pré-tabela ou um único arquivo de pré-tabela '
+             'previamente extraído(s) do Matomo'
     )
 
     params = parser.parse_args()
@@ -420,27 +388,36 @@ def main():
     if params.pretables:
         logging.info('Iniciado para usar arquivos de pré-tabelas extraídas do Matomo')
         pretables = get_pretables(params.pretables)
+
         for pt in pretables:
             logging.info('Extraindo dados do arquivo {}'.format(pt))
             hit_manager.reset()
 
-            run_for_pretable(pretable=pt,
-                             hit_manager=hit_manager,
-                             db_session=db_session,
-                             collection=params.collection)
+            with open(pt) as data:
+                csv_data = csv.DictReader(data, delimiter='\t')
+                run(data=csv_data,
+                    mode='pretable',
+                    hit_manager=hit_manager,
+                    db_session=db_session,
+                    collection=params.collection)
 
     else:
         logging.info('Iniciado para coletar dados diretamente de banco de dados Matomo')
         dates = get_dates(date=params.period)
+
         for date in dates:
             logging.info('Extraindo dados para data {}'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
 
-            run_for_matomo_db(date=date,
-                              hit_manager=hit_manager,
-                              idsite=params.idsite,
-                              db_session=db_session,
-                              collection=params.collection)
+            db_data = db_tools.get_matomo_logs_for_date(db_session=db_session,
+                                                        idsite=params.idsite,
+                                                        date=date)
+
+            run(data=db_data,
+                mode='database',
+                hit_manager=hit_manager,
+                db_session=db_session,
+                collection=params.collection)
 
     time_end = time()
     logging.info('Durou %.2f segundos' % (time_end - time_start))
