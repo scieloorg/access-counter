@@ -16,14 +16,23 @@ HIT_TYPE_PLATFORM = 3
 # Página principal de artigo + script=sci_arttext, pid={}
 ARTICLE_URL_FULL_TEXT = 'scielo.br/scielo.php?'
 
+# Página principal de um press release + script=script_pr, pid={}
+ARTICLE_URL_PRESS_RELEASE = 'scielo.br/scielo.php?'
+
 # Página principal de artigo, em formato plus + pid={}
 ARTICLE_URL_FULL_TEXT_PLUS = 'scielo.br/article_plus.php?'
 
 # Página de resumo de artigo + script=sci_abstract, pid={}
 ARTICLE_URL_ABSTRACT = 'scielo.br/scielo.php?'
 
+# Página de lista de referências de artigo + pid={}
+ARTICLE_URL_REFERENCE_LIST = 'scielo.br/scieloorg/php/reference.php?'
+
 # Página sobre como citar artigo + script=sci_isoref, pid={}
 ARTICLE_URL_HOW_TO_CITE = 'scielo.br/scielo.php?'
+
+# Página de com arquivo para citação ao artigo + format={}, pid={}
+ARTICLE_URL_DOWNLOAD_CITATION = 'scielo.br/scielo.php?download'
 
 # Página de artigo em formato XML + pid={}
 ARTICLE_URL_XML = 'scielo.br/scieloorg/php/articlexml.php?'
@@ -33,6 +42,12 @@ ARTICLE_URL_TRANSLATED = 'scielo.br/scieloorg/php/translate.php?'
 
 # Arquivo PDF relacionado a artigo + nome_do_arquivo.pdf
 ARTICLE_URL_PDF = 'http://www.scielo.br/pdf/'
+
+# Arquivo PDF relacionado a artigo + pid{}, por meio de serviço externo ReadCube
+ARTICLE_URL_PDF_FROM_EXTERNAL_TOOL = 'scielo.br/readcube/epdf.php?'
+
+# Página que requisita arquivo PDF relacionado a artigo + script=sci_pdf, pid={}
+ARTICLE_URL_PDF_REQUEST = 'scielo.br/scielo.php?'
 
 # Artigo com tipo de conteúdo indefinido
 ARTICLE_CONTENT_TYPE_UNDEFINED = -1

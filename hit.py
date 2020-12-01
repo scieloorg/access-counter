@@ -357,14 +357,22 @@ class HitManager:
             return map_helper.ARTICLE_CONTENT_TYPE_FULL_TEXT_PLUS
         elif self._article_content_is_abstract(hit):
             return map_helper.ARTICLE_CONTENT_TYPE_ABSTRACT
+        elif self._article_content_is_reference_list(hit):
+            return map_helper.ARTICLE_CONTENT_TYPE_REFERENCE_LIST
+        elif self._article_content_is_press_release(hit):
+            return map_helper.ARTICLE_CONTENT_TYPE_PRESS_RELEASE
         elif self._article_content_is_xml(hit):
             return map_helper.ARTICLE_CONTENT_TYPE_XML
         elif self._article_content_is_pdf(hit):
             return map_helper.ARTICLE_CONTENT_TYPE_PDF
         elif self._article_content_is_how_to_cite(hit):
             return map_helper.ARTICLE_CONTENT_TYPE_HOW_TO_CITE
+        elif self._article_content_is_download_citation(hit):
+            return map_helper.ARTICLE_CONTENT_TYPE_DOWNLOAD_CITATION
         elif self._article_content_is_translated(hit):
             return map_helper.ARTICLE_CONTENT_TYPE_TRANSLATED
+        elif self._article_content_is_pdf_request(hit):
+            return map_helper.ARTICLE_CONTENT_TYPE_PDF_REQUEST
         else:
             return map_helper.ARTICLE_CONTENT_TYPE_UNDEFINED
 
@@ -411,14 +419,25 @@ class HitManager:
         else:
             return map_helper.JOURNAL_CONTENT_TYPE_UNDEFINED
 
+    def _article_content_is_pdf_request(self, hit):
+        if map_helper.ARTICLE_URL_PDF_REQUEST in hit.action_name:
+            if hit.script == 'sci_pdf':
+                return True
+
     def _article_content_is_pdf(self, hit):
         if map_helper.ARTICLE_URL_PDF in hit.action_name:
+            return True
+        if map_helper.ARTICLE_URL_PDF_FROM_EXTERNAL_TOOL in hit.action_name:
             return True
 
     def _article_content_is_how_to_cite(self, hit):
         if map_helper.ARTICLE_URL_HOW_TO_CITE in hit.action_name:
             if hit.script == 'sci_isoref':
                 return True
+
+    def _article_content_is_download_citation(self, hit):
+        if map_helper.ARTICLE_URL_DOWNLOAD_CITATION in hit.action_name:
+            return True
 
     def _article_content_is_full_text(self, hit):
         if map_helper.ARTICLE_URL_FULL_TEXT in hit.action_name:
@@ -428,10 +447,22 @@ class HitManager:
     def _article_content_is_full_text_plus(self, hit):
         if map_helper.ARTICLE_URL_FULL_TEXT_PLUS in hit.action_name:
             return True
+        if map_helper.ARTICLE_URL_FULL_TEXT in hit.action_name:
+            if hit.script == 'sci_arttext_plus':
+                return True
 
     def _article_content_is_abstract(self, hit):
         if map_helper.ARTICLE_URL_ABSTRACT in hit.action_name:
             if hit.script == 'sci_abstract':
+                return True
+
+    def _article_content_is_reference_list(self, hit):
+        if map_helper.ARTICLE_URL_REFERENCE_LIST in hit.action_name:
+            return True
+
+    def _article_content_is_press_release(self, hit):
+        if map_helper.ARTICLE_URL_PRESS_RELEASE in hit.action_name:
+            if hit.script == 'sci_arttext_pr':
                 return True
 
     def _article_content_is_translated(self, hit):
