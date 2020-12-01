@@ -34,7 +34,7 @@ def get_default_lang(article: dict):
     :param article: artigo em formato de dicionário
     :return: o idioma do artigo, se encontrado, ou string vazia, caso contrário
     """
-    return article.get('article', {}).get('v40', [{}])[0].get('_', '')
+    return article.get('article', {}).get('v40', [{}])[0].get('_', '').lower()
 
 
 def fix_issn_to_acronym_errors(issn_to_acronym: dict):
@@ -67,7 +67,7 @@ def get_fulltext_langs(article: dict):
             url_host = url_parsed.hostname
             url_path = url_parsed.path
 
-            ftls[mode].append([lang, url_host, url_path])
+            ftls[mode].append([lang.lower(), url_host, url_path])
             DOMAINS.add(url_host)
 
     return ftls
@@ -153,7 +153,7 @@ def main():
     try:
         mc = MongoClient(params.mongo_uri)
     except ConnectionError as e:
-        print('Não foi possível conectar a base de dados do ArticleMeta')
+        print('\nNão foi possível conectar a base de dados do ArticleMeta')
         print(e)
         exit(1)
 
@@ -172,13 +172,17 @@ def main():
     # PID de artigo para lista de datas
     pid_to_dates = {}
 
+    total_articles = 0
     print('Coletando dados...')
     for article in mc[MONGO_DATABASE][MONGO_COLLECTION].find({}):
+        total_articles += 1
+        print('\r%d de artigos extraídos' % total_articles, end='')
+
         pid = article.get('code')
         issns = [i for i in article.get('code_title') if i is not None]
         collection = article.get('collection')
         if not collection:
-            print('WARNING:coleção indefinida para pid (%s) e issns (%s)' % (pid, issns))
+            print('\n[WARNING] Coleção indefinida para pid (%s) e issns (%s)' % (pid, issns))
 
         default_lang = get_default_lang(article)
         acronym = get_journal_acronym(article)
@@ -193,9 +197,9 @@ def main():
                         issn_to_acronym[collection][i] = acronym
                     else:
                         if acronym != issn_to_acronym[collection][i]:
-                            print('WARNING:(%s, %s, %s, %s) já está na lista e é diferente de %s' % (collection, pid, i, acronym, issn_to_acronym[collection][i]))
+                            print('\n[WARNING] (%s, %s, %s, %s) já está na lista e é diferente de %s' % (collection, pid, i, acronym, issn_to_acronym[collection][i]))
         else:
-            print('WARNING:%s, %s não possui acrônimo' % (collection, pid))
+            print('\n[WARNING] %s, %s não possui acrônimo' % (collection, pid))
 
         if collection not in pid_to_issns:
             pid_to_issns[collection] = {}
@@ -230,7 +234,7 @@ def main():
                     path_pdf_to_pid[collection][url_path].add(pid)
 
                     if len(path_pdf_to_pid[collection][url_path]) > 1:
-                        print('WARNING:há mais de um PID em path_pdf_to_pid[%s][%s] = %s' % (collection, url_path, path_pdf_to_pid[collection][url_path]))
+                        print('\n[WARNING] Há mais de um PID em path_pdf_to_pid[%s][%s] = %s' % (collection, url_path, path_pdf_to_pid[collection][url_path]))
 
                     if 'pdf' not in pid_to_langs[collection][pid]:
                         pid_to_langs[collection][pid]['pdf'] = set()
