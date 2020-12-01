@@ -3,49 +3,59 @@
 Gera relatórios em formato COUNTER R5.
 
 ## Como instalar
-1. Criar ambiente virtual para python 3.6+: `virtualenv -p python3.6 .venv`
-2. Acessar ambiente virtual: `source .venv/bin/activate`
-3. Instalar dependências:  `apt install libmysqlclient-dev`, `pip install -r requirements.txt`
+__Criar ambiente virtual para python 3.6+__ 
+```bash
+virtualenv -p python3.6 .venv
+```
+
+__Acessar ambiente virtual__
+```bash
+source .venv/bin/activate
+```
+
+__Instalar dependências__
+```bash
+apt install libmysqlclient-dev
+pip install -r requirements.txt
+```
 
 ## Como usar
 
 __Criar tabelas__
 
-`python create_tables.py -d mysql://user:pass@host:port/database --create_index_ip_on_matomo_log_visit --fix_fields_interactions`
+```python
+python create_tables.py -u {STRING DE CONEXÃO COM MATOMO-DB} --fix_matomo_db
+```
 
 
 __Popular tabela de periódicos__
 
-`python populate_journals.py -d mysql://user:pass@host:port/database`
+```python
+python populate_journals.py -u {STRING DE CONEXÃO COM MATOMO-DB}
+```
+
 
 __Coletar dados do Matomo e gerar métricas COUNTER__
 
 _Por meio de arquivos de log pré-processados_
 
-`python main.py -p path_pdf_to_pid.data -a issn_to_acronym.data -p path_pdf_to_pid.data --langs pid_to_format_lang.data -u mysql://user:pass@host:port/database -l data/matomo-logs/ --idsite=1`
+```python
+python main.py --dict_pdf {DICIONÁRIO PDF-PID} --dict_acronym {DICIONÁRIO ISSN-ACRÔNIMO --dict_language {DICIONÁRIO PID-FORMATO-IDIOMA} -u {STRING DE CONEXÃO COM MATOMO-DB} --dir_pretables {DIRETÓRIO PRÉ-TABELAS MATOMO} --idsite {ID DO SITE}
+```
 
 _Por meio de acesso direto ao banco de dados do Matomo_
 
-`python main.py -p path_pdf_to_pid.data -a issn_to_acronym.data -p path_pdf_to_pid.data --langs pid_to_format_lang.data -u mysql://user:pass@host:port/database --period 2020-06-01,2020-06-07 --idsite=1`
+```python
+python main.py --dict_pdf {DICIONÁRIO PDF-PID} --dict_acronym {DICIONÁRIO ISSN-ACRÔNIMO --dict_language {DICIONÁRIO PID-FORMATO-IDIOMA} -u {STRING DE CONEXÃO COM MATOMO-DB} --period {PERIÓDO} --idsite {ID DO SITE}
+```
+
 
 ## Insumos utilizados
-a detalhar
 
-__Dicionário de arquivos PDF__
-- `path_pdf_to_pid.data`
+__Dicionário PDF-PID__
  
-__Dicionário de acrônimos de periódicos__
-- `issn_to_acronym.data`
+__Dicionário ISSN-ACRÔNIMO__
 
-__Dicionário de idiomas__
-- `pid_to_format_lang.data`
+__Dicionário PID-FORMAT-IDIOMA__
 
-__Logs Matomo extraídos previamente__
-- `data/matomo-logs/`
-
-
-## Tabelas COUNTER
-a detalhar
-
-## Tabelas Matomo
-a detalhar
+__Diretório PRÉ-TABELAS MATOMO__
