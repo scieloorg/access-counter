@@ -140,7 +140,7 @@ class HitManager:
 
                 # Ignoramos tudo que não for acesso a artigo
                 else:
-                    logging.warning('Hit ignorado, URL não é de acesso a artigo (%s, %s)' % (new_hit.ip, new_hit.action_name))
+                    logging.debug('Hit ignorado, URL não é de acesso a artigo (%s, %s)' % (new_hit.ip, new_hit.action_name))
                     return
 
                 if new_hit.content_type == -1:
@@ -189,7 +189,7 @@ class HitManager:
 
         # Ignoramos tudo que não for acesso a artigo
         else:
-            logging.warning('Hit ignorado, URL não é de artigo (%s, %s) ' % (new_hit.ip, new_hit.action_name))
+            logging.debug('Hit ignorado, URL não é de artigo (%s, %s) ' % (new_hit.ip, new_hit.action_name))
             return
 
         return new_hit
