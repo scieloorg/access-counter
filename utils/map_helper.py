@@ -198,7 +198,10 @@ REGEX_JOURNAL_PID = r'^[0-9]{4}-[0-9]{3}[0-9xX]$'
 LANG_TO_CODE = {
     'pt': 1,
     'es': 2,
-    'en': 3
+    'en': 3,
+    'fr': 4,
+    'de': 5,
+    'it': 6
 }
 
 FORMAT_TO_CODE = {
