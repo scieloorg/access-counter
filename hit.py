@@ -138,7 +138,12 @@ class HitManager:
                     self.set_format(new_hit)
                     self.set_lang(new_hit)
 
+                if new_hit.content_type == -1:
+                    logging.warning('Hit ignorado, URL é descartável ou desconhecida (%s, %s) ' % (new_hit.ip, new_hit.action_name))
+                    return
+
                 return new_hit
+
             else:
                 logging.warning('Hit ignorado, acesso é da rede local (%s,%s) ' % (new_hit.ip, new_hit.action_name))
                 return
@@ -168,6 +173,10 @@ class HitManager:
 
         self.set_hit_type(new_hit)
         self.set_content_type(new_hit)
+
+        if new_hit.content_type == -1:
+            logging.warning('Hit ignorado, URL é descartável ou desconhecida (%s, %s) ' % (new_hit.ip, new_hit.action_name))
+            return
 
         if new_hit.hit_type == map_helper.HIT_TYPE_ARTICLE:
             self.set_format(new_hit)
@@ -333,8 +342,8 @@ class HitManager:
                 hit.format = map_helper.ARTICLE_FORMAT_PDF
             else:
                 hit.format = map_helper.ARTICLE_FORMAT_HTML
-        else:
-            hit.format = map_helper.ARTICLE_DEFAULT_FORMAT
+        elif hit.content_type == -1 or not hit.content_type:
+            hit.format = map_helper.ARTICLE_FORMAT_UNDEFINED
 
     def get_article_content_type(self, hit: Hit):
         """
