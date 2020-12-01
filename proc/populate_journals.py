@@ -171,14 +171,14 @@ def main():
     parser = argparse.ArgumentParser(usage)
 
     parser.add_argument(
-        '-d',
+        '-u', '--matomo_db_uri',
         required=True,
         dest='matomodb_uri',
         help='String de conexão a base SQL no formato mysql://username:password@host1:port/database'
     )
 
     parser.add_argument(
-        '-t',
+        '-t', '--use_thrift',
         dest='use_thrift',
         default=False,
         action='store_true',
