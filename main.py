@@ -13,7 +13,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
 from utils import db_tools, pid_tools
 from utils.map_helper import FORMAT_TO_CODE, LANG_TO_CODE
-from utils.sql_declarative import Article, ArticleMetric, Localization
+from utils.sql_declarative import Article, ArticleMetric, Localization, ArticleFormat, ArticleLanguage
 
 MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '200000'))
 
@@ -35,19 +35,19 @@ def get_dates(date: str):
             return [start + datetime.timedelta(days=x) for x in range(0, (end - start).days)]
 
 
-def get_log_files(path_log_files: str):
+def get_pretables(path_pretables: str):
     """
     Obtém lista de caminhos de arquivos log com dados previamente extraídos do Matomo
 
-    @param path_log_files: arquivo de log ou pasta com arquivos de log
+    @param path_pretables: arquivo de log ou pasta com arquivos de log
     @return: lista de caminhos de arquivo(s) log
     """
-    log_files = []
-    if os.path.isfile(path_log_files):
-        log_files.append(path_log_files)
-    elif os.path.isdir(path_log_files):
-        log_files.extend([os.path.join(os.path.abspath(path_log_files), f) for f in os.listdir(path_log_files)])
-    return log_files
+    pretables = []
+    if os.path.isfile(path_pretables):
+        pretables.append(path_pretables)
+    elif os.path.isdir(path_pretables):
+        pretables.extend([os.path.join(os.path.abspath(path_pretables), f) for f in os.listdir(path_pretables)])
+    return pretables
 
 
 def update_metrics(article_metric, data):
@@ -83,8 +83,45 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     for pflll_key, pid_data in metrics.items():
         pid, data_format, lang, latitude, longitude = pflll_key
 
-        article_format_id = FORMAT_TO_CODE.get(data_format, 1)
-        article_language_id = LANG_TO_CODE.get(lang, 1)
+        article_format_id = FORMAT_TO_CODE.get(data_format, -1)
+
+        # Caso artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_language
+        if article_format_id == -1:
+            try:
+                existing_article_format = db_tools.get_article_format(db_session=db_session,
+                                                                      format_name=data_format)
+                article_format_id = existing_article_format.format_id
+
+            except NoResultFound:
+                new_article_format = ArticleFormat()
+                new_article_format.name = data_format
+
+                db_session.add(new_article_format)
+                db_session.flush()
+
+                article_format_id = new_article_format.format_id
+
+                logging.info('Adicionado formato {}-{}'.format(new_article_format.format_id,
+                                                               new_article_format.name))
+
+        article_language_id = LANG_TO_CODE.get(lang, -1)
+        if article_language_id == -1:
+            try:
+                existing_article_language = db_tools.get_article_language(db_session=db_session,
+                                                                          language_name=lang)
+                article_language_id = existing_article_language.language_id
+
+            except NoResultFound:
+                new_article_language = ArticleLanguage()
+                new_article_language.name = lang
+
+                db_session.add(new_article_language)
+                db_session.flush()
+
+                article_language_id = new_article_language.language_id
+
+                logging.info('Adicionado idioma {}-{}'.format(new_article_language.language_id,
+                                                              new_article_language.name))
 
         issn = pid_tools.article_to_journal(pid)
 
@@ -172,18 +209,18 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                 logging.error('Artigo já está na base: {}'.format(e))
 
 
-def run_for_log_file(log_file: str, hit_manager: HitManager, db_session, collection):
+def run_for_pretable(pretable: str, hit_manager: HitManager, db_session, collection):
     """
     Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
     Por questões de limitação de memória, o método trabalha por IP.
-    Para cada IP, são obtidos os registros a ele relacionados, do arquivo de log pré-extraído da base de dados Matomo
+    Para cada IP, são obtidos os registros a ele relacionados, de tabela pré-extraída da base de dados Matomo
 
-    @param log_file: arquivo a ser lido
+    @param pretable: arquivo a ser lido
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    with open(log_file) as f:
+    with open(pretable) as f:
         csv_file = csv.DictReader(f, delimiter='\t')
 
         # IP atual a ser contabilizado
@@ -308,21 +345,21 @@ def main():
     )
 
     parser.add_argument(
-        '-p', '--pdf_paths',
+        '--dict_pdf',
         dest='pdf_to_pid',
         required=True,
         help='Dicionário que mapeia caminho de PDF a PID'
     )
 
     parser.add_argument(
-        '-a', '--acronyms',
+        '--dict_acronym',
         dest='issn_to_acronym',
         required=True,
         help='Dicionário que mapeia ISSN a acrônimo'
     )
 
     parser.add_argument(
-        '--langs',
+        '--dict_language',
         dest='pid_to_format_lang',
         required=True,
         help='Dicionário que mapeia PID a formato e idioma'
@@ -352,8 +389,8 @@ def main():
              'apenas os dados do dia indicado serão extraídos'
     )
     group.add_argument(
-        '--logs',
-        dest='logs',
+        '--dir_pretables',
+        dest='pretables',
         default=[],
         help='Carrega dados a partir de uma pasta com arquivos de log ou um único arquivo de log '
              'prevhit_managerente extraído(s) do Matomo'
@@ -379,14 +416,14 @@ def main():
                              issn_to_acronym=issn_to_acronym,
                              pid_to_format_lang=pid_to_format_lang)
 
-    if params.logs:
-        logging.info('Iniciado para usar arquivos de log')
-        log_files = get_log_files(params.logs)
-        for lf in log_files:
-            logging.info('Extraindo dados do arquivo {}'.format(lf))
+    if params.pretables:
+        logging.info('Iniciado para usar arquivos de pré-tabelas extraídas do Matomo')
+        pretables = get_pretables(params.pretables)
+        for pt in pretables:
+            logging.info('Extraindo dados do arquivo {}'.format(pt))
             hit_manager.reset()
 
-            run_for_log_file(log_file=lf,
+            run_for_pretable(pretable=pt,
                              hit_manager=hit_manager,
                              db_session=db_session,
                              collection=params.collection)
