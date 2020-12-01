@@ -314,7 +314,7 @@ class HitManager:
         # Se idioma já está definido, verifica se é válido
         if hit.lang:
             # Idiomas possíveis
-            format_possible_langs = self.pid_to_format_lang.get(collection, {}).get(hit.pid, {}).get(hit.format, [])
+            format_possible_langs = self.pid_to_format_lang.get(collection, {}).get(hit.pid, {}).get(hit.format, set())
 
             # Se idioma obtido da URL não é válido, atribui idioma padrão
             if hit.lang not in format_possible_langs:
