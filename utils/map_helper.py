@@ -58,10 +58,24 @@ ARTICLE_CONTENT_TYPE_HOW_TO_CITE = 5
 # Página de versão traduzida do artigo
 ARTICLE_CONTENT_TYPE_TRANSLATED = 6
 
+# Página de requisição de arquivo PDF associado a artigo
+ARTICLE_CONTENT_TYPE_PDF_REQUEST = 7
+
+# Página de press release
+ARTICLE_CONTENT_TYPE_PRESS_RELEASE = 8
+
+# Página de download de citação ao artigo
+ARTICLE_CONTENT_TYPE_DOWNLOAD_CITATION = 9
+
+# Página de lista de referências de artigo
+ARTICLE_CONTENT_TYPE_REFERENCE_LIST = 10
+
 # Formato e idioma de artigo
 ARTICLE_LANG_PT = 'pt'
 ARTICLE_FORMAT_HTML = 'html'
 ARTICLE_FORMAT_PDF = 'pdf'
+ARTICLE_FORMAT_UNDEFINED = 'und'
+
 ARTICLE_DEFAULT_FORMAT = ARTICLE_FORMAT_HTML
 ARTICLE_DEFAULT_LANG = ARTICLE_LANG_PT
 
@@ -72,7 +86,11 @@ COUNTER_ARTICLE_ITEM_INVESTIGATIONS = [ARTICLE_CONTENT_TYPE_FULL_TEXT,
                                        ARTICLE_CONTENT_TYPE_HOW_TO_CITE,
                                        ARTICLE_CONTENT_TYPE_XML,
                                        ARTICLE_CONTENT_TYPE_TRANSLATED,
-                                       ARTICLE_CONTENT_TYPE_PDF]
+                                       ARTICLE_CONTENT_TYPE_PDF,
+                                       ARTICLE_CONTENT_TYPE_PDF_REQUEST,
+                                       ARTICLE_CONTENT_TYPE_PRESS_RELEASE,
+                                       ARTICLE_CONTENT_TYPE_DOWNLOAD_CITATION,
+                                       ARTICLE_CONTENT_TYPE_REFERENCE_LIST]
 
 # Lista de URLs que são contabilizadas para COUNTER Item Requests
 COUNTER_ARTICLE_ITEM_REQUESTS = [ARTICLE_CONTENT_TYPE_FULL_TEXT,
