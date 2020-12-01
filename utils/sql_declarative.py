@@ -50,15 +50,22 @@ class JournalCollection(Base):
 class ArticleLanguage(Base):
     __tablename__ = 'counter_article_language'
 
+    __table_args__ = (UniqueConstraint('name',
+                                       name='uni_name'),)
+
     language_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    name = Column(VARCHAR(3), nullable=False)
+    name = Column(VARCHAR(10
+                          ), nullable=False)
 
 
 class ArticleFormat(Base):
     __tablename__ = 'counter_article_format'
 
+    __table_args__ = (UniqueConstraint('name',
+                                       name='uni_name'),)
+
     format_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    name = Column(VARCHAR(4), nullable=False)
+    name = Column(VARCHAR(10), nullable=False)
 
 
 class Article(Base):
