@@ -47,7 +47,14 @@ def is_double_click(past_hit, current_hit):
     :param current_hit: ação atual
     :return: True se for duplo-clique, False caso contrário
     """
-    if (past_hit.pid, past_hit.format, past_hit.lang) == (current_hit.pid, current_hit.format, current_hit.lang):
+    if (past_hit.pid,
+        past_hit.format,
+        past_hit.content_type,
+        past_hit.lang) == (current_hit.pid,
+                           current_hit.format,
+                           current_hit.content_type,
+                           current_hit.lang):
+
         time_delta = current_hit.server_time - past_hit.server_time
         if time_delta.total_seconds() <= 30:
             return True
