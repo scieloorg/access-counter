@@ -69,9 +69,9 @@ class Hit:
         self.issn = self.action_params.get('issn', '').upper()
 
     def is_from_local_network(self):
-        if self.latitude == 'NULL':
+        if self.latitude == '' or not self.latitude:
             return True
-        if self.longitude == 'NULL':
+        if self.longitude == '' or not self.longitude:
             return True
         return False
 
