@@ -52,7 +52,7 @@ class Hit:
         self.action_name = kargs.get('actionName', '').lower()
 
         # Extrai parâmetros da URL da ação
-        self.action_params = dict([(x[0].strip(), x[1].strip()) for x in parse.parse_qsl(parse.urlsplit(self.action_name).query)])
+        self.action_params = self.extract_params()
 
         # Gera um ID de sessão
         self.session_id = counter_tools.generate_session_id(self.ip,
@@ -81,6 +81,23 @@ class Hit:
         if self.action_name == '' or not self.action_name:
             return True
         return False
+
+    def extract_params(self):
+        url_split = parse.urlsplit(self.action_name)
+        url_qsl = parse.parse_qsl(url_split.query)
+        params = dict([(x[0].strip(), x[1].strip()) for x in url_qsl])
+
+        for k in params.keys():
+            # Trata apenas os parâmetros de interesse
+            if k in {'pid', 'tlng', 'lang', 'nrm', 'issn'}:
+                sanitized_value = params[k].split(' ')[0]
+
+                # Remove ponto final que ocorre em algumas situações
+                if sanitized_value.endswith('.'):
+                    sanitized_value = sanitized_value[:-1]
+
+                params[k] = sanitized_value
+        return params
 
     def __str__(self):
         return '|'.join([self.session_id, self.server_time.strftime("%M:%S"), self.action_name])
