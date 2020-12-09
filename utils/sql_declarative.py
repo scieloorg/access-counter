@@ -82,6 +82,7 @@ class Article(Base):
     article_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     collection_acronym = Column(VARCHAR(3), nullable=False)
     pid = Column(VARCHAR(23), nullable=False)
+    yop = Column(INTEGER(4))
 
     fk_art_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id',
                                                                   name='fk_art_journal_id'))
