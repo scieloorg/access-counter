@@ -320,8 +320,7 @@ class HitManager:
 
         @param hit: um Hit
         """
-        url_parsed = parse.urlparse(hit.action_name)
-        collection = map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
+        collection = self.get_collection(hit)
 
         # Idioma padrão originário do dicionário
         pid_langs = self.pid_to_format_lang.get(collection, {}).get(hit.pid)
@@ -343,6 +342,15 @@ class HitManager:
                 hit.lang = default_lang
         else:
             hit.lang = default_lang
+
+    def get_collection(self, hit: Hit):
+        """
+        Obtém a coleção associada ao Hit (acesso)
+
+        @param: um Hit
+        """
+        url_parsed = parse.urlparse(hit.action_name)
+        return map_helper.DOMAINS.get(url_parsed.hostname, map_helper.DEFAULT_COLLECTION)
 
     def set_format(self, hit: Hit):
         """
