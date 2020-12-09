@@ -78,7 +78,7 @@ class Hit:
         return False
 
     def is_null_action(self):
-        if self.action_name == 'NULL':
+        if self.action_name == '' or not self.action_name:
             return True
         return False
 
