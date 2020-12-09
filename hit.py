@@ -264,6 +264,15 @@ class HitManager:
         if not hit.pid:
             self._set_pid_as_issn(hit)
 
+    def set_yop(self, hit: Hit):
+        """
+        Atribui o valor de ano de publicação (sigla yop em Inglês: Year of Publication) ao PID.
+
+        @param hit: Hit ao qual o yop é atribuído
+        """
+        collection = self.get_collection(hit)
+        hit.yop = self.pid_to_yop.get(collection, {}).get(hit.pid, {}).get('publication_year', '')
+
     def _set_pid_from_pdf(self, hit: Hit):
         """
         Atribui o PID de um artigo a partir de dicionário de path_pdf para PID
