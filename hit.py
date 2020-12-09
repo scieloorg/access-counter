@@ -20,6 +20,7 @@ class Hit:
                  'action_params',
                  'session_id',
                  'pid',
+                 'yop',
                  'lang',
                  'script',
                  'hit_type',
@@ -67,6 +68,7 @@ class Hit:
         self.content_type = ''
         self.format = ''
         self.issn = self.action_params.get('issn', '').upper()
+        self.yop = ''
 
     def is_from_local_network(self):
         if self.latitude == '' or not self.latitude:
@@ -92,7 +94,8 @@ class HitManager:
                  'pid_format_lang_localization_to_hits',
                  'pdf_path_to_pid',
                  'issn_to_acronym',
-                 'pid_to_format_lang']
+                 'pid_to_format_lang',
+                 'pid_to_yop']
 
     def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang):
         self.session_to_pid_format_lang = {}
