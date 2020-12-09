@@ -81,8 +81,8 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    for pflll_key, pid_data in metrics.items():
-        pid, data_format, lang, latitude, longitude = pflll_key
+    for pfllly_key, pid_data in metrics.items():
+        pid, data_format, lang, latitude, longitude, yop = pfllly_key
 
         article_format_id = FORMAT_TO_CODE.get(data_format, -1)
 
@@ -143,6 +143,7 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                     new_article.collection_acronym = collection
                     new_article.fk_art_journal_id = existing_journal.journal_id
                     new_article.pid = pid
+                    new_article.yop = yop
 
                     db_session.add(new_article)
                     db_session.flush()
@@ -287,7 +288,7 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     @param collection: acrônimo de coleção
     """
     hit_manager.remove_double_clicks()
-    hit_manager.group_by_pid_format_lang_localization()
+    hit_manager.group_by_pid_format_lang_localization_yop()
 
     cs = CounterStat()
     cs.calculate_metrics(hit_manager.pid_format_lang_localization_to_hits)
@@ -332,6 +333,13 @@ def main():
         dest='pid_to_format_lang',
         required=True,
         help='Dicionário que mapeia PID a formato e idioma'
+    )
+
+    parser.add_argument(
+        '--dict_yop',
+        dest='pid_to_yop',
+        required=True,
+        help='Dicionário que mapeia PID a ano de publicação'
     )
 
     parser.add_argument(
@@ -380,10 +388,14 @@ def main():
     logging.info('Carregando dicionário de PID --> formato --> idioma')
     pid_to_format_lang = pickle.load(open(params.pid_to_format_lang, 'rb'))
 
+    logging.info('Carregando dicinoário de PID --> ano de publicação')
+    pid_to_yop = pickle.load(open(params.pid_to_yop, 'rb'))
+
     db_session = db_tools.get_db_session(params.matomo_db_uri)
     hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid,
                              issn_to_acronym=issn_to_acronym,
-                             pid_to_format_lang=pid_to_format_lang)
+                             pid_to_format_lang=pid_to_format_lang,
+                             pid_to_yop=pid_to_yop)
 
     if params.pretables:
         logging.info('Iniciado para usar arquivos de pré-tabelas extraídas do Matomo')

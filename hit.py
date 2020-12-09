@@ -97,7 +97,7 @@ class HitManager:
                  'pid_to_format_lang',
                  'pid_to_yop']
 
-    def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang):
+    def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang, pid_to_yop):
         self.session_to_pid_format_lang = {}
         self.pid_format_lang_localization_to_hits = {}
 
@@ -105,6 +105,7 @@ class HitManager:
         self.pdf_path_to_pid = path_pdf_to_pid
         self.issn_to_acronym = issn_to_acronym
         self.pid_to_format_lang = pid_to_format_lang
+        self.pid_to_yop = pid_to_yop
 
     def create_hit_from_sql_data(self, row):
         """
@@ -140,6 +141,7 @@ class HitManager:
                 if new_hit.hit_type == map_helper.HIT_TYPE_ARTICLE:
                     self.set_format(new_hit)
                     self.set_lang(new_hit)
+                    self.set_yop(new_hit)
 
                 # Ignoramos tudo que não for acesso a artigo
                 else:
@@ -189,6 +191,7 @@ class HitManager:
         if new_hit.hit_type == map_helper.HIT_TYPE_ARTICLE:
             self.set_format(new_hit)
             self.set_lang(new_hit)
+            self.set_yop(new_hit)
 
         # Ignoramos tudo que não for acesso a artigo
         else:
@@ -215,14 +218,14 @@ class HitManager:
 
         self.session_to_pid_format_lang[hit.session_id][pfl].append(hit)
 
-    def group_by_pid_format_lang_localization(self):
+    def group_by_pid_format_lang_localization_yop(self):
         for s, pfl_hits in self.session_to_pid_format_lang.items():
             for pfl, hits in pfl_hits.items():
                 for h in hits:
-                    pflll = pfl + (h.latitude, h.longitude)
-                    if pflll not in self.pid_format_lang_localization_to_hits:
-                        self.pid_format_lang_localization_to_hits[pflll] = []
-                    self.pid_format_lang_localization_to_hits[pflll].append(h)
+                    pfllly = pfl + (h.latitude, h.longitude, h.yop)
+                    if pfllly not in self.pid_format_lang_localization_to_hits:
+                        self.pid_format_lang_localization_to_hits[pfllly] = []
+                    self.pid_format_lang_localization_to_hits[pfllly].append(h)
 
     def remove_double_clicks(self):
         """
@@ -256,7 +259,7 @@ class HitManager:
         Atribui o valor de pid a um Hit. Primeiro tenta obter por meio de caminho de PDF, após, por parâmetro ISSN.
         E nesse caso, o Hit é a uma URL de periódico o PID armazena o ISSN
 
-        @param hit: Hit a ser atribuído
+        @param hit: Hit ao qual o PID é atribuído
         """
         if not hit.pid:
             self._set_pid_from_pdf(hit)

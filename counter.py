@@ -96,12 +96,12 @@ class CounterStat:
         @param pid_format_lang_localization_to_hits: dicionário
             (pid, format, language, localization) --> [hit1, hit2, ...]
         """
-        for pflll, hits in pid_format_lang_localization_to_hits.items():
-            pid, data_format, lang, latitude, longitude = pflll
+        for pfllly, hits in pid_format_lang_localization_to_hits.items():
+            pid, data_format, lang, latitude, longitude, yop = pfllly
 
             if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_ARTICLE:
                 datefied_hits = self.get_datefied_hits(hits)
-                self._calculate(datefied_hits, pflll, self.metrics)
+                self._calculate(datefied_hits, pfllly, self.metrics)
 
     def get_datefied_hits(self, hits):
         """
