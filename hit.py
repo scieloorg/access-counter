@@ -51,7 +51,7 @@ class Hit:
         self.action_name = kargs.get('actionName', '').lower()
 
         # Extrai parâmetros da URL da ação
-        self.action_params = dict(parse.parse_qsl(parse.urlsplit(self.action_name).query))
+        self.action_params = dict([(x[0].strip(), x[1].strip()) for x in parse.parse_qsl(parse.urlsplit(self.action_name).query)])
 
         # Gera um ID de sessão
         self.session_id = counter_tools.generate_session_id(self.ip,
