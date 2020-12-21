@@ -9,24 +9,6 @@ class Hit:
     """
     Classe que representa o acesso a uma página (ação)
     """
-    __slots__ = ['ip',
-                 'latitude',
-                 'longitude',
-                 'server_time',
-                 'browser_name',
-                 'browser_version',
-                 'action_name',
-                 'action_params',
-                 'session_id',
-                 'pid',
-                 'yop',
-                 'lang',
-                 'script',
-                 'hit_type',
-                 'content_type',
-                 'format',
-                 'issn']
-
     def __init__(self, **kargs):
         # Endereço IP
         self.ip = kargs.get('ip', '')
