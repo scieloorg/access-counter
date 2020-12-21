@@ -231,6 +231,30 @@ def _export_article(metrics, db_session, collection):
                 logging.error('Artigo já está na base ({})'.format(e))
 
 
+def _export_issue(metrics, db_session, collection):
+    for key, issue_data in metrics.items():
+        # ToDo
+        pass
+
+
+def _export_journal(metrics, db_session, collection):
+    for key, journal_data in metrics.items():
+        # ToDo
+        pass
+
+
+def _export_platform(metrics, db_session, collection):
+    for key, platform_data in metrics.items():
+        # ToDo
+        pass
+
+
+def _export_others(metrics, db_session, collection):
+    for key, others_data in metrics.items():
+        # ToDo
+        pass
+
+
 def run(data, mode, hit_manager: HitManager, db_session, collection):
     """
     Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
