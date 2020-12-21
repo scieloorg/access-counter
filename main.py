@@ -98,6 +98,13 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
 
     db_session.commit()
 
+
+def _export_article(metrics, db_session, collection):
+    for key, article_data in metrics.items():
+        pid, data_format, lang, latitude, longitude, yop = key
+
+        article_format_id = dicts.format_to_code.get(data_format, -1)
+
         # Caso artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_language
         if article_format_id == -1:
             try:
@@ -114,10 +121,10 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
 
                 article_format_id = new_article_format.format_id
 
-                logging.info('Adicionado formato {}-{}'.format(new_article_format.format_id,
-                                                               new_article_format.name))
+                logging.debug('Adicionado formato (ID: %s, NAME: %s)' % (new_article_format.format_id,
+                                                                         new_article_format.name))
 
-        article_language_id = LANG_TO_CODE.get(lang, -1)
+        article_language_id = dicts.language_to_code.get(lang, -1)
         if article_language_id == -1:
             try:
                 existing_article_language = db_tools.get_article_language(db_session=db_session,
@@ -133,12 +140,12 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
 
                 article_language_id = new_article_language.language_id
 
-                logging.info('Adicionado idioma {}-{}'.format(new_article_language.language_id,
-                                                              new_article_language.name))
+                logging.debug('Adicionado idioma (ID: %s, NAME: %s)' % (new_article_language.language_id,
+                                                                        new_article_language.name))
 
-        issn = pid_tools.article_to_journal(pid)
+        issn = ht.article_pid_to_journal_issn(pid)
 
-        for ymd in pid_data:
+        for ymd in article_data:
             try:
                 # Procura periódico na base de dados
                 existing_journal = db_tools.get_journal(db_session=db_session, issn=issn)
@@ -187,12 +194,12 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                                                                           localization_id=existing_localization.localization_id
                                                                           )
 
-                    update_metrics(existing_article_metric, pid_data[ymd])
-                    logging.info('Atualizada métrica {}-{}-{}-{}-{}'.format(existing_article_metric.fk_article_id,
-                                                                            existing_article_metric.fk_article_format_id,
-                                                                            existing_article_metric.fk_article_language_id,
-                                                                            existing_article_metric.fk_localization_id,
-                                                                            existing_article_metric.year_month_day))
+                    update_metrics(existing_article_metric, article_data[ymd])
+                    logging.debug('Atualizada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (existing_article_metric.fk_article_id,
+                                                                                                                     existing_article_metric.fk_article_format_id,
+                                                                                                                     existing_article_metric.fk_article_language_id,
+                                                                                                                     existing_article_metric.fk_localization_id,
+                                                                                                                     existing_article_metric.year_month_day))
 
                 except NoResultFound:
                     # Cria um novo registro de métrica, caso não exista na base de dados
@@ -203,24 +210,25 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                     new_metric_article.fk_localization_id = existing_localization.localization_id
                     new_metric_article.year_month_day = ymd
 
-                    update_metrics(new_metric_article, pid_data[ymd])
+                    update_metrics(new_metric_article, article_data[ymd])
 
                     db_session.add(new_metric_article)
-                    logging.info('Adicionada métrica {}-{}-{}-{}-{}'.format(new_metric_article.fk_article_id,
-                                                                            new_metric_article.fk_article_format_id,
-                                                                            new_metric_article.fk_article_language_id,
-                                                                            new_metric_article.fk_localization_id,
-                                                                            new_metric_article.year_month_day))
+                    logging.debug('Adicionada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (new_metric_article.fk_article_id,
+                                                                                                                     new_metric_article.fk_article_format_id,
+                                                                                                                     new_metric_article.fk_article_language_id,
+                                                                                                                     new_metric_article.fk_localization_id,
+                                                                                                                     new_metric_article.year_month_day))
 
                 db_session.flush()
 
             except NoResultFound:
-                logging.error('Nenhum periódico foi localizado na base de dados: {}'.format(issn))
+                logging.warning('Nenhum periódico encontrado (ISSN: %s, PID: %s, FMT: %s, LANG: %s)'
+                              % (issn, pid, data_format, lang))
             except MultipleResultsFound:
-                logging.error('Mais de um periódico foi localizado na base de dados: {}'.format(issn))
+                logging.warning('Mais de um periódico encontrado (ISSN: %s)' % issn)
             except IntegrityError as e:
                 db_session.rollback()
-                logging.error('Artigo já está na base: {}'.format(e))
+                logging.error('Artigo já está na base ({})'.format(e))
 
 
 def run(data, mode, hit_manager: HitManager, db_session, collection):
