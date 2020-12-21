@@ -32,56 +32,54 @@ class Hit:
         # URL da ação
         self.action_name = kargs.get('actionName', '').lower()
 
-        # Extrai parâmetros da URL da ação
-        self.action_params = self.extract_params()
-
-        # Gera um ID de sessão
-        self.session_id = counter_tools.generate_session_id(self.ip,
-                                                            self.browser_name,
-                                                            self.browser_version,
-                                                            self.server_time)
-
-        self.pid = self.action_params.get('pid', '').upper()
-        self.lang = self.action_params.get('tlng', '')
-        self.script = self.action_params.get('script', '')
-
-        self.hit_type = ''
-        self.content_type = ''
-        self.format = ''
-        self.issn = self.action_params.get('issn', '').upper()
-        self.yop = ''
-
-    def is_from_local_network(self):
+    def _is_from_local_network(self):
         if self.latitude == '' or not self.latitude:
             return True
         if self.longitude == '' or not self.longitude:
             return True
         return False
 
-    def is_null_action(self):
-        if self.action_name == '' or not self.action_name:
+    def _is_null_action(self):
+        if self.action_name == '' or not self.action_name or self.action_name == 'null':
             return True
         return False
 
-    def extract_params(self):
-        url_split = parse.urlsplit(self.action_name)
-        url_qsl = parse.parse_qsl(url_split.query)
-        params = dict([(x[0].strip(), x[1].strip()) for x in url_qsl])
+    def is_valid_hit(self):
+        # Verifica se Hit é da rede local
+        if self._is_from_local_network():
+            logging.debug('Hit ignorado. Acesso é da rede local (IP: %s, ActionName: %s)' % (self.ip, self.action_name))
+            return False
 
-        for k in params.keys():
-            # Trata apenas os parâmetros de interesse
-            if k in {'pid', 'tlng', 'lang', 'nrm', 'issn'}:
-                sanitized_value = params[k].split(' ')[0]
+        # Verifica se Hit é relacionado a ação nula
+        if self._is_null_action():
+            logging.debug('Hit ignorado. Atributo action_name está vazio (IP: %s, ActionName: %s)' % (self.ip, self.action_name))
+            return False
 
-                # Remove ponto final que ocorre em algumas situações
-                if sanitized_value.endswith('.'):
-                    sanitized_value = sanitized_value[:-1]
+        return True
 
-                params[k] = sanitized_value
-        return params
+    def is_trackable_hit(self, flag_include_other_hit_types=False):
+        # Ignora Hits não artigo (a depender de flag_include_other_hit_types)
+        if not flag_include_other_hit_types:
+            if self.hit_type != at.HIT_TYPE_ARTICLE:
+                return False
 
-    def __str__(self):
-        return '|'.join([self.session_id, self.server_time.strftime("%M:%S"), self.action_name])
+        # Verifica se Hit possui conteúdo indefinido
+        if self.content_type == at.HIT_CONTENT_OTHERS:
+            logging.debug('Hit ignorado. Conteúdo não é rastreável (HitType: %s, ActionName: %s)' % (self.hit_type, self.action_name))
+            return False
+
+        # Verifica se Hit possui tipo indefinido
+        if self.hit_type == at.HIT_CONTENT_OTHERS:
+            logging.debug('Hit ignorado. Tipo não foi determinado (IP: %s, ActionName: %s)' % (self.ip, self.action_name))
+            return False
+
+        if not self.issn and self.hit_type in {at.HIT_TYPE_ARTICLE,
+                                               at.HIT_TYPE_ISSUE,
+                                               at.HIT_TYPE_JOURNAL}:
+            logging.debug('Hit ignorado. ISSN não está definido (HitType: %s, ActionName: %s' % (self.hit_type, self.action_name))
+            return False
+
+        return True
 
 
 class HitManager:
