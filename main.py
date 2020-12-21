@@ -50,13 +50,13 @@ def get_pretables(path_pretables: str):
     return pretables
 
 
-def update_metrics(article_metric, data):
+def update_metrics(metric, data):
     """
     Atualiza valores de métricas COUNTER para um registro.
     Caso registro seja novo, considera os valores no objeto data.
     Caso registro já existe, faz soma valores atuais com valores novos
 
-    @param article_metric: registro de ArticleMetric
+    @param metric: registro de Metric
     @param data: dados a serem adicionados ou atribuídos ao registro
     """
     keys = ['total_item_investigations',
@@ -65,11 +65,11 @@ def update_metrics(article_metric, data):
             'unique_item_requests']
 
     for k in keys:
-        current_value = article_metric.__getattribute__(k)
+        current_value = metric.__getattribute__(k)
         if current_value:
-            article_metric.__setattr__(k, current_value + data[k])
+            metric.__setattr__(k, current_value + data[k])
         else:
-            article_metric.__setattr__(k, data[k])
+            metric.__setattr__(k, data[k])
 
 
 def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
