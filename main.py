@@ -80,10 +80,23 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    for pfllly_key, pid_data in metrics.items():
-        pid, data_format, lang, latitude, longitude, yop = pfllly_key
+    for group in metrics.keys():
+        if group == 'article':
+            _export_article(metrics[group], db_session, collection)
 
-        article_format_id = FORMAT_TO_CODE.get(data_format, -1)
+        elif group == 'issue':
+            _export_issue(metrics[group], db_session, collection)
+
+        elif group == 'journal':
+            _export_journal(metrics[group], db_session, collection)
+
+        elif group == 'platform':
+            _export_platform(metrics[group], db_session, collection)
+
+        elif group == 'others':
+            _export_others(metrics[group], db_session, collection)
+
+    db_session.commit()
 
         # Caso artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_language
         if article_format_id == -1:
