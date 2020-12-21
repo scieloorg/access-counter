@@ -11,12 +11,11 @@ from socket import inet_ntoa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
-from utils import db_tools, pid_tools
-from utils.map_helper import FORMAT_TO_CODE, LANG_TO_CODE
+from utils import db_tools, dicts, hit_tools as ht
 from utils.sql_declarative import Article, ArticleMetric, Localization, ArticleFormat, ArticleLanguage
 
-MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '200000'))
-MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '20000'))
+
+MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '100000'))
 
 
 def get_dates(date: str):
