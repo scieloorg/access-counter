@@ -2,6 +2,7 @@
 
 Gera relatórios em formato COUNTER R5.
 
+
 ## Como instalar
 __Criar ambiente virtual para python 3.6+__ 
 ```bash
@@ -18,6 +19,7 @@ __Instalar dependências__
 apt install libmysqlclient-dev
 pip install -r requirements.txt
 ```
+
 
 ## Como usar
 
@@ -59,3 +61,4 @@ __Dicionário ISSN-ACRÔNIMO__
 __Dicionário PID-FORMAT-IDIOMA__
 
 __Diretório PRÉ-TABELAS MATOMO__
+
