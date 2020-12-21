@@ -6,8 +6,18 @@ from sqlalchemy.exc import OperationalError, IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
-from utils.sql_declarative import Base, LogLinkVisitAction, LogAction, LogVisit, Journal, Article, ArticleMetric, \
-    ArticleLanguage, ArticleFormat, Localization
+from utils.sql_declarative import (
+    Base,
+    LogLinkVisitAction,
+    LogAction,
+    LogVisit,
+    Journal,
+    Article,
+    ArticleMetric,
+    ArticleLanguage,
+    ArticleFormat,
+    Localization
+)
 
 
 def create_tables(matomo_db_uri):
