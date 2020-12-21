@@ -55,7 +55,7 @@ def get_journal_acronym(article: dict):
     :param article: artigo em formato de dicionário
     :return: o acrônimo do periódico, ou string vazia, caso contrário
     """
-    return article.get('title', {}).get('v68', [{}])[0].get('_', '')
+    return article.get('title', {}).get('v68', [{}])[0].get('_', '').lower()
 
 
 def get_fulltext_langs(article: dict):
@@ -63,7 +63,7 @@ def get_fulltext_langs(article: dict):
 
     for mode in FULLTEXT_MODES:
         for lang, url in article.get('fulltexts', {}).get(mode, {}).items():
-            url_parsed = urlparse(url)
+            url_parsed = urlparse(url.lower())
             url_host = url_parsed.hostname
             url_path = url_parsed.path
 
