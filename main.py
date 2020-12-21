@@ -304,7 +304,7 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
 
 
 def main():
-    usage = 'Extrai informações de log no formato COUNTER R5'
+    usage = 'Calcula métricas COUNTER R5 usando dados de acesso SciELO'
     parser = argparse.ArgumentParser(usage)
 
     parser.add_argument(
@@ -357,10 +357,18 @@ def main():
     )
 
     parser.add_argument(
+        '-o', '--include_other_hit_types',
+        dest='include_other_hit_types',
+        action='store_true',
+        default=False,
+        help='Inclui na contagem Hits dos tipos HIT_TYPE_ISSUE, HIT_TYPE_JOURNAL e HIT_TYPE_PLATFORM'
+    )
+
+    parser.add_argument(
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
-        default='WARNING',
+        default='INFO',
         help='Nível de log'
     )
 
@@ -382,34 +390,44 @@ def main():
 
     params = parser.parse_args()
 
-    logging.basicConfig(filename='r5_' + time().__str__() + '.log', level=params.logging_level)
+    fileLog = logging.FileHandler('r5_' + time().__str__() + '.log')
+    fileLog.setLevel(params.logging_level)
 
-    time_start = time()
+    consoleLog = logging.StreamHandler()
+    consoleLog.setLevel(logging.INFO)
 
-    logging.info('Carregando dicionário de caminhos de PDF --> PID')
+    logging.basicConfig(level=params.logging_level,
+                        format='[%(asctime)s] %(levelname)s %(message)s',
+                        datefmt='%d/%b/%Y %H:%M:%S',
+                        handlers=[fileLog, consoleLog])
+
+    logging.info('Carregando dicionário PDF-PID')
     pdf_to_pid = pickle.load(open(params.pdf_to_pid, 'rb'))
 
-    logging.info('Carregando dicionário de ISSN --> acrônimo de periódico')
+    logging.info('Carregando dicionário ISSN-Acrônimo')
     issn_to_acronym = pickle.load(open(params.issn_to_acronym, 'rb'))
 
-    logging.info('Carregando dicionário de PID --> formato --> idioma')
+    logging.info('Carregando dicionário PID-Formato-Idioma')
     pid_to_format_lang = pickle.load(open(params.pid_to_format_lang, 'rb'))
 
-    logging.info('Carregando dicinoário de PID --> ano de publicação')
+    logging.info('Carregando dicionário PID-Datas')
     pid_to_yop = pickle.load(open(params.pid_to_yop, 'rb'))
 
     db_session = db_tools.get_db_session(params.matomo_db_uri)
     hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid,
                              issn_to_acronym=issn_to_acronym,
                              pid_to_format_lang=pid_to_format_lang,
-                             pid_to_yop=pid_to_yop)
+                             pid_to_yop=pid_to_yop,
+                             flag_include_other_hit_types=params.include_other_hit_types)
 
     if params.pretables:
-        logging.info('Iniciado para usar arquivos de pré-tabelas extraídas do Matomo')
+        logging.info('Iniciado em modo pré-tabelas')
         pretables = get_pretables(params.pretables)
 
         for pt in pretables:
-            logging.info('Extraindo dados do arquivo {}'.format(pt))
+            time_start = time()
+
+            logging.info('Extraindo dados do arquivo {}...'.format(pt))
             hit_manager.reset()
 
             with open(pt) as data:
@@ -420,12 +438,17 @@ def main():
                     db_session=db_session,
                     collection=params.collection)
 
+            time_end = time()
+            logging.info('Durou %.2f segundos' % (time_end - time_start))
+
     else:
-        logging.info('Iniciado para coletar dados diretamente de banco de dados Matomo')
+        logging.info('Iniciado em modo de banco de dados')
         dates = get_dates(date=params.period)
 
         for date in dates:
-            logging.info('Extraindo dados para data {}'.format(date.strftime('%Y-%m-%d')))
+            time_start = time()
+
+            logging.info('Extraindo dados para data {}...'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
 
             db_data = db_tools.get_matomo_logs_for_date(db_session=db_session,
@@ -438,8 +461,8 @@ def main():
                 db_session=db_session,
                 collection=params.collection)
 
-    time_end = time()
-    logging.info('Durou %.2f segundos' % (time_end - time_start))
+            time_end = time()
+            logging.info('Durou %.2f segundos' % (time_end - time_start))
 
 
 if __name__ == '__main__':
