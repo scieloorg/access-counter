@@ -249,14 +249,10 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
     # Contador para rodar rotinas counter a cada IP_LIMIT
     ip_counter = 0
 
-    # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
-    bucket_counter = 0
-
     # Verificador da primeira linha
     line_counter = 0
 
     for d in data:
-        bucket_counter += 1
         line_counter += 1
         ip_counter += 1
 
@@ -279,23 +275,14 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
 
             past_ip = current_ip
 
-        if mode == 'pretable':
-            hit = hit_manager.create_hit_from_log_line(**d)
-        else:
-            hit = hit_manager.create_hit_from_sql_data(d)
+        hit = hit_manager.create_hit(d, mode)
 
         if hit:
             hit_manager.add_hit(hit)
 
-        # Se atingiu o limit do bucket, faz commit
-        if bucket_counter >= MATOMO_DB_SESSION_BUCKET_LIMIT:
-            db_session.commit()
-            bucket_counter = 0
-
     run_counter_routines(hit_manager=hit_manager,
                          db_session=db_session,
                          collection=collection)
-    db_session.commit()
 
 
 def run_counter_routines(hit_manager: HitManager, db_session, collection):
@@ -308,11 +295,11 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     @param collection: acrônimo de coleção
     """
     hit_manager.remove_double_clicks()
-    hit_manager.group_by_pid_format_lang_localization_yop()
 
     cs = CounterStat()
-    cs.calculate_metrics(hit_manager.pid_format_lang_localization_to_hits)
+    cs.calculate_metrics(hit_manager.hits)
     export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
+
     hit_manager.reset()
 
 
