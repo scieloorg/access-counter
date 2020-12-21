@@ -2,8 +2,7 @@ import logging
 
 from datetime import datetime
 from socket import inet_ntoa
-from urllib import parse
-from utils import counter_tools, map_helper, pid_tools
+from utils import counter_tools, map_actions as at, hit_tools as ht
 
 
 class Hit:
