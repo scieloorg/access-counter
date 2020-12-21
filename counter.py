@@ -1,4 +1,4 @@
-from utils import map_helper, pid_tools
+from utils import dicts
 
 
 # Métricas para Item
@@ -13,7 +13,11 @@ class CounterStat:
     Modelo de dados utilizado para representar as métricas COUNTER R5
     """
     def __init__(self):
-        self.metrics = {}
+        self.metrics = {'article': {},
+                        'issue': {},
+                        'journal': {},
+                        'platform': {},
+                        'others': {}}
 
     def _get_hits_by_session_and_content_type(self, hits: list):
         """
@@ -64,44 +68,46 @@ class CounterStat:
 
         return unique_requests
 
-    def _calculate(self, datefied_hits: dict, key, target: dict):
+    def _calculate(self, datefied_hits: dict, key, target: dict, group: str):
+        group_hit_type = dicts.group_to_hit_type[group]
+        group_item_requests = dicts.group_to_item_requests[group]
+        group_item_investigations = dicts.group_to_item_investigations[group]
+
         for ymd in datefied_hits:
             if key not in target:
                 target[key] = {ymd: METRICS_ITEM.copy()}
 
             target[key][ymd]['total_item_requests'] = self._get_total(
                 datefied_hits[ymd],
-                map_helper.HIT_TYPE_ARTICLE,
-                map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
+                group_hit_type,
+                group_item_requests)
 
             target[key][ymd]['total_item_investigations'] = self._get_total(
                 datefied_hits[ymd],
-                map_helper.HIT_TYPE_ARTICLE,
-                map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+                group_hit_type,
+                group_item_investigations)
 
             target[key][ymd]['unique_item_requests'] = self._get_unique(
                 datefied_hits[ymd],
-                map_helper.HIT_TYPE_ARTICLE,
-                map_helper.COUNTER_ARTICLE_ITEM_REQUESTS)
+                group_hit_type,
+                group_item_requests)
 
             target[key][ymd]['unique_item_investigations'] = self._get_unique(
                 datefied_hits[ymd],
-                map_helper.HIT_TYPE_ARTICLE,
-                map_helper.COUNTER_ARTICLE_ITEM_INVESTIGATIONS)
+                group_hit_type,
+                group_item_investigations)
 
-    def calculate_metrics(self, pid_format_lang_localization_to_hits):
+    def calculate_metrics(self, data_content):
         """
-        Calcula métricas COUNTER e armazena os resultados no campo self.metrics
+        Calcula métricas COUNTER e armazena os resultados no campo self.metrics[group: {}]
 
-        @param pid_format_lang_localization_to_hits: dicionário
-            (pid, format, language, localization) --> [hit1, hit2, ...]
+        @param data_content: dicionário com o conteúdo os dados para cálculo
         """
-        for pfllly, hits in pid_format_lang_localization_to_hits.items():
-            pid, data_format, lang, latitude, longitude, yop = pfllly
-
-            if pid_tools.get_pid_type(pid) == map_helper.HIT_TYPE_ARTICLE:
-                datefied_hits = self.get_datefied_hits(hits)
-                self._calculate(datefied_hits, pfllly, self.metrics)
+        for group in data_content.keys():
+            for session_id, key_hits in data_content[group].items():
+                for key, hits in key_hits.items():
+                    datefied_hits = self.get_datefied_hits(hits)
+                    self._calculate(datefied_hits, key, self.metrics[group], group)
 
     def get_datefied_hits(self, hits):
         """
