@@ -67,16 +67,16 @@ def is_double_click(group, past_hit, current_hit):
     if group == 'issue' or group == 'journal':
         if (past_hit.issn,
             past_hit.pid,
-            past_hit.content_type,
-            past_hit.action_name) == (current_hit.issn,
-                                      current_hit.pid,
-                                      current_hit.content_type,
-                                      current_hit.action_name):
+            past_hit.content_type) == (current_hit.issn,
+                                       current_hit.pid,
+                                       current_hit.content_type):
             if time_delta.total_seconds() <= 30:
                 return True
 
-    if group == 'journal' or group == 'platform':
-        if past_hit.action_name == current_hit.action_name:
+    if group == 'platform' or group == 'others':
+        if (past_hit.content_type,
+            past_hit.action_name) == (current_hit.content_type,
+                                      current_hit.action_name):
             if time_delta.total_seconds() <= 30:
                 return True
 
