@@ -72,6 +72,50 @@ def update_metrics(metric, data):
             metric.__setattr__(k, data[k])
 
 
+def export_article_hits_to_csv(hits: dict):
+    with open('r5_hit_data.csv', 'a') as f:
+        for session, hits_data in hits.items():
+            for key, hits_list in hits_data.items():
+                pid, fmt, lang, lat, long, yop = key
+                issn = ht.article_pid_to_journal_issn(pid)
+
+                line_data = [pid, fmt, lang, lat, long, yop, issn]
+
+                for hit in hits_list:
+                    year = hit.server_time.year
+                    month = hit.server_time.month
+                    day = hit.server_time.day
+                    hour =hit.server_time.hour
+                    minute = hit.server_time.minute
+                    second = hit.server_time.second
+
+                    ymdhms = '-'.join([str(year),
+                                       str(month).zfill(2),
+                                       str(day).zfill(2),
+                                       str(hour).zfill(2),
+                                       str(minute).zfill(2),
+                                       str(second).zfill(2)])
+
+                    f.write('|'.join(line_data + [hit.session_id,
+                                                  ymdhms,
+                                                  hit.action_name]) + '\n')
+
+
+def export_article_metrics_to_csv(metrics: dict):
+    with open('r5_article_data.csv', 'a') as f:
+        for key, article_data in metrics.items():
+            pid, fmt, lang, lat, long, yop = key
+            issn = ht.article_pid_to_journal_issn(pid)
+
+            for ymd in article_data:
+                line_data = [pid, fmt, lang, lat, long, yop, issn, ymd]
+                line_data.append(article_data[ymd]['total_item_investigations'])
+                line_data.append(article_data[ymd]['total_item_requests'])
+                line_data.append(article_data[ymd]['unique_item_investigations'])
+                line_data.append(article_data[ymd]['unique_item_requests'])
+                f.write('|'.join([str(i) for i in line_data]) + '\n')
+
+
 def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     """
     Exporta métricas para banco de dados
@@ -324,6 +368,13 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     cs.calculate_metrics(hit_manager.hits)
     export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
 
+    if hit_manager.debug:
+        logging.info('Salvando hits em disco...')
+        export_article_hits_to_csv(hit_manager.hits['article'])
+
+        logging.info('Salvando métricas em disco...')
+        export_article_metrics_to_csv(cs.metrics['article'])
+
     hit_manager.reset()
 
 
@@ -393,7 +444,16 @@ def main():
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
         default='INFO',
-        help='Nível de log'
+        help='Nivel de log'
+    )
+
+    parser.add_argument(
+        '--debug',
+        dest='debug',
+        default=False,
+        action='store_true',
+        help='Possibilita verificar corretude da extração de Hits e do cálculo de métricas.'
+             ' Salva em disco dois arquivos: (1) r5_hit_data e (2) r5_metric_data.'
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -442,7 +502,8 @@ def main():
                              issn_to_acronym=issn_to_acronym,
                              pid_to_format_lang=pid_to_format_lang,
                              pid_to_yop=pid_to_yop,
-                             flag_include_other_hit_types=params.include_other_hit_types)
+                             flag_include_other_hit_types=params.include_other_hit_types,
+                             debug=params.debug)
 
     if params.pretables:
         logging.info('Iniciado em modo pré-tabelas')
