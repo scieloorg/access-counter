@@ -11,12 +11,11 @@ from socket import inet_ntoa
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
-from utils import db_tools, pid_tools
-from utils.map_helper import FORMAT_TO_CODE, LANG_TO_CODE
+from utils import db_tools, dicts, hit_tools as ht
 from utils.sql_declarative import Article, ArticleMetric, Localization, ArticleFormat, ArticleLanguage
 
-MATOMO_DB_SESSION_BUCKET_LIMIT = int(os.environ.get('MATOMO_DB_SESSION_BUCKET_LIMIT', '200000'))
-MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '20000'))
+
+MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '100000'))
 
 
 def get_dates(date: str):
@@ -51,13 +50,13 @@ def get_pretables(path_pretables: str):
     return pretables
 
 
-def update_metrics(article_metric, data):
+def update_metrics(metric, data):
     """
     Atualiza valores de métricas COUNTER para um registro.
     Caso registro seja novo, considera os valores no objeto data.
     Caso registro já existe, faz soma valores atuais com valores novos
 
-    @param article_metric: registro de ArticleMetric
+    @param metric: registro de Metric
     @param data: dados a serem adicionados ou atribuídos ao registro
     """
     keys = ['total_item_investigations',
@@ -66,11 +65,55 @@ def update_metrics(article_metric, data):
             'unique_item_requests']
 
     for k in keys:
-        current_value = article_metric.__getattribute__(k)
+        current_value = metric.__getattribute__(k)
         if current_value:
-            article_metric.__setattr__(k, current_value + data[k])
+            metric.__setattr__(k, current_value + data[k])
         else:
-            article_metric.__setattr__(k, data[k])
+            metric.__setattr__(k, data[k])
+
+
+def export_article_hits_to_csv(hits: dict):
+    with open('r5_hit_data.csv', 'a') as f:
+        for session, hits_data in hits.items():
+            for key, hits_list in hits_data.items():
+                pid, fmt, lang, lat, long, yop = key
+                issn = ht.article_pid_to_journal_issn(pid)
+
+                line_data = [pid, fmt, lang, lat, long, yop, issn]
+
+                for hit in hits_list:
+                    year = hit.server_time.year
+                    month = hit.server_time.month
+                    day = hit.server_time.day
+                    hour =hit.server_time.hour
+                    minute = hit.server_time.minute
+                    second = hit.server_time.second
+
+                    ymdhms = '-'.join([str(year),
+                                       str(month).zfill(2),
+                                       str(day).zfill(2),
+                                       str(hour).zfill(2),
+                                       str(minute).zfill(2),
+                                       str(second).zfill(2)])
+
+                    f.write('|'.join(line_data + [hit.session_id,
+                                                  ymdhms,
+                                                  hit.action_name]) + '\n')
+
+
+def export_article_metrics_to_csv(metrics: dict):
+    with open('r5_article_data.csv', 'a') as f:
+        for key, article_data in metrics.items():
+            pid, fmt, lang, lat, long, yop = key
+            issn = ht.article_pid_to_journal_issn(pid)
+
+            for ymd in article_data:
+                line_data = [pid, fmt, lang, lat, long, yop, issn, ymd]
+                line_data.append(article_data[ymd]['total_item_investigations'])
+                line_data.append(article_data[ymd]['total_item_requests'])
+                line_data.append(article_data[ymd]['unique_item_investigations'])
+                line_data.append(article_data[ymd]['unique_item_requests'])
+                f.write('|'.join([str(i) for i in line_data]) + '\n')
 
 
 def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
@@ -81,10 +124,30 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
     """
-    for pfllly_key, pid_data in metrics.items():
-        pid, data_format, lang, latitude, longitude, yop = pfllly_key
+    for group in metrics.keys():
+        if group == 'article':
+            _export_article(metrics[group], db_session, collection)
 
-        article_format_id = FORMAT_TO_CODE.get(data_format, -1)
+        elif group == 'issue':
+            _export_issue(metrics[group], db_session, collection)
+
+        elif group == 'journal':
+            _export_journal(metrics[group], db_session, collection)
+
+        elif group == 'platform':
+            _export_platform(metrics[group], db_session, collection)
+
+        elif group == 'others':
+            _export_others(metrics[group], db_session, collection)
+
+    db_session.commit()
+
+
+def _export_article(metrics, db_session, collection):
+    for key, article_data in metrics.items():
+        pid, data_format, lang, latitude, longitude, yop = key
+
+        article_format_id = dicts.format_to_code.get(data_format, -1)
 
         # Caso artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_language
         if article_format_id == -1:
@@ -102,10 +165,10 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
 
                 article_format_id = new_article_format.format_id
 
-                logging.info('Adicionado formato {}-{}'.format(new_article_format.format_id,
-                                                               new_article_format.name))
+                logging.debug('Adicionado formato (ID: %s, NAME: %s)' % (new_article_format.format_id,
+                                                                         new_article_format.name))
 
-        article_language_id = LANG_TO_CODE.get(lang, -1)
+        article_language_id = dicts.language_to_code.get(lang, -1)
         if article_language_id == -1:
             try:
                 existing_article_language = db_tools.get_article_language(db_session=db_session,
@@ -121,12 +184,12 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
 
                 article_language_id = new_article_language.language_id
 
-                logging.info('Adicionado idioma {}-{}'.format(new_article_language.language_id,
-                                                              new_article_language.name))
+                logging.debug('Adicionado idioma (ID: %s, NAME: %s)' % (new_article_language.language_id,
+                                                                        new_article_language.name))
 
-        issn = pid_tools.article_to_journal(pid)
+        issn = ht.article_pid_to_journal_issn(pid)
 
-        for ymd in pid_data:
+        for ymd in article_data:
             try:
                 # Procura periódico na base de dados
                 existing_journal = db_tools.get_journal(db_session=db_session, issn=issn)
@@ -175,12 +238,12 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                                                                           localization_id=existing_localization.localization_id
                                                                           )
 
-                    update_metrics(existing_article_metric, pid_data[ymd])
-                    logging.info('Atualizada métrica {}-{}-{}-{}-{}'.format(existing_article_metric.fk_article_id,
-                                                                            existing_article_metric.fk_article_format_id,
-                                                                            existing_article_metric.fk_article_language_id,
-                                                                            existing_article_metric.fk_localization_id,
-                                                                            existing_article_metric.year_month_day))
+                    update_metrics(existing_article_metric, article_data[ymd])
+                    logging.debug('Atualizada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (existing_article_metric.fk_article_id,
+                                                                                                                     existing_article_metric.fk_article_format_id,
+                                                                                                                     existing_article_metric.fk_article_language_id,
+                                                                                                                     existing_article_metric.fk_localization_id,
+                                                                                                                     existing_article_metric.year_month_day))
 
                 except NoResultFound:
                     # Cria um novo registro de métrica, caso não exista na base de dados
@@ -191,24 +254,49 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
                     new_metric_article.fk_localization_id = existing_localization.localization_id
                     new_metric_article.year_month_day = ymd
 
-                    update_metrics(new_metric_article, pid_data[ymd])
+                    update_metrics(new_metric_article, article_data[ymd])
 
                     db_session.add(new_metric_article)
-                    logging.info('Adicionada métrica {}-{}-{}-{}-{}'.format(new_metric_article.fk_article_id,
-                                                                            new_metric_article.fk_article_format_id,
-                                                                            new_metric_article.fk_article_language_id,
-                                                                            new_metric_article.fk_localization_id,
-                                                                            new_metric_article.year_month_day))
+                    logging.debug('Adicionada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (new_metric_article.fk_article_id,
+                                                                                                                     new_metric_article.fk_article_format_id,
+                                                                                                                     new_metric_article.fk_article_language_id,
+                                                                                                                     new_metric_article.fk_localization_id,
+                                                                                                                     new_metric_article.year_month_day))
 
                 db_session.flush()
 
             except NoResultFound:
-                logging.error('Nenhum periódico foi localizado na base de dados: {}'.format(issn))
+                logging.warning('Nenhum periódico encontrado (ISSN: %s, PID: %s, FMT: %s, LANG: %s)'
+                              % (issn, pid, data_format, lang))
             except MultipleResultsFound:
-                logging.error('Mais de um periódico foi localizado na base de dados: {}'.format(issn))
+                logging.warning('Mais de um periódico encontrado (ISSN: %s)' % issn)
             except IntegrityError as e:
                 db_session.rollback()
-                logging.error('Artigo já está na base: {}'.format(e))
+                logging.error('Artigo já está na base ({})'.format(e))
+
+
+def _export_issue(metrics, db_session, collection):
+    for key, issue_data in metrics.items():
+        # ToDo
+        pass
+
+
+def _export_journal(metrics, db_session, collection):
+    for key, journal_data in metrics.items():
+        # ToDo
+        pass
+
+
+def _export_platform(metrics, db_session, collection):
+    for key, platform_data in metrics.items():
+        # ToDo
+        pass
+
+
+def _export_others(metrics, db_session, collection):
+    for key, others_data in metrics.items():
+        # ToDo
+        pass
 
 
 def run(data, mode, hit_manager: HitManager, db_session, collection):
@@ -229,14 +317,10 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
     # Contador para rodar rotinas counter a cada IP_LIMIT
     ip_counter = 0
 
-    # Contador para enviar commits a base de dados Matomo a cada BUCKET_LIMIT
-    bucket_counter = 0
-
     # Verificador da primeira linha
     line_counter = 0
 
     for d in data:
-        bucket_counter += 1
         line_counter += 1
         ip_counter += 1
 
@@ -259,23 +343,14 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
 
             past_ip = current_ip
 
-        if mode == 'pretable':
-            hit = hit_manager.create_hit_from_log_line(**d)
-        else:
-            hit = hit_manager.create_hit_from_sql_data(d)
+        hit = hit_manager.create_hit(d, mode)
 
         if hit:
             hit_manager.add_hit(hit)
 
-        # Se atingiu o limit do bucket, faz commit
-        if bucket_counter >= MATOMO_DB_SESSION_BUCKET_LIMIT:
-            db_session.commit()
-            bucket_counter = 0
-
     run_counter_routines(hit_manager=hit_manager,
                          db_session=db_session,
                          collection=collection)
-    db_session.commit()
 
 
 def run_counter_routines(hit_manager: HitManager, db_session, collection):
@@ -288,16 +363,23 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     @param collection: acrônimo de coleção
     """
     hit_manager.remove_double_clicks()
-    hit_manager.group_by_pid_format_lang_localization_yop()
 
     cs = CounterStat()
-    cs.calculate_metrics(hit_manager.pid_format_lang_localization_to_hits)
+    cs.calculate_metrics(hit_manager.hits)
     export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
+
+    if hit_manager.debug:
+        logging.info('Salvando hits em disco...')
+        export_article_hits_to_csv(hit_manager.hits['article'])
+
+        logging.info('Salvando métricas em disco...')
+        export_article_metrics_to_csv(cs.metrics['article'])
+
     hit_manager.reset()
 
 
 def main():
-    usage = 'Extrai informações de log no formato COUNTER R5'
+    usage = 'Calcula métricas COUNTER R5 usando dados de acesso SciELO'
     parser = argparse.ArgumentParser(usage)
 
     parser.add_argument(
@@ -350,11 +432,28 @@ def main():
     )
 
     parser.add_argument(
+        '-o', '--include_other_hit_types',
+        dest='include_other_hit_types',
+        action='store_true',
+        default=False,
+        help='Inclui na contagem Hits dos tipos HIT_TYPE_ISSUE, HIT_TYPE_JOURNAL e HIT_TYPE_PLATFORM'
+    )
+
+    parser.add_argument(
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
-        default='WARNING',
-        help='Nível de log'
+        default='INFO',
+        help='Nivel de log'
+    )
+
+    parser.add_argument(
+        '--debug',
+        dest='debug',
+        default=False,
+        action='store_true',
+        help='Possibilita verificar corretude da extração de Hits e do cálculo de métricas.'
+             ' Salva em disco dois arquivos: (1) r5_hit_data e (2) r5_metric_data.'
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -375,34 +474,45 @@ def main():
 
     params = parser.parse_args()
 
-    logging.basicConfig(filename='r5_' + time().__str__() + '.log', level=params.logging_level)
+    fileLog = logging.FileHandler('r5_' + time().__str__() + '.log')
+    fileLog.setLevel(params.logging_level)
 
-    time_start = time()
+    consoleLog = logging.StreamHandler()
+    consoleLog.setLevel(logging.INFO)
 
-    logging.info('Carregando dicionário de caminhos de PDF --> PID')
+    logging.basicConfig(level=params.logging_level,
+                        format='[%(asctime)s] %(levelname)s %(message)s',
+                        datefmt='%d/%b/%Y %H:%M:%S',
+                        handlers=[fileLog, consoleLog])
+
+    logging.info('Carregando dicionário PDF-PID')
     pdf_to_pid = pickle.load(open(params.pdf_to_pid, 'rb'))
 
-    logging.info('Carregando dicionário de ISSN --> acrônimo de periódico')
+    logging.info('Carregando dicionário ISSN-Acrônimo')
     issn_to_acronym = pickle.load(open(params.issn_to_acronym, 'rb'))
 
-    logging.info('Carregando dicionário de PID --> formato --> idioma')
+    logging.info('Carregando dicionário PID-Formato-Idioma')
     pid_to_format_lang = pickle.load(open(params.pid_to_format_lang, 'rb'))
 
-    logging.info('Carregando dicinoário de PID --> ano de publicação')
+    logging.info('Carregando dicionário PID-Datas')
     pid_to_yop = pickle.load(open(params.pid_to_yop, 'rb'))
 
     db_session = db_tools.get_db_session(params.matomo_db_uri)
     hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid,
                              issn_to_acronym=issn_to_acronym,
                              pid_to_format_lang=pid_to_format_lang,
-                             pid_to_yop=pid_to_yop)
+                             pid_to_yop=pid_to_yop,
+                             flag_include_other_hit_types=params.include_other_hit_types,
+                             debug=params.debug)
 
     if params.pretables:
-        logging.info('Iniciado para usar arquivos de pré-tabelas extraídas do Matomo')
+        logging.info('Iniciado em modo pré-tabelas')
         pretables = get_pretables(params.pretables)
 
         for pt in pretables:
-            logging.info('Extraindo dados do arquivo {}'.format(pt))
+            time_start = time()
+
+            logging.info('Extraindo dados do arquivo {}...'.format(pt))
             hit_manager.reset()
 
             with open(pt) as data:
@@ -413,12 +523,17 @@ def main():
                     db_session=db_session,
                     collection=params.collection)
 
+            time_end = time()
+            logging.info('Durou %.2f segundos' % (time_end - time_start))
+
     else:
-        logging.info('Iniciado para coletar dados diretamente de banco de dados Matomo')
+        logging.info('Iniciado em modo de banco de dados')
         dates = get_dates(date=params.period)
 
         for date in dates:
-            logging.info('Extraindo dados para data {}'.format(date.strftime('%Y-%m-%d')))
+            time_start = time()
+
+            logging.info('Extraindo dados para data {}...'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
 
             db_data = db_tools.get_matomo_logs_for_date(db_session=db_session,
@@ -431,8 +546,8 @@ def main():
                 db_session=db_session,
                 collection=params.collection)
 
-    time_end = time()
-    logging.info('Durou %.2f segundos' % (time_end - time_start))
+            time_end = time()
+            logging.info('Durou %.2f segundos' % (time_end - time_start))
 
 
 if __name__ == '__main__':

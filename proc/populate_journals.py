@@ -8,11 +8,10 @@ from sqlalchemy.exc import IntegrityError
 sys.path.append('..')
 
 from articlemeta.client import RestfulClient, ThriftClient
-from utils.map_helper import COLLECTION_TO_CODE
 from sqlalchemy.sql import null
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from urllib import parse
-from utils import db_tools
+from utils import db_tools, dicts
 from utils.sql_declarative import Journal, JournalCollection
 
 
@@ -102,7 +101,7 @@ def populate(articlemeta, db_session):
     @param articlemeta: cliente Thrift ou Restful da API ArticleMeta
     @param db_session: sessão de conexão com banco de dados Matomo
     """
-    for col in COLLECTION_TO_CODE.keys():
+    for col in dicts.collection_to_code.keys():
         for journal in articlemeta.journals(col):
 
             online_issn = format_issn(journal.electronic_issn)
