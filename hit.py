@@ -193,12 +193,14 @@ class HitManager:
             hit.yop = ht.get_year_of_publication(hit, self.pid_to_yop)
             hit.lang = ht.get_language(hit, self.pid_to_format_lang)
 
-        # Obtém acrônimo de periódico, se for o caso
-        if hit.hit_type in {at.HIT_TYPE_ISSUE,
-                            at.HIT_TYPE_JOURNAL}:
-            hit.acronym = ht.get_journal_acronym(hit, self.issn_to_acronym)
-            if not hit.issn:
-                hit.issn = ht.get_issn(hit, self.acronym_to_issn)
+        # Situação em que outros tipos de Hit são considerados
+        if self.flag_include_other_hit_types:
+            # Obtém acrônimo de periódico, se for o caso
+            if hit.hit_type in {at.HIT_TYPE_ISSUE,
+                                at.HIT_TYPE_JOURNAL}:
+                hit.acronym = ht.get_journal_acronym(hit, self.issn_to_acronym)
+                if not hit.issn:
+                    hit.issn = ht.get_issn(hit, self.acronym_to_issn)
 
     def reset(self):
         """
