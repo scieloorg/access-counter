@@ -271,14 +271,16 @@ def get_issn(hit, acronym2pid: dict):
     # Tenta obter ISSN a partir de trecho pid_(ISSN) de url
     if hit.content_type == ma.HIT_CONTENT_JOURNAL_SERIAL:
         matched_script_sci_serial_issn = re.match(rege.REGEX_JOURNAL_SCRIPT_SCI_SERIAL, hit.action_name)
-        if len(matched_script_sci_serial_issn.groups()) == 1:
-            return matched_script_sci_serial_issn.group(1)
+        if matched_script_sci_serial_issn:
+            if len(matched_script_sci_serial_issn.groups()) == 1:
+                return matched_script_sci_serial_issn.group(1)
 
     # Tenta obter ISSN a partir de trecho pid_(ISSN) de url
     if hit.content_type == ma.HIT_CONTENT_JOURNAL_ISSUES:
         matched_script_sci_issues_issn = re.match(rege.REGEX_JOURNAL_SCRIPT_SCI_ISSUES, hit.action_name)
-        if len(matched_script_sci_issues_issn.groups()) == 1:
-            return matched_script_sci_issues_issn.group(1)
+        if matched_script_sci_issues_issn:
+            if len(matched_script_sci_issues_issn.groups()) == 1:
+                return matched_script_sci_issues_issn.group(1)
 
     return acronym2pid.get(hit.collection, {}).get(hit.acronym, [''])[0]
 
