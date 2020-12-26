@@ -172,11 +172,21 @@ def main():
     # PID de artigo para lista de datas
     pid_to_dates = {}
 
-    total_articles = 0
+    mongo_client = mc[MONGO_DATABASE][MONGO_COLLECTION]
+
+    print('Testando conexão... ', end='')
+    is_conection_ok = True if 'code' in mongo_client.find_one().keys() else False
+    if is_conection_ok:
+        print('Sucesso')
+    else:
+        print('Falhou')
+        exit(1)
+
+    total_extracted = 0
     print('Coletando dados...')
-    for article in mc[MONGO_DATABASE][MONGO_COLLECTION].find({}):
-        total_articles += 1
-        print('\r%d de artigos extraídos' % total_articles, end='')
+    for article in mongo_client.find({}):
+        total_extracted += 1
+        print('\rExtraídos: %d' % total_extracted, end='')
 
         pid = article.get('code')
         issns = [i for i in article.get('code_title') if i is not None]
