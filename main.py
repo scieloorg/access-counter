@@ -140,8 +140,6 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
         elif group == 'others':
             _export_others(metrics[group], db_session, collection)
 
-    db_session.commit()
-
 
 def _export_article(metrics, db_session, collection):
     for key, article_data in metrics.items():
@@ -199,7 +197,6 @@ def _export_article(metrics, db_session, collection):
                     existing_article = db_tools.get_article(db_session=db_session,
                                                             pid=pid,
                                                             collection=collection)
-
                 except NoResultFound:
                     # Cria um novo artigo caso artigo não exista na base de dados
                     new_article = Article()
@@ -210,7 +207,6 @@ def _export_article(metrics, db_session, collection):
 
                     db_session.add(new_article)
                     db_session.flush()
-
                     existing_article = new_article
 
                 try:
@@ -228,7 +224,6 @@ def _export_article(metrics, db_session, collection):
                     db_session.flush()
 
                     existing_localization = new_localization
-
                 try:
                     existing_article_metric = db_tools.get_article_metric(db_session=db_session,
                                                                           year_month_day=ymd,
@@ -244,7 +239,6 @@ def _export_article(metrics, db_session, collection):
                                                                                                                      existing_article_metric.fk_article_language_id,
                                                                                                                      existing_article_metric.fk_localization_id,
                                                                                                                      existing_article_metric.year_month_day))
-
                 except NoResultFound:
                     # Cria um novo registro de métrica, caso não exista na base de dados
                     new_metric_article = ArticleMetric()
@@ -255,16 +249,12 @@ def _export_article(metrics, db_session, collection):
                     new_metric_article.year_month_day = ymd
 
                     update_metrics(new_metric_article, article_data[ymd])
-
                     db_session.add(new_metric_article)
                     logging.debug('Adicionada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (new_metric_article.fk_article_id,
                                                                                                                      new_metric_article.fk_article_format_id,
                                                                                                                      new_metric_article.fk_article_language_id,
                                                                                                                      new_metric_article.fk_localization_id,
                                                                                                                      new_metric_article.year_month_day))
-
-                db_session.flush()
-
             except NoResultFound:
                 logging.warning('Nenhum periódico encontrado (ISSN: %s, PID: %s, FMT: %s, LANG: %s)'
                               % (issn, pid, data_format, lang))
@@ -273,6 +263,8 @@ def _export_article(metrics, db_session, collection):
             except IntegrityError as e:
                 db_session.rollback()
                 logging.error('Artigo já está na base ({})'.format(e))
+
+    db_session.commit()
 
 
 def _export_issue(metrics, db_session, collection):
