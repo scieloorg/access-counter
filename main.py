@@ -72,8 +72,8 @@ def update_metrics(metric, data):
             metric.__setattr__(k, data[k])
 
 
-def export_article_hits_to_csv(hits: dict):
-    with open('r5_hit_data.csv', 'a') as f:
+def export_article_hits_to_csv(hits: dict, prefix: str):
+    with open('r5_hit_data_' + prefix + '.csv', 'a') as f:
         for session, hits_data in hits.items():
             for key, hits_list in hits_data.items():
                 pid, fmt, lang, lat, long, yop = key
@@ -101,8 +101,8 @@ def export_article_hits_to_csv(hits: dict):
                                                   hit.action_name]) + '\n')
 
 
-def export_article_metrics_to_csv(metrics: dict):
-    with open('r5_article_data.csv', 'a') as f:
+def export_article_metrics_to_csv(metrics: dict, prefix: str):
+    with open('r5_article_data_' + prefix + '.csv', 'a') as f:
         for key, article_data in metrics.items():
             pid, fmt, lang, lat, long, yop = key
             issn = ht.article_pid_to_journal_issn(pid)
@@ -338,7 +338,8 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
             if ip_counter >= MATOMO_DB_IP_COUNTER_LIMIT:
                 run_counter_routines(hit_manager=hit_manager,
                                      db_session=db_session,
-                                     collection=collection)
+                                     collection=collection,
+                                     prefix=str(line_counter))
                 ip_counter = 0
 
             past_ip = current_ip
@@ -350,10 +351,11 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
 
     run_counter_routines(hit_manager=hit_manager,
                          db_session=db_session,
-                         collection=collection)
+                         collection=collection,
+                         prefix=str(line_counter))
 
 
-def run_counter_routines(hit_manager: HitManager, db_session, collection):
+def run_counter_routines(hit_manager: HitManager, db_session, collection, prefix):
     """
     Executa métodos COUNTER para remover cliques-duplos, contar acessos por PID e extrair métricas.
     Ao final, salva resultados (métricas) em base de dados
@@ -361,6 +363,7 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
+    @param prefix: uma string utilizada como prefixo nos arquivos de debug
     """
     hit_manager.remove_double_clicks()
 
@@ -370,10 +373,10 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
 
     if hit_manager.debug:
         logging.info('Salvando hits em disco...')
-        export_article_hits_to_csv(hit_manager.hits['article'])
+        export_article_hits_to_csv(hit_manager.hits['article'], prefix)
 
         logging.info('Salvando métricas em disco...')
-        export_article_metrics_to_csv(cs.metrics['article'])
+        export_article_metrics_to_csv(cs.metrics['article'], prefix)
 
     hit_manager.reset()
 
