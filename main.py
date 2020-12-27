@@ -224,6 +224,7 @@ def _export_article(metrics, db_session, collection):
                     db_session.flush()
 
                     existing_localization = new_localization
+
                 try:
                     existing_article_metric = db_tools.get_article_metric(db_session=db_session,
                                                                           year_month_day=ymd,
@@ -255,6 +256,8 @@ def _export_article(metrics, db_session, collection):
                                                                                                                      new_metric_article.fk_article_language_id,
                                                                                                                      new_metric_article.fk_localization_id,
                                                                                                                      new_metric_article.year_month_day))
+                db_session.flush()
+
             except NoResultFound:
                 logging.warning('Nenhum periódico encontrado (ISSN: %s, PID: %s, FMT: %s, LANG: %s)'
                               % (issn, pid, data_format, lang))
@@ -263,7 +266,6 @@ def _export_article(metrics, db_session, collection):
             except IntegrityError as e:
                 db_session.rollback()
                 logging.error('Artigo já está na base ({})'.format(e))
-
     db_session.commit()
 
 
