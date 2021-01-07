@@ -77,22 +77,22 @@ class CounterStat:
             if key not in target:
                 target[key] = {ymd: METRICS_ITEM.copy()}
 
-            target[key][ymd]['total_item_requests'] = self._get_total(
+            target[key][ymd]['total_item_requests'] += self._get_total(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_requests)
 
-            target[key][ymd]['total_item_investigations'] = self._get_total(
+            target[key][ymd]['total_item_investigations'] += self._get_total(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_investigations)
 
-            target[key][ymd]['unique_item_requests'] = self._get_unique(
+            target[key][ymd]['unique_item_requests'] += self._get_unique(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_requests)
 
-            target[key][ymd]['unique_item_investigations'] = self._get_unique(
+            target[key][ymd]['unique_item_investigations'] += self._get_unique(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_investigations)
