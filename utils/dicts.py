@@ -103,3 +103,11 @@ group_to_item_requests = {
     'journal': mm.COUNTER_JOURNAL_ITEM_REQUESTS,
     'platform': mm.COUNTER_PLATFORM_ITEM_REQUESTS
 }
+
+# métricas COUNTER
+counter_item_metrics = {
+    'total_item_requests': 0,
+    'unique_item_requests': 0,
+    'total_item_investigations': 0,
+    'unique_item_investigations': 0
+}
