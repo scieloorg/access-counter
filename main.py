@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 import pickle
+import re
 
 from counter import CounterStat
 from hit import HitManager
@@ -50,6 +51,21 @@ def get_pretables(path_pretables: str):
     return pretables
 
 
+def get_pretable_date_value(path_pretable: str):
+    """
+    Obtém uma data a partir de nome de arquivo de pré-tabelas. Esse valor é utilizado para gravar os valores de métricas em disco.
+    :param path_pretable: caminho completo do arquivo de pré-tabelas
+    :return: uma data
+    """
+    pattern_date = r'(\d{4}-\d{2}-\d{2})\.'
+    matched_date = re.search(pattern_date, path_pretable)
+    if matched_date:
+        return matched_date.groups()[0].replace('-', '')
+    else:
+        logging.error('Não foi possível detectar data válida em nome de arquivo: %s' % path_pretable)
+        exit(1)
+
+
 def update_metrics(metric, data):
     """
     Atualiza valores de métricas COUNTER para um registro.
@@ -72,8 +88,8 @@ def update_metrics(metric, data):
             metric.__setattr__(k, data[k])
 
 
-def export_article_hits_to_csv(hits: dict):
-    with open('r5_hit_data_' + time().__str__() + '.csv', 'a') as f:
+def export_article_hits_to_csv(hits: dict, file_prefix: str):
+    with open('r5_hits_' + file_prefix + '.csv', 'a') as f:
         for session, hits_data in hits.items():
             for key, hits_list in hits_data.items():
                 pid, fmt, lang, lat, long, yop = key
@@ -101,8 +117,8 @@ def export_article_hits_to_csv(hits: dict):
                                                   hit.action_name]) + '\n')
 
 
-def export_article_metrics_to_csv(metrics: dict):
-    with open('r5_article_data_' + time().__str__() + '.csv', 'a') as f:
+def export_article_metrics_to_csv(metrics: dict, file_prefix: str):
+    with open('r5_metrics_' + file_prefix + '.csv', 'a') as f:
         for key, article_data in metrics.items():
             pid, fmt, lang, lat, long, yop = key
             issn = ht.article_pid_to_journal_issn(pid)
@@ -293,7 +309,7 @@ def _export_others(metrics, db_session, collection):
         pass
 
 
-def run(data, mode, hit_manager: HitManager, db_session, collection):
+def run(data, mode, hit_manager: HitManager, db_session, collection, result_file_prefix):
     """
     Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
     Por questões de limitação de memória, o método trabalha por IP.
@@ -304,6 +320,7 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
+    @param result_file_prefix: um prefixo para ser usado no nome do arquivo com as métricas e hits
     """
     # IP atual a ser contabilizado
     past_ip = ''
@@ -332,7 +349,8 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
             if ip_counter >= MATOMO_DB_IP_COUNTER_LIMIT:
                 run_counter_routines(hit_manager=hit_manager,
                                      db_session=db_session,
-                                     collection=collection)
+                                     collection=collection,
+                                     file_prefix=result_file_prefix)
                 ip_counter = 0
 
             past_ip = current_ip
@@ -344,10 +362,11 @@ def run(data, mode, hit_manager: HitManager, db_session, collection):
 
     run_counter_routines(hit_manager=hit_manager,
                          db_session=db_session,
-                         collection=collection)
+                         collection=collection,
+                         file_prefix=result_file_prefix)
 
 
-def run_counter_routines(hit_manager: HitManager, db_session, collection):
+def run_counter_routines(hit_manager: HitManager, db_session, collection, file_prefix):
     """
     Executa métodos COUNTER para remover cliques-duplos, contar acessos por PID e extrair métricas.
     Ao final, salva resultados (métricas) em base de dados
@@ -355,6 +374,7 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
+    @param file_prefix: um prefixo para ser usado no nome do arquivo com as métricas e hits
     """
     hit_manager.remove_double_clicks()
 
@@ -364,10 +384,10 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection):
 
     if hit_manager.debug:
         logging.info('Salvando hits em disco...')
-        export_article_hits_to_csv(hit_manager.hits['article'])
+        export_article_hits_to_csv(hit_manager.hits['article'], file_prefix)
 
         logging.info('Salvando métricas em disco...')
-        export_article_metrics_to_csv(cs.metrics['article'])
+        export_article_metrics_to_csv(cs.metrics['article'], file_prefix)
 
     hit_manager.reset()
 
@@ -447,7 +467,7 @@ def main():
         default=False,
         action='store_true',
         help='Possibilita verificar corretude da extração de Hits e do cálculo de métricas.'
-             ' Salva em disco dois arquivos: (1) r5_hit_data e (2) r5_metric_data.'
+             ' Salva em disco dois arquivos: (1) r5_hits_yyyymmdd e (2) r5_metrics_yyyymmdd.'
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -509,13 +529,16 @@ def main():
             logging.info('Extraindo dados do arquivo {}...'.format(pt))
             hit_manager.reset()
 
+            pretable_date_value = get_pretable_date_value(pt)
+
             with open(pt) as data:
                 csv_data = csv.DictReader(data, delimiter='\t')
                 run(data=csv_data,
                     mode='pretable',
                     hit_manager=hit_manager,
                     db_session=db_session,
-                    collection=params.collection)
+                    collection=params.collection,
+                    result_file_prefix=pretable_date_value)
 
             time_end = time()
             logging.info('Durou %.2f segundos' % (time_end - time_start))
@@ -538,7 +561,8 @@ def main():
                 mode='database',
                 hit_manager=hit_manager,
                 db_session=db_session,
-                collection=params.collection)
+                collection=params.collection,
+                result_file_prefix=date.strftime('%Y%m%d'))
 
             time_end = time()
             logging.info('Durou %.2f segundos' % (time_end - time_start))
