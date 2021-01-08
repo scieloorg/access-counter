@@ -68,7 +68,10 @@ class CounterStat:
 
         for ymd in datefied_hits:
             if key not in target:
-                target[key] = {ymd: dicts.counter_item_metrics.copy()}
+                target[key] = {}
+
+            if ymd not in target[key]:
+                target[key][ymd] = dicts.counter_item_metrics.copy()
 
             target[key][ymd]['total_item_requests'] += self._get_total(
                 datefied_hits[ymd],
