@@ -1,13 +1,6 @@
 from utils import dicts
 
 
-# Métricas para Item
-METRICS_ITEM = {'total_item_requests': 0,
-                'unique_item_requests': 0,
-                'total_item_investigations': 0,
-                'unique_item_investigations': 0}
-
-
 class CounterStat:
     """
     Modelo de dados utilizado para representar as métricas COUNTER R5
