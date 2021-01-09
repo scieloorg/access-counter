@@ -169,13 +169,13 @@ def _export_article(metrics, db_session, collection):
 
         article_format_id = dicts.format_to_code.get(data_format, -1)
 
-        # Caso artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_language
+        # Caso formato de artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_format
         if article_format_id == -1:
+            # Procura formato de artigo na base dados
             try:
-                existing_article_format = db_tools.get_article_format(db_session=db_session,
-                                                                      format_name=data_format)
+                existing_article_format = db_tools.get_article_format(db_session=db_session, format_name=data_format)
                 article_format_id = existing_article_format.format_id
-
+            # Cria formato caso não exista na base de dados
             except NoResultFound:
                 new_article_format = ArticleFormat()
                 new_article_format.name = data_format
@@ -189,12 +189,15 @@ def _export_article(metrics, db_session, collection):
                                                                          new_article_format.name))
 
         article_language_id = dicts.language_to_code.get(lang, -1)
+
+        # Caso idioma de artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_language
         if article_language_id == -1:
+            # Procura idioma na base de dados
             try:
                 existing_article_language = db_tools.get_article_language(db_session=db_session,
                                                                           language_name=lang)
                 article_language_id = existing_article_language.language_id
-
+            # Cria um novo idioma na base de dados, caso não exista
             except NoResultFound:
                 new_article_language = ArticleLanguage()
                 new_article_language.name = lang
@@ -210,84 +213,96 @@ def _export_article(metrics, db_session, collection):
         issn = ht.article_pid_to_journal_issn(pid)
 
         for ymd in article_data:
+            # Procura periódico na base de dados
             try:
-                # Procura periódico na base de dados
                 existing_journal = db_tools.get_journal(db_session=db_session, issn=issn)
+            # Cria um novo periódico caso não exista na base de dados
+            except NoResultFound:
+                new_journal = Journal()
+                new_journal.pid_issn = issn
+                new_journal.print_issn = ''
+                new_journal.online_issn = ''
 
-                try:
-                    # Procura artigo na base de dados
-                    existing_article = db_tools.get_article(db_session=db_session,
-                                                            pid=pid,
-                                                            collection=collection)
-                except NoResultFound:
-                    # Cria um novo artigo caso artigo não exista na base de dados
-                    new_article = Article()
-                    new_article.collection_acronym = collection
-                    new_article.fk_art_journal_id = existing_journal.journal_id
-                    new_article.pid = pid
-                    new_article.yop = yop
-
-                    db_session.add(new_article)
-                    db_session.flush()
-                    existing_article = new_article
-
-                try:
-                    # Procura origem do acesso (latitude e longitude) na base de dados
-                    existing_localization = db_tools.get_localization(db_session=db_session,
-                                                                      latitude=latitude,
-                                                                      longitude=longitude)
-                except NoResultFound:
-                    # Cria uma nova localização
-                    new_localization = Localization()
-                    new_localization.latitude = latitude
-                    new_localization.longitude = longitude
-
-                    db_session.add(new_localization)
-                    db_session.flush()
-
-                    existing_localization = new_localization
-
-                try:
-                    existing_article_metric = db_tools.get_article_metric(db_session=db_session,
-                                                                          year_month_day=ymd,
-                                                                          article_id=existing_article.article_id,
-                                                                          article_format_id=article_format_id,
-                                                                          article_language_id=article_language_id,
-                                                                          localization_id=existing_localization.localization_id
-                                                                          )
-
-                    update_metrics(existing_article_metric, article_data[ymd])
-                    logging.debug('Atualizada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (existing_article_metric.fk_article_id,
-                                                                                                                     existing_article_metric.fk_article_format_id,
-                                                                                                                     existing_article_metric.fk_article_language_id,
-                                                                                                                     existing_article_metric.fk_localization_id,
-                                                                                                                     existing_article_metric.year_month_day))
-                except NoResultFound:
-                    # Cria um novo registro de métrica, caso não exista na base de dados
-                    new_metric_article = ArticleMetric()
-                    new_metric_article.fk_article_id = existing_article.article_id
-                    new_metric_article.fk_article_format_id = article_format_id
-                    new_metric_article.fk_article_language_id = article_language_id
-                    new_metric_article.fk_localization_id = existing_localization.localization_id
-                    new_metric_article.year_month_day = ymd
-
-                    update_metrics(new_metric_article, article_data[ymd])
-                    db_session.add(new_metric_article)
-                    logging.debug('Adicionada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (new_metric_article.fk_article_id,
-                                                                                                                     new_metric_article.fk_article_format_id,
-                                                                                                                     new_metric_article.fk_article_language_id,
-                                                                                                                     new_metric_article.fk_localization_id,
-                                                                                                                     new_metric_article.year_month_day))
+                db_session.add(new_journal)
                 db_session.flush()
 
+                existing_journal = new_journal
+
+                new_journal_collection = JournalCollection()
+                new_journal_collection.fk_col_journal_id = existing_journal.journal_id
+                new_journal_collection.name = values.DEFAULT_COLLECTION
+                new_journal_collection.title = ''
+
+                db_session.add(new_journal_collection)
+                db_session.flush()
+
+                logging.debug('Adicionado periódico (ISSN: %s)' % (new_journal.pid_issn))
+
+            # Procura artigo na base de dados
+            try:
+                existing_article = db_tools.get_article(db_session=db_session,
+                                                        pid=pid,
+                                                        collection=collection)
+            # Cria um novo artigo caso artigo não exista na base de dados
             except NoResultFound:
-                logging.warning('Nenhum periódico encontrado (ISSN: %s, PID: %s, FMT: %s, LANG: %s)'
-                              % (issn, pid, data_format, lang))
-            except MultipleResultsFound:
-                logging.warning('Mais de um periódico encontrado (ISSN: %s)' % issn)
-            except IntegrityError as e:
-                db_session.rollback()
-                logging.error('Artigo já está na base ({})'.format(e))
+                new_article = Article()
+                new_article.collection_acronym = collection
+                new_article.fk_art_journal_id = existing_journal.journal_id
+                new_article.pid = pid
+                new_article.yop = yop
+
+                db_session.add(new_article)
+                db_session.flush()
+                existing_article = new_article
+
+            # Procura origem do acesso (latitude e longitude) na base de dados
+            try:
+                existing_localization = db_tools.get_localization(db_session=db_session,
+                                                                  latitude=latitude,
+                                                                  longitude=longitude)
+            # Cria uma nova localização
+            except NoResultFound:
+                new_localization = Localization()
+                new_localization.latitude = latitude
+                new_localization.longitude = longitude
+
+                db_session.add(new_localization)
+                db_session.flush()
+
+                existing_localization = new_localization
+
+            # Procura métrica na base de dados para atualizá-la
+            try:
+                existing_article_metric = db_tools.get_article_metric(db_session=db_session,
+                                                                      year_month_day=ymd,
+                                                                      article_id=existing_article.article_id,
+                                                                      article_format_id=article_format_id,
+                                                                      article_language_id=article_language_id,
+                                                                      localization_id=existing_localization.localization_id
+                                                                      )
+
+                update_metrics(existing_article_metric, article_data[ymd])
+                logging.debug('Atualizada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (existing_article_metric.fk_article_id,
+                                                                                                                 existing_article_metric.fk_article_format_id,
+                                                                                                                 existing_article_metric.fk_article_language_id,
+                                                                                                                 existing_article_metric.fk_localization_id,
+                                                                                                                 existing_article_metric.year_month_day))
+            # Cria um novo registro de métrica, caso não exista na base de dados
+            except NoResultFound:
+                new_metric_article = ArticleMetric()
+                new_metric_article.fk_article_id = existing_article.article_id
+                new_metric_article.fk_article_format_id = article_format_id
+                new_metric_article.fk_article_language_id = article_language_id
+                new_metric_article.fk_localization_id = existing_localization.localization_id
+                new_metric_article.year_month_day = ymd
+
+                update_metrics(new_metric_article, article_data[ymd])
+                db_session.add(new_metric_article)
+                logging.debug('Adicionada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, GEO_ID: %s, YMD: %s)' % (new_metric_article.fk_article_id,
+                                                                                                                 new_metric_article.fk_article_format_id,
+                                                                                                                 new_metric_article.fk_article_language_id,
+                                                                                                                 new_metric_article.fk_localization_id,
+                                                                                                                 new_metric_article.year_month_day))
     db_session.commit()
 
 
