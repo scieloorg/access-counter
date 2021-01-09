@@ -9,12 +9,18 @@ import re
 from counter import CounterStat
 from hit import HitManager
 from socket import inet_ntoa
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from time import time
-from utils import db_tools, dicts, hit_tools as ht
-from utils.sql_declarative import Article, ArticleMetric, Localization, ArticleFormat, ArticleLanguage
-
+from utils import db_tools, dicts, values, hit_tools as ht
+from utils.sql_declarative import (
+    Article,
+    ArticleMetric,
+    Localization,
+    ArticleFormat,
+    ArticleLanguage,
+    Journal,
+    JournalCollection,
+)
 
 MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '250000'))
 
