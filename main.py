@@ -9,7 +9,7 @@ import re
 from counter import CounterStat
 from hit import HitManager
 from socket import inet_ntoa
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.orm.exc import NoResultFound
 from time import time
 from utils import db_tools, dicts, values, hit_tools as ht
 from utils.sql_declarative import (
@@ -401,14 +401,16 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection, file_p
 
     cs = CounterStat()
     cs.calculate_metrics(hit_manager.hits)
-    export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
 
-    if hit_manager.debug:
-        logging.info('Salvando hits em disco...')
-        export_article_hits_to_csv(hit_manager.hits['article'], file_prefix)
+    if hit_manager.persist_on_database:
+        logging.info('Salvando métricas na base de dados...')
+        export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
 
-        logging.info('Salvando métricas em disco...')
-        export_article_metrics_to_csv(cs.metrics['article'], file_prefix)
+    logging.info('Salvando hits em disco...')
+    export_article_hits_to_csv(hit_manager.hits['article'], file_prefix)
+
+    logging.info('Salvando métricas em disco...')
+    export_article_metrics_to_csv(cs.metrics['article'], file_prefix)
 
     hit_manager.reset()
 
@@ -483,19 +485,19 @@ def main():
     )
 
     parser.add_argument(
-        '--debug',
-        dest='debug',
-        default=False,
+        '-d',
+        '--persist_on_database',
+        dest='persist_on_database',
         action='store_true',
-        help='Possibilita verificar corretude da extração de Hits e do cálculo de métricas.'
-             ' Salva em disco dois arquivos: (1) r5_hits_yyyymmdd e (2) r5_metrics_yyyymmdd.'
+        default=False,
+        help='Também persiste resultados em banco de dados'
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
         '--period',
         dest='period',
-        help='Periódo da qual os dados serão extraídos do Matomo. Caso esteja no formato YYYY-MM-DD,YYYY-MM-DD, '
+        help='Período da qual os dados serão extraídos do Matomo. Caso esteja no formato YYYY-MM-DD,YYYY-MM-DD, '
              'o período entre a primeira e segunda datas será considerado. Caso esteja no formato YYYY-MM-DD, '
              'apenas os dados do dia indicado serão extraídos'
     )
@@ -537,8 +539,8 @@ def main():
                              issn_to_acronym=issn_to_acronym,
                              pid_to_format_lang=pid_to_format_lang,
                              pid_to_yop=pid_to_yop,
-                             flag_include_other_hit_types=params.include_other_hit_types,
-                             debug=params.debug)
+                             persist_on_database=params.persist_on_database,
+                             flag_include_other_hit_types=params.include_other_hit_types)
 
     if params.pretables:
         logging.info('Iniciado em modo pré-tabelas')
