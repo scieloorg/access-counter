@@ -148,6 +148,13 @@ def main():
              'mongodb://username:password@host:port/database.collection'
     )
 
+    parser.add_argument(
+        '-v',
+        default='',
+        dest='version',
+        help='String que representa a versão dos dicionários gerados (usar uma data no formato YYYY-MM-DD)'
+    )
+
     params = parser.parse_args()
 
     try:
@@ -156,6 +163,8 @@ def main():
         print('\nNão foi possível conectar a base de dados do ArticleMeta')
         print(e)
         exit(1)
+
+    version = params.version
 
     # PID de artigo -> lista de ISSNs
     pid_to_issns = {}
@@ -257,20 +266,20 @@ def main():
 
     fix_issn_to_acronym_errors(issn_to_acronym)
 
-    pickle.dump(pid_to_issns, open('pid_to_issns.data', 'wb'))
-    export_pid_to_issn(pid_to_issns, 'pid_to_issns.csv')
+    pickle.dump(pid_to_issns, open('pid-issns-' + version + '.data', 'wb'))
+    export_pid_to_issn(pid_to_issns, 'pid-issns-' + version + '.csv')
 
-    pickle.dump(pid_to_langs, open('pid_to_format_lang.data', 'wb'))
-    export_lang_format_to_pid(pid_to_langs, 'pid_to_format_lang.csv')
+    pickle.dump(pid_to_langs, open('pid-format-lang-' + version + '.data', 'wb'))
+    export_lang_format_to_pid(pid_to_langs, 'pid-format-lang-' + version + '.csv')
 
-    pickle.dump(path_pdf_to_pid, open('path_pdf_to_pid.data', 'wb'))
-    export_path_pdf_to_pid(path_pdf_to_pid, 'path_pdf_to_pid.csv')
+    pickle.dump(path_pdf_to_pid, open('pdf-pid-' + version + '.data', 'wb'))
+    export_path_pdf_to_pid(path_pdf_to_pid, 'pdf-pid-' + version + '.csv')
 
-    pickle.dump(issn_to_acronym, open('issn_to_acronym.data', 'wb'))
-    export_issn_to_acronym(issn_to_acronym, 'issn_to_acronym.csv')
+    pickle.dump(issn_to_acronym, open('issn-acronym-' + version + '.data', 'wb'))
+    export_issn_to_acronym(issn_to_acronym, 'issn-acronym-' + version + '.csv')
 
-    pickle.dump(pid_to_dates, open('pid_to_dates.data', 'wb'))
-    export_pid_to_dates(pid_to_dates, 'pid_to_dates.csv')
+    pickle.dump(pid_to_dates, open('pid-dates-' + version + '.data', 'wb'))
+    export_pid_to_dates(pid_to_dates, 'pid-dates-' + version + '.csv')
 
 
 if __name__ == '__main__':
