@@ -8,8 +8,9 @@ usage(){
   echo "Script para calcular métricas COUNTER em paralelo"
   echo "================================================="
   echo "Persiste em disco os resultados obtidos"
-  echo "Arquivos r5_metrics_YYYY-MM-DD contêm os valores das métricas"
-  echo "Arquivos r5_hits_YYYY-MM-DD contêm os acessos (hits) associados às métricas"
+  echo "Arquivos r5_metrics_YYYYMMDD contêm os valores das métricas"
+  echo "Arquivos r5_hits_YYYYMMDD contêm os acessos (hits) associados às métricas"
+  echo "Sugere-se t = 5 para um computador com 16 GB de RAM e 6 cores"
   echo ""
 }
 
