@@ -12,10 +12,8 @@ from sqlalchemy.sql import null
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from urllib import parse
 from utils import db_tools, dicts
+from utils.regular_expressions import REGEX_ISSN
 from utils.sql_declarative import Journal, JournalCollection
-
-
-REGEX_ISSN = re.compile(r'[0-9]{4}-[0-9]{3}[0-9xX]')
 
 
 def format_publisher_names(publisher_names: list):
