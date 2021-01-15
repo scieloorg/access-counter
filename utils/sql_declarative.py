@@ -99,6 +99,9 @@ class ArticleMetric(Base):
                                        'year_month_day',
                                        name='uni_art_for_lan_loc_id_ymd'),)
 
+    __table_args__ += (Index('index_ymd',
+                             'year_month_day'),)
+
     __table_args__ += (Index('index_ymd_art_for_id',
                              'fk_article_format_id',
                              'year_month_day'),)
@@ -117,6 +120,13 @@ class ArticleMetric(Base):
                              'fk_article_language_id',
                              'fk_localization_id',
                              'year_month_day'),)
+
+    __table_args__ += (Index('index_ymd_aid_fmt_lang_loc',
+                             'year_month_day',
+                             'fk_article_id',
+                             'fk_article_format_id',
+                             'fk_article_language_id',
+                             'fk_localization_id'),)
 
     metric_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 

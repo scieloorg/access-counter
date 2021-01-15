@@ -10,6 +10,9 @@ REGEX_JOURNAL_PID = r'^[0-9]{4}-[0-9]{3}[0-9xX]$'
 # Detecta ano de publicação (YOP) a partir do PID de artigo
 REGEX_ARTICLE_PID_YOP = r'^S[0-9]{4}-[0-9]{3}[0-9xX](\d{4})\d{9}$'
 
+# Detecta ISSN
+REGEX_ISSN = r'[0-9]{4}-[0-9]{3}[0-9xX]'
+
 # Detectam nome e/ou caminho de arquivo pdf
 REGEX_PDF = r'.*\.pdf$'
 REGEX_ARTICLE_PDF_PATH = r'.*(/pdf/.*/.*)'

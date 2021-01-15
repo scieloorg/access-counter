@@ -1,13 +1,6 @@
 from utils import dicts
 
 
-# Métricas para Item
-METRICS_ITEM = {'total_item_requests': 0,
-                'unique_item_requests': 0,
-                'total_item_investigations': 0,
-                'unique_item_investigations': 0}
-
-
 class CounterStat:
     """
     Modelo de dados utilizado para representar as métricas COUNTER R5
@@ -75,27 +68,34 @@ class CounterStat:
 
         for ymd in datefied_hits:
             if key not in target:
-                target[key] = {ymd: METRICS_ITEM.copy()}
+                target[key] = {}
 
-            target[key][ymd]['total_item_requests'] = self._get_total(
+            if ymd not in target[key]:
+                target[key][ymd] = dicts.counter_item_metrics.copy()
+
+            target[key][ymd]['total_item_requests'] += self._get_total(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_requests)
 
-            target[key][ymd]['total_item_investigations'] = self._get_total(
+            target[key][ymd]['total_item_investigations'] += self._get_total(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_investigations)
 
-            target[key][ymd]['unique_item_requests'] = self._get_unique(
+            target[key][ymd]['unique_item_requests'] += self._get_unique(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_requests)
 
-            target[key][ymd]['unique_item_investigations'] = self._get_unique(
+            target[key][ymd]['unique_item_investigations'] += self._get_unique(
                 datefied_hits[ymd],
                 group_hit_type,
                 group_item_investigations)
+
+            # Remove valores nulos
+            if sum(target[key][ymd].values()) == 0:
+                del target[key][ymd]
 
     def calculate_metrics(self, data_content):
         """

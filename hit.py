@@ -86,7 +86,7 @@ class HitManager:
     """
     Classe que gerencia objetos Hit
     """
-    def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang, pid_to_yop, flag_include_other_hit_types=False, debug=False):
+    def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang, pid_to_yop, persist_on_database, flag_include_other_hit_types=False):
         self.hits = {'article': {}, 'issue': {}, 'journal': {}, 'platform': {}, 'others': {}}
 
         # Dicionários para tratamento de PID
@@ -102,7 +102,7 @@ class HitManager:
         self.flag_include_other_hit_types = flag_include_other_hit_types
 
         # Utilizada para analisar corretude de lista de Hits e de Métricas
-        self.debug = debug
+        self.persist_on_database = persist_on_database
 
     def _generate_acronym_to_issn(self):
         """
