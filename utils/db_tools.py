@@ -20,6 +20,9 @@ from utils.sql_declarative import (
 )
 
 
+engine = None
+
+
 def create_tables(matomo_db_uri):
     """
     Cria tabelas na base de dados MariaDB
@@ -134,6 +137,7 @@ def get_db_session(matomo_db_uri):
     @param matomo_db_uri: string de conexão à base do Matomo
     @return: uma sessão de conexão com a base do Matomo
     """
+    global engine
     engine = create_engine(matomo_db_uri)
     Base.metadata.bind = engine
     db_session = sessionmaker(bind=engine)
