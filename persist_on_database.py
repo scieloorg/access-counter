@@ -186,6 +186,7 @@ def read_r5_metrics(path_file_r5_metrics):
                 r5_metrics.append(R5Metrics(**row))
             else:
                 logging.debug('Métrica ignorada: %s' % r5.__str__())
+
     return r5_metrics
 
 
@@ -211,7 +212,7 @@ def update_issn_table(issns, db_session):
     :param issns: Lista de ISSNs que não constam no banco de dados
     :param db_session: Sessão de conexão com banco de dados
     """
-    logging.info('Há %d periódicos a serem adicionados no banco de dados' % len(issns))
+    logging.info('Há %d periódico(s) a ser(em) adicionado(s) no banco de dados' % len(issns))
     for issn in issns:
         new_journal = Journal()
         new_journal.pid_issn = issn
@@ -373,7 +374,6 @@ def add_article_metrics(r5_metrics, db_session, maps):
                                        r.total_item_requests,
                                        r.unique_item_investigations,
                                        r.unique_item_requests]
-
         else:
             # Caso key já esteja no dicionário de métricas, faz a somatória dos valores
             aggregated_metrics[key] = sum_metrics(aggregated_metrics[key], [r.total_item_investigations,
@@ -381,28 +381,32 @@ def add_article_metrics(r5_metrics, db_session, maps):
                                                                             r.unique_item_investigations,
                                                                             r.unique_item_requests])
 
-    for key, values in aggregated_metrics.items():
-        art_id, lang_id, fmt_id, geo_id, ymd = key
-        tii, tir, uii, uir = values
+    # Obtém último ID da tabela counter_article_metric
+    last_article_metric_id = db_session.execute('SELECT MAX(metric_id) FROM counter_article_metric limit 1').first()[0]
 
-        new_metric_article = ArticleMetric()
-        new_metric_article.fk_article_id = art_id
-        new_metric_article.fk_article_format_id = fmt_id
-        new_metric_article.fk_article_language_id = lang_id
-        new_metric_article.fk_localization_id = geo_id
-        new_metric_article.year_month_day = ymd
-        new_metric_article.total_item_investigations = tii
-        new_metric_article.total_item_requests = tir
-        new_metric_article.unique_item_investigations = uii
-        new_metric_article.unique_item_requests = uir
+    # ID da próxima linha de um objeto article_metric
+    next_article_metric_id = 1 + last_article_metric_id if last_article_metric_id else 1
 
-        objects.append(new_metric_article)
-        logging.debug('Adicionada métrica (%s, %s, %s, %s, %s)' % (new_metric_article.fk_article_id,
-                                                                   new_metric_article.fk_article_format_id,
-                                                                   new_metric_article.fk_article_language_id,
-                                                                   new_metric_article.fk_localization_id,
-                                                                   new_metric_article.year_month_day))
-    db_session.bulk_save_objects(objects)
+    # Transforma dicionário de métricas em itens persistíveis no banco de dados
+    for k, v in aggregated_metrics.items():
+        art_id, lang_id, fmt_id, geo_id, ymd = k
+        tii, tir, uii, uir = v
+
+        row = {'metric_id': next_article_metric_id,
+               'fk_article_id': art_id,
+               'fk_article_language_id': lang_id,
+               'fk_article_format_id': fmt_id,
+               'fk_localization_id': geo_id,
+               'year_month_day': ymd,
+               'total_item_investigations': tii,
+               'total_item_requests': tir,
+               'unique_item_investigations': uii,
+               'unique_item_requests': uir}
+
+        objects.append(row)
+        next_article_metric_id += 1
+
+    db_session.bulk_insert_mappings(ArticleMetric, objects)
     db_session.commit()
 
 
@@ -423,6 +427,14 @@ def main():
         help='Diretório com arquivos r5_metrics'
     )
 
+    parser.add_argument(
+        '-m', '--mode',
+        dest='mode',
+        default='all',
+        choices=['all', 'metric', 'foreign'],
+        help='Tabelas a serem persistidas'
+    )
+
     params = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO,
@@ -431,6 +443,9 @@ def main():
 
     # Obtém sessão de conexão com banco de dados COUNTER/Matomo
     db_session = db_tools.get_db_session(params.matomo_db_uri)
+
+    # Obtém os nomes das tabelas a serem persistidas
+    target_tables = params.mode
 
     # Obtém dicionários que mapeia ISSN a ISSN-Chave, Idioma a ID e Formato a ID
     issn_map = mount_issn_map(db_session)
@@ -441,10 +456,10 @@ def main():
 
     # Obtém lista de arquivos r5_metrics a serem lidos
     files_r5 = sorted([os.path.join(params.dir_r5_metrics, f) for f in os.listdir(params.dir_r5_metrics) if 'r5_metrics' in f])
-    logging.info('Há %d arquivos para serem processados' % len(files_r5))
+    logging.info('Há %d arquivo(s) para ser(em) processado(s)' % len(files_r5))
 
-    # Processa cada arquivo r5_metrics
     for f in files_r5:
+        time_start = time.time()
         logging.info('Processando arquivo %s' % f)
 
         # Lê arquivo r5
@@ -452,44 +467,51 @@ def main():
         r5_metrics = read_r5_metrics(f)
 
         # Obtém lista de ISSNs que não existem no banco de dados
-        logging.info('Obtendo ISSNs...')
-        new_issns = update_issn_map(r5_metrics, issn_map)
+        if 'all' in target_tables or 'foreign' in target_tables:
+            logging.info('Obtendo ISSNs...')
+            new_issns = update_issn_map(r5_metrics, issn_map)
 
-        # Atualiza banco de dados com ISSNs não encontrados
-        if new_issns:
-            logging.info('Atualizando lista de ISSNs...')
-            update_issn_table(new_issns, db_session)
+            # Atualiza banco de dados com ISSNs não encontrados
+            if new_issns:
+                logging.info('Atualizando lista de ISSNs...')
+                update_issn_table(new_issns, db_session)
+                issn_map = mount_issn_map(db_session)
 
-        # Atualiza lista de pares (Latitude, Longitude) no banco de dados
-        logging.info('Atualizando lista de pares (latitude, longitude)...')
-        exist_new_localizations = update_localization_table(r5_metrics, db_session, localization_map)
+            # Atualiza lista de pares (Latitude, Longitude) no banco de dados
+            logging.info('Atualizando lista de pares (latitude, longitude)...')
+            exist_new_localizations = update_localization_table(r5_metrics, db_session, localization_map)
 
-        if exist_new_localizations:
-            logging.info('Recarregando dados de localização')
-            localization_map = mount_localization_map(db_session)
+            if exist_new_localizations and 'all' in target_tables:
+                logging.info('Recarregando dados de localização')
+                localization_map = mount_localization_map(db_session)
 
-        # Atualiza formatos de artigo no banco de dados
-        logging.info('Atualizando formatos...')
-        update_format_table(r5_metrics, db_session, format_map)
+            # Atualiza formatos de artigo no banco de dados
+            logging.info('Atualizando formatos...')
+            update_format_table(r5_metrics, db_session, format_map)
 
-        # Atualiza idiomas de artigo no banco de dados
-        logging.info('Atualizando idiomas...')
-        update_language_table(r5_metrics, db_session, language_map)
+            # Atualiza idiomas de artigo no banco de dados
+            logging.info('Atualizando idiomas...')
+            update_language_table(r5_metrics, db_session, language_map)
 
-        # Atualiza artigos no banco de dados
-        logging.info('Atualizando artigos...')
-        exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
+            # Atualiza artigos no banco de dados
+            logging.info('Atualizando artigos...')
+            exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
 
-        if exist_new_pids:
-            logging.info('Recarregando dados de PID e COLLECTION_ACRONYM')
-            pid_map = mount_pid_map(db_session)
+            if exist_new_pids and 'all' in target_tables:
+                logging.info('Recarregando dados de PID e COLLECTION_ACRONYM')
+                pid_map = mount_pid_map(db_session)
 
-        # Adiciona métricas de artigo no banco de dados
-        logging.info('Adicionando métricas...')
-        add_article_metrics(r5_metrics, db_session, {'pid': pid_map,
-                                                     'language': language_map,
-                                                     'format': format_map,
-                                                     'localization': localization_map})
+        if 'all' in target_tables or 'metric' in target_tables:
+            # Adiciona métricas de artigo no banco de dados
+            logging.info('Adicionando métricas...')
+            add_article_metrics(r5_metrics,
+                                db_session,
+                                {'pid': pid_map,
+                                 'language': language_map,
+                                 'format': format_map,
+                                 'localization': localization_map})
+
+            logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
 
 
 if __name__ == '__main__':
