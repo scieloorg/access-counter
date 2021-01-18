@@ -61,6 +61,10 @@ class R5Metrics:
 
         return True
 
+    def __str__(self):
+        return '|'.join([str(getattr(self, k)) for k in self.__dict__ if not k.startswith('_')])
+
+
 def sum_metrics(m1, m2):
     """
     Retorna uma nova lista com a soma dos elementos de duas listas de métricas
