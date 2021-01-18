@@ -19,6 +19,8 @@ from utils.sql_declarative import (
 
 
 COLLECTION_ACRONYM = os.environ.get('COLLECTION_ACRONYM', 'scl')
+MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
+MAX_YEAR = datetime.datetime.now().year + 5
 
 
 class R5Metrics:
