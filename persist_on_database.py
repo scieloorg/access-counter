@@ -38,6 +38,26 @@ class R5Metrics:
         self.unique_item_investigations = int(kargs['unique_item_investigations'])
         self.unique_item_requests = int(kargs['unique_item_requests'])
 
+    def is_valid_metric(self):
+        # Ignora métrica que latitude é nula
+        if self.latitude == 'NULL':
+            return False
+
+        # Ignora métrica que longitude é nula
+        if self.longitude == 'NULL':
+            return False
+
+        # Ignora métrica que PID é mal-formado
+        if not re.match(REGEX_ARTICLE_PID, self.pid):
+            return False
+
+        # Ignora métricas cujo artigo possui ano de publicação inválido
+        if not isinstance(self.year_of_publication, int):
+            return False
+        elif self.year_of_publication < MIN_YEAR or self.year_of_publication > MAX_YEAR:
+            return False
+
+        return True
 
 def sum_metrics(m1, m2):
     """
