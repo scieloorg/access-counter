@@ -181,9 +181,11 @@ def read_r5_metrics(path_file_r5_metrics):
                                                                    'unique_item_investigations',
                                                                    'unique_item_requests'])
         for row in csv_reader:
-            # Ignora linhas que latitude e longitude são nulas (originárias de IPs locais, por exemplo)
-            if row.get('latitude') != 'NULL' and row.get('longitude') != 'NULL':
+            r5 = R5Metrics(**row)
+            if r5.is_valid_metric():
                 r5_metrics.append(R5Metrics(**row))
+            else:
+                logging.debug('Métrica ignorada: %s' % r5.__str__())
     return r5_metrics
 
 
