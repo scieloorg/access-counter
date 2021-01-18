@@ -1,8 +1,10 @@
 import argparse
 import csv
+import datetime
 import logging
 import os
 import re
+import time
 
 from decimal import Decimal
 from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
