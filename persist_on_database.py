@@ -5,7 +5,7 @@ import os
 import re
 
 from decimal import Decimal
-from utils.regular_expressions import REGEX_ISSN
+from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
 from utils import db_tools, values
 from utils.sql_declarative import (
     Journal,
