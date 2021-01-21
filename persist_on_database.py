@@ -16,7 +16,10 @@ from utils.sql_declarative import (
     ArticleFormat,
     ArticleLanguage,
     Article,
-    ArticleMetric
+    ArticleMetric,
+    JournalMetric,
+    SushiJournalMetric,
+    SushiJournalYOPMetric
 )
 
 
@@ -89,11 +92,11 @@ def mount_issn_map(session):
                  j.print_issn] if i != '']
         for i in issns:
             if i not in issn_map:
-                issn_map[i] = j.journal_id
+                issn_map[i] = j.id
             else:
-                if issn_map[i] != j.journal_id:
+                if issn_map[i] != j.id:
                     logging.error('Base de periódicos está inconsistente (%s -> %s,  %s -> %s)'
-                                  % (i, j.journal_id, i, issn_map[i]))
+                                  % (i, j.id, i, issn_map[i]))
 
     return issn_map
 
@@ -107,7 +110,7 @@ def mount_localization_map(session):
     localization_map = {}
 
     for m in session.query(Localization):
-        localization_map[(m.latitude, m.longitude)] = m.localization_id
+        localization_map[(m.latitude, m.longitude)] = m.id
     return localization_map
 
 
@@ -120,8 +123,8 @@ def mount_format_map(session):
     format_map = {}
 
     for m in session.query(ArticleFormat):
-        format_code = m.format_id
-        format_name = m.name
+        format_code = m.id
+        format_name = m.format
         format_map[format_name] = format_code
 
     return format_map
@@ -136,9 +139,9 @@ def mount_pid_map(session):
     pid_map = {}
 
     for m in session.query(Article):
-        article_id = m.article_id
+        article_id = m.id
         article_pid = m.pid
-        article_collection = m.collection_acronym
+        article_collection = m.collection
         pid_map[(article_pid, article_collection)] = article_id
 
     return pid_map
@@ -153,8 +156,8 @@ def mount_language_map(session):
     language_map = {}
 
     for m in session.query(ArticleLanguage):
-        language_id = m.language_id
-        language_name = m.name
+        language_id = m.id
+        language_name = m.language
         language_map[language_name] = language_id
 
     return language_map
@@ -223,8 +226,8 @@ def update_issn_table(issns, db_session):
         db_session.flush()
 
         new_journal_collection = JournalCollection()
-        new_journal_collection.fk_col_journal_id = new_journal.journal_id
-        new_journal_collection.name = values.DEFAULT_COLLECTION
+        new_journal_collection.idjournal_jc = new_journal.id
+        new_journal_collection.collection = values.DEFAULT_COLLECTION
         new_journal_collection.title = ''
 
         db_session.add(new_journal_collection)
@@ -275,13 +278,13 @@ def update_format_table(r5_metrics, db_session, format_map):
 
     for nfmt in new_formats:
         new_fmt = ArticleFormat()
-        new_fmt.name = nfmt
+        new_fmt.format = nfmt
 
         logging.info('Adicionado formato %s' % nfmt)
         db_session.add(new_fmt)
         db_session.commit()
 
-        format_map[new_fmt.name] = new_fmt.format_id
+        format_map[new_fmt.format] = new_fmt.id
 
 
 def update_language_table(r5_metrics, db_session, language_map):
@@ -296,13 +299,13 @@ def update_language_table(r5_metrics, db_session, language_map):
 
     for nlang in new_languages:
         new_language = ArticleLanguage()
-        new_language.name = nlang
+        new_language.language = nlang
 
         logging.info('Adicionado idioma %s' % nlang)
         db_session.add(new_language)
         db_session.commit()
 
-        language_map[new_language.name] = new_language.language_id
+        language_map[new_language.language] = new_language.id
 
 
 def update_article_table(r5_metrics, db_session, issn_map, pid_map):
@@ -326,8 +329,8 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
         pid, col = k
         if (pid, col) not in pid_map:
             new_article = Article()
-            new_article.collection_acronym = COLLECTION_ACRONYM
-            new_article.fk_art_journal_id = issn_map[v.issn]
+            new_article.collection = COLLECTION_ACRONYM
+            new_article.idjournal_a = issn_map[v.issn]
             new_article.pid = v.pid
             new_article.yop = v.year_of_publication
 
