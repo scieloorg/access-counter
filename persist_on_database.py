@@ -345,33 +345,100 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
         return True
 
 
-def add_article_metrics(r5_metrics, db_session, maps):
+def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
     """
-    Adiciona métricas de artigo no banco de dados
+    Adiciona métricas no banco de dados
     :param r5_metrics: lista de instâncias R5Metric
     :param db_session: Sessão de conexão com banco de dados
     :param maps: Dicionários que mapeiam insumos a seus respectivos IDs no banco de dados
+    :param key_list: Lista de chaves
+    :param table_class: Classe que representa a tabela a ser persistida
     """
     objects = []
+
+    # Obtém um dicionário de métricas agregadas pelos valores associados a chave de key_list
+    aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
+
+    # Obtém último ID
+    last_id = db_tools.get_last_id(db_session, table_class)
+    next_id = 1 + last_id if last_id else 1
+
+    # Transforma dicionário de métricas em itens persistíveis no banco de dados
+    for k, v in aggregated_metrics.items():
+        row = {}
+        tii, tir, uii, uir = v
+        row.update({'id': next_id,
+                    'total_item_investigations': tii,
+                    'total_item_requests': tir,
+                    'unique_item_investigations': uii,
+                    'unique_item_requests': uir})
+
+        # É métrica agregada para artigo
+        if table_class.__tablename__ == 'counter_article_metric':
+            idarticle, idlanguage, idformat, idlocalization, year_month_day = k
+            row.update({'idarticle': idarticle,
+                        'idlanguage': idlanguage,
+                        'idformat': idformat,
+                        'idlocalization': idlocalization,
+                        'year_month_day': year_month_day})
+
+        # É métrica agregada para periódico
+        elif table_class.__tablename__ == 'counter_journal_metric':
+            idjournal_cjm, idlanguage_cjm, idformat_cjm, yop, year_month_day = k
+            row.update({'idjournal_cjm': idjournal_cjm,
+                        'idlanguage_cjm': idlanguage_cjm,
+                        'idformat_cjm': idformat_cjm,
+                        'yop': yop,
+                        'year_month_day': year_month_day})
+
+        # É métrica agregada para periódico e ano de publicação na tabela Sushi
+        elif table_class.__tablename__ == 'sushi_journal_yop_metric':
+            idjournal_sjym, yop, year_month_day = k
+            row.update({'idjournal_sjym': idjournal_sjym,
+                        'yop': yop,
+                        'year_month_day': year_month_day})
+
+        # É métricas agregada para periódico na tabela SUSHI
+        elif table_class.__tablename__ == 'sushi_journal_metric':
+            idjournal_sjm, year_month_day = k
+            row.update({'idjournal_sjm': idjournal_sjm,
+                        'year_month_day': year_month_day})
+
+        objects.append(row)
+        next_id += 1
+
+    db_session.bulk_insert_mappings(table_class, objects)
+    db_session.commit()
+
+
+def _aggregate_by_keylist(r5_metrics, key_list, maps):
+    """
+    Agrega métricas de acordo com uma lista de chaves de agregação
+
+    :param r5_metrics: Lista de métricas do tipo R5Metric
+    :param key_list:  Lista de chaves agregadoras
+    :param maps: Dicionários que mapeiam insumos a seus respectivos IDs no banco de dados
+    :return: Um dicionário que mapeia as métricas a suas respectivas chaves
+    """
     aggregated_metrics = {}
 
-    # Como uma mesma chave ocorre diversas vezes (IPs diferentes podem apontar para uma mesma Localização),
-    #  é preciso agregar os valores das métricas por chave
     for r in r5_metrics:
-        fk_article_id = maps['pid'][(r.pid, COLLECTION_ACRONYM)]
-        fk_article_language_id = maps['language'][r.language_name]
-        fk_article_format_id = maps['format'][r.format_name]
-        fk_localization_id = maps['localization'][(r.latitude, r.longitude)]
-        year_month_day = r.year_month_day
+        attrs = {'idjournal_cjm': maps['issn'][r.issn],
+                 'idjournal_sjm': maps['issn'][r.issn],
+                 'idjournal_sjym': maps['issn'][r.issn],
+                 'idarticle': maps['pid'][(r.pid, COLLECTION_ACRONYM)],
+                 'idlanguage': maps['language'][r.language_name],
+                 'idlanguage_cjm': maps['language'][r.language_name],
+                 'idformat': maps['format'][r.format_name],
+                 'idformat_cjm': maps['format'][r.format_name],
+                 'idlocalization': maps['localization'][(r.latitude, r.longitude)],
+                 'yop': r.year_of_publication,
+                 'year_month_day': r.year_month_day}
 
-        # Cria uma chave para a métrica r
-        key = (fk_article_id,
-               fk_article_language_id,
-               fk_article_format_id,
-               fk_localization_id,
-               year_month_day)
+        # Monta chave de agregação de métricas
+        key = tuple(attrs[k] for k in key_list)
 
-        # Adiciona métrica r no dicionário que agrega métricas por key
+        # Adiciona métricas no dicionário
         if key not in aggregated_metrics:
             aggregated_metrics[key] = [r.total_item_investigations,
                                        r.total_item_requests,
@@ -383,34 +450,7 @@ def add_article_metrics(r5_metrics, db_session, maps):
                                                                             r.total_item_requests,
                                                                             r.unique_item_investigations,
                                                                             r.unique_item_requests])
-
-    # Obtém último ID da tabela counter_article_metric
-    last_article_metric_id = db_session.execute('SELECT MAX(metric_id) FROM counter_article_metric limit 1').first()[0]
-
-    # ID da próxima linha de um objeto article_metric
-    next_article_metric_id = 1 + last_article_metric_id if last_article_metric_id else 1
-
-    # Transforma dicionário de métricas em itens persistíveis no banco de dados
-    for k, v in aggregated_metrics.items():
-        art_id, lang_id, fmt_id, geo_id, ymd = k
-        tii, tir, uii, uir = v
-
-        row = {'metric_id': next_article_metric_id,
-               'fk_article_id': art_id,
-               'fk_article_language_id': lang_id,
-               'fk_article_format_id': fmt_id,
-               'fk_localization_id': geo_id,
-               'year_month_day': ymd,
-               'total_item_investigations': tii,
-               'total_item_requests': tir,
-               'unique_item_investigations': uii,
-               'unique_item_requests': uir}
-
-        objects.append(row)
-        next_article_metric_id += 1
-
-    db_session.bulk_insert_mappings(ArticleMetric, objects)
-    db_session.commit()
+    return aggregated_metrics
 
 
 def main():
@@ -431,11 +471,11 @@ def main():
     )
 
     parser.add_argument(
-        '-m', '--mode',
-        dest='mode',
-        default='all',
-        choices=['all', 'metric', 'foreign'],
-        help='Tabelas a serem persistidas'
+        '-t', '--tables',
+        dest='tables',
+        default='counter_foreign,sushi_journal_metric',
+        type=str,
+        help='Lista de tabelas a serem persistidas (indicar os nomes das tabelas separadaos por vírgula)'
     )
 
     params = parser.parse_args()
@@ -448,7 +488,8 @@ def main():
     db_session = db_tools.get_db_session(params.matomo_db_uri)
 
     # Obtém os nomes das tabelas a serem persistidas
-    target_tables = params.mode
+    target_tables = params.tables.split(',')
+    logging.info('Tabelas a serem persistidas: (%s)' % ','.join(target_tables))
 
     # Obtém dicionários que mapeia ISSN a ISSN-Chave, Idioma a ID e Formato a ID
     issn_map = mount_issn_map(db_session)
@@ -470,7 +511,7 @@ def main():
         r5_metrics = read_r5_metrics(f)
 
         # Obtém lista de ISSNs que não existem no banco de dados
-        if 'all' in target_tables or 'foreign' in target_tables:
+        if 'counter_foreign' in target_tables:
             logging.info('Obtendo ISSNs...')
             new_issns = update_issn_map(r5_metrics, issn_map)
 
@@ -484,7 +525,7 @@ def main():
             logging.info('Atualizando lista de pares (latitude, longitude)...')
             exist_new_localizations = update_localization_table(r5_metrics, db_session, localization_map)
 
-            if exist_new_localizations and 'all' in target_tables:
+            if exist_new_localizations and ('counter_article_metric' in target_tables or 'counter_journal_metric' in target_tables or 'sushi_journal_metric' in target_tables):
                 logging.info('Recarregando dados de localização')
                 localization_map = mount_localization_map(db_session)
 
@@ -500,21 +541,33 @@ def main():
             logging.info('Atualizando artigos...')
             exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
 
-            if exist_new_pids and 'all' in target_tables:
+            if exist_new_pids and ('counter_article_metric' in target_tables or 'counter_journal_metric' in target_tables or 'sushi_journal_metric' in target_tables):
                 logging.info('Recarregando dados de PID e COLLECTION_ACRONYM')
                 pid_map = mount_pid_map(db_session)
 
-        if 'all' in target_tables or 'metric' in target_tables:
-            # Adiciona métricas de artigo no banco de dados
-            logging.info('Adicionando métricas...')
-            add_article_metrics(r5_metrics,
-                                db_session,
-                                {'pid': pid_map,
-                                 'language': language_map,
-                                 'format': format_map,
-                                 'localization': localization_map})
+        maps = {'pid': pid_map, 'language': language_map, 'format': format_map, 'localization': localization_map, 'issn': issn_map}
 
-            logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
+        if 'counter_article_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para counter_article...')
+            keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric)
+
+        if 'counter_journal_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para counter_journal...')
+            keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric)
+
+        if 'sushi_journal_yop_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para sushi_journal_yop...')
+            keys_sushi_journal_yop = ['idjournal_sjym', 'yop', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric)
+
+        if 'sushi_journal_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para sushi_journal...')
+            keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric)
+
+        logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
 
 
 if __name__ == '__main__':
