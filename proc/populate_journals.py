@@ -86,7 +86,7 @@ def update_journal_issn(journal, issn_type, new_value):
                 logging.error('Houston, we have a problem (%s) %s != %s' % (issn_type, new_value, current_value))
         else:
             setattr(journal, issn_type, new_value)
-            logging.info('Atualizado periódico {} ({}), de {} para {}'.format(journal.journal_id,
+            logging.info('Atualizado periódico {} ({}), de {} para {}'.format(journal.id,
                                                                               issn_type,
                                                                               current_value,
                                                                               new_value))
@@ -144,22 +144,22 @@ def populate(articlemeta, db_session):
             # Cria novo registro de JournalCollection. Assume que nenhum periódico é repetido para uma mesma coleção
             new_journal_collection = JournalCollection()
 
-            new_journal_collection.fk_col_journal_id = existing_journal.journal_id
+            new_journal_collection.idjournal_jc = existing_journal.id
 
             # O título e demais atributos estão no contexto da coleção associada ao periódico
             new_journal_collection.title = journal.title
             new_journal_collection.publisher_name = format_publisher_names(journal.publisher_name)
             new_journal_collection.uri = extract_url(journal)
-            new_journal_collection.name = col
+            new_journal_collection.collection = col
 
             try:
                 db_session.add(new_journal_collection)
                 db_session.commit()
                 logging.info('Adicionado informações da coleção {} para o periódico {}'.format(col,
-                                                                                               existing_journal.journal_id))
+                                                                                               existing_journal.id))
             except IntegrityError:
-                logging.error('Entrada duplicada para {}-{}'.format(new_journal_collection.name,
-                                                                    new_journal_collection.fk_col_journal_id))
+                logging.error('Entrada duplicada para {}-{}'.format(new_journal_collection.collection,
+                                                                    new_journal_collection.idjournal_jc))
                 db_session.rollback()
 
 
