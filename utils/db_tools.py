@@ -3,6 +3,7 @@ import logging
 
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.exc import OperationalError, IntegrityError
+from sqlalchemy.sql import func
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -41,7 +42,7 @@ def create_tables(matomo_db_uri):
 def _add_basic_article_languages(db_session):
     for ind, l in enumerate(['pt', 'es', 'en', 'fr', 'de', 'it']):
         art_lang = ArticleLanguage()
-        art_lang.name = l
+        art_lang.language = l
         db_session.add(art_lang)
 
     try:
@@ -53,7 +54,7 @@ def _add_basic_article_languages(db_session):
 def _add_basic_article_formats(db_session):
     for ind, fmt in enumerate(['html', 'pdf']):
         art_fmt = ArticleFormat()
-        art_fmt.name = fmt
+        art_fmt.format = fmt
         db_session.add(art_fmt)
 
     try:
@@ -206,7 +207,7 @@ def get_article(db_session, pid, collection):
     @return: um resultado do tipo Article
     """
     return db_session.query(Article).filter(
-        and_(Article.collection_acronym == collection,
+        and_(Article.collection == collection,
              Article.pid == pid)).one()
 
 
@@ -224,10 +225,10 @@ def get_article_metric(db_session, year_month_day, article_id, article_format_id
     """
     return db_session.query(ArticleMetric).filter(
         and_(ArticleMetric.year_month_day == year_month_day,
-             ArticleMetric.fk_article_id == article_id,
-             ArticleMetric.fk_article_format_id == article_format_id,
-             ArticleMetric.fk_article_language_id == article_language_id,
-             ArticleMetric.fk_localization_id == localization_id)).one()
+             ArticleMetric.idarticle == article_id,
+             ArticleMetric.idformat == article_format_id,
+             ArticleMetric.idlanguage == article_language_id,
+             ArticleMetric.idlocalization == localization_id)).one()
 
 
 def get_localization(db_session, latitude, longitude):
@@ -252,7 +253,7 @@ def get_article_format(db_session, format_name):
     @param format_name: nome do formato
     @return: um resultado do tipo ArticleFormat
     """
-    return db_session.query(ArticleFormat).filter(ArticleFormat.name == format_name).one()
+    return db_session.query(ArticleFormat).filter(ArticleFormat.format == format_name).one()
 
 
 def get_article_language(db_session, language_name):
@@ -263,4 +264,14 @@ def get_article_language(db_session, language_name):
     @param language_name: um nome abreviado de idioma
     @return: um resultado do tipo ArticleLanguage
     """
-    return db_session.query(ArticleLanguage).filter(ArticleLanguage.name == language_name).one()
+    return db_session.query(ArticleLanguage).filter(ArticleLanguage.language == language_name).one()
+
+
+def get_last_id(db_session, table_class):
+    """
+    Obtém o maior valor de ID de uma tabela
+    :param db_session:  sessão de conexão com banco de dados
+    :param table_class: uma classe que representa a tabela
+    :return: um inteiro que representa o último ID associado à tabela
+    """
+    return db_session.query(func.max(table_class.id)).scalar()
