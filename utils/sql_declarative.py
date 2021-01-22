@@ -10,21 +10,12 @@ Base = declarative_base()
 class Journal(Base):
     __tablename__ = 'counter_journal'
 
-    __table_args__ = (UniqueConstraint('print_issn',
-                                       'online_issn',
-                                       'pid_issn',
-                                       name='uni_issn'),)
+    __table_args__ = (UniqueConstraint('print_issn', 'online_issn', 'pid_issn', name='uni_issn'),)
+    __table_args__ += (Index('idx_print_issn', 'print_issn'),)
+    __table_args__ += (Index('idx_online_issn', 'online_issn'),)
+    __table_args__ += (Index('idx_pid_issn', 'pid_issn'),)
 
-    __table_args__ += (Index('index_print_issn',
-                             'print_issn'),)
-
-    __table_args__ += (Index('index_online_issn',
-                             'online_issn'),)
-
-    __table_args__ += (Index('index_pid_issn',
-                             'pid_issn'),)
-
-    journal_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     print_issn = Column(VARCHAR(9), nullable=False)
     online_issn = Column(VARCHAR(9), nullable=False)
     pid_issn = Column(VARCHAR(9), nullable=False)
@@ -32,117 +23,61 @@ class Journal(Base):
 
 class JournalCollection(Base):
     __tablename__ = 'counter_journal_collection'
+    __table_args__ = (UniqueConstraint('collection', 'idjournal_jc', name='uni_col_jou'),)
 
-    __table_args__ = (UniqueConstraint('name',
-                                       'fk_col_journal_id',
-                                       name='uni_name_fk_col_journal_id'),)
-
-    journal_collection_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    name = Column(VARCHAR(3), nullable=False)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    collection = Column(VARCHAR(3), nullable=False)
     title = Column(VARCHAR(255), nullable=False)
     uri = Column(VARCHAR(255))
     publisher_name = Column(VARCHAR(255))
-
-    fk_col_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id',
-                                                                  name='fk_col_journal_id'))
+    idjournal_jc = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_jc'))
 
 
 class ArticleLanguage(Base):
     __tablename__ = 'counter_article_language'
+    __table_args__ = (UniqueConstraint('language', name='uni_lang'),)
 
-    __table_args__ = (UniqueConstraint('name',
-                                       name='uni_name'),)
-
-    language_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    name = Column(VARCHAR(10
-                          ), nullable=False)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    language = Column(VARCHAR(10), nullable=False)
 
 
 class ArticleFormat(Base):
     __tablename__ = 'counter_article_format'
+    __table_args__ = (UniqueConstraint('format', name='uni_fmt'),)
 
-    __table_args__ = (UniqueConstraint('name',
-                                       name='uni_name'),)
-
-    format_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    name = Column(VARCHAR(10), nullable=False)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    format = Column(VARCHAR(10), nullable=False)
 
 
 class Article(Base):
     __tablename__ = 'counter_article'
+    __table_args__ = (UniqueConstraint('collection', 'pid', name='uni_col_pid'),)
+    __table_args__ += (Index('idx_col_pid_jou_yop', 'collection', 'pid', 'idjournal_a', 'yop'),)
 
-    __table_args__ = (UniqueConstraint('collection_acronym',
-                                       'pid',
-                                       name='uni_col_pid'),)
-
-    __table_args__ += (Index('index_col_pid',
-                             'collection_acronym',
-                             'pid'),)
-
-    article_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    collection_acronym = Column(VARCHAR(3), nullable=False)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    collection = Column(VARCHAR(3), nullable=False)
     pid = Column(VARCHAR(23), nullable=False)
     yop = Column(INTEGER(4))
 
-    fk_art_journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.journal_id',
-                                                                  name='fk_art_journal_id'))
+    idjournal_a = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_a'))
     journal = relationship(Journal)
 
 
 class ArticleMetric(Base):
     __tablename__ = 'counter_article_metric'
+    __table_args__ = (UniqueConstraint('year_month_day', 'idarticle', 'idformat', 'idlanguage', 'idlocalization', name='uni_date_art_all'),)
+    __table_args__ += (Index('idx_date_art_all', 'year_month_day', 'idarticle', 'idformat', 'idlanguage', 'idlocalization'),)
 
-    __table_args__ = (UniqueConstraint('fk_article_id',
-                                       'fk_article_format_id',
-                                       'fk_article_language_id',
-                                       'fk_localization_id',
-                                       'year_month_day',
-                                       name='uni_art_for_lan_loc_id_ymd'),)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    __table_args__ += (Index('index_ymd',
-                             'year_month_day'),)
-
-    __table_args__ += (Index('index_ymd_art_for_id',
-                             'fk_article_format_id',
-                             'year_month_day'),)
-
-    __table_args__ += (Index('index_ymd_art_lan_id',
-                             'fk_article_language_id',
-                             'year_month_day'),)
-
-    __table_args__ += (Index('index_ymd_art_for_lan_id',
-                             'fk_article_format_id',
-                             'fk_article_language_id',
-                             'year_month_day'),)
-
-    __table_args__ += (Index('index_ymd_art_for_lan_loc_id',
-                             'fk_article_format_id',
-                             'fk_article_language_id',
-                             'fk_localization_id',
-                             'year_month_day'),)
-
-    __table_args__ += (Index('index_ymd_aid_fmt_lang_loc',
-                             'year_month_day',
-                             'fk_article_id',
-                             'fk_article_format_id',
-                             'fk_article_language_id',
-                             'fk_localization_id'),)
-
-    metric_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-
-    fk_article_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article.article_id', name='fk_article_id'))
+    idarticle = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle'))
     article = relationship(Article)
 
-    fk_article_language_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.language_id',
-                                                                       name='fk_article_language_id'))
-    fk_article_format_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.format_id',
-                                                                     name='fk_article_format_id'))
-
-    fk_localization_id = Column(INTEGER(unsigned=True), ForeignKey('counter_localization.localization_id',
-                                                                   name='fk_localization_id'))
+    idformat = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.id', name='idformat'))
+    idlanguage = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage'))
+    idlocalization = Column(INTEGER(unsigned=True), ForeignKey('counter_localization.id', name='idlocalization'))
 
     year_month_day = Column(Date, nullable=False)
-
     total_item_requests = Column(Integer, nullable=False)
     total_item_investigations = Column(Integer, nullable=False)
     unique_item_requests = Column(Integer, nullable=False)
@@ -151,17 +86,65 @@ class ArticleMetric(Base):
 
 class Localization(Base):
     __tablename__ = 'counter_localization'
-    __table_args__ = (UniqueConstraint('latitude',
-                                       'longitude',
-                                       name='uni_lat_lon'),)
-    __table_args__ += (Index('index_lat_long',
-                             'latitude',
-                             'longitude'),)
+    __table_args__ = (UniqueConstraint('latitude', 'longitude', name='uni_loc'),)
+    __table_args__ += (Index('idx_loc', 'latitude', 'longitude'),)
 
-    localization_id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
     latitude = Column(DECIMAL(9, 6))
     longitude = Column(DECIMAL(9, 6))
+
+
+class JournalMetric(Base):
+    __tablename__ = 'counter_journal_metric'
+    __table_args__ = (UniqueConstraint('year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'idjournal_cjm', 'yop', name='uni_date_all_cjm'),)
+    __table_args__ += (Index('idx_date_all_cjm', 'year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'yop', 'idjournal_cjm'),)
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    idformat_cjm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.id', name='idformat_cjm'))
+    idlanguage_cjm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_cjm'))
+    idjournal_cjm = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_cjm'))
+
+    yop = Column(INTEGER(4))
+    year_month_day = Column(Date, nullable=False)
+
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)
+
+
+class SushiJournalYOPMetric(Base):
+    __tablename__ = 'sushi_journal_yop_metric'
+    __table_args__ = (UniqueConstraint('year_month_day', 'yop', 'idjournal_sjym', name='uni_date_yop_jou_sjym'),)
+    __table_args__ += (Index('idx_date_yop_sjym', 'year_month_day', 'yop', 'idjournal_sjym'),)
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    idjournal_sjym = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_sjym'))
+    yop = Column(INTEGER(4))
+    year_month_day = Column(Date, nullable=False)
+
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)
+
+
+class SushiJournalMetric(Base):
+    __tablename__ = 'sushi_journal_metric'
+    __table_args__ = (UniqueConstraint('year_month_day', 'idjournal_sjm', name='uni_date_jou_sjm'),)
+    __table_args__ += (Index('idx_date_sjm', 'year_month_day', 'idjournal_sjm'),)
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    idjournal_sjm = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_sjm'))
+    year_month_day = Column(Date, nullable=False)
+
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)
 
 
 class LogAction(Base):

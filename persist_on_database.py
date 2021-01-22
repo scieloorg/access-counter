@@ -1,11 +1,13 @@
 import argparse
 import csv
+import datetime
 import logging
 import os
 import re
+import time
 
 from decimal import Decimal
-from utils.regular_expressions import REGEX_ISSN
+from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
 from utils import db_tools, values
 from utils.sql_declarative import (
     Journal,
@@ -14,11 +16,16 @@ from utils.sql_declarative import (
     ArticleFormat,
     ArticleLanguage,
     Article,
-    ArticleMetric
+    ArticleMetric,
+    JournalMetric,
+    SushiJournalMetric,
+    SushiJournalYOPMetric
 )
 
 
 COLLECTION_ACRONYM = os.environ.get('COLLECTION_ACRONYM', 'scl')
+MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
+MAX_YEAR = datetime.datetime.now().year + 5
 
 
 class R5Metrics:
@@ -26,15 +33,39 @@ class R5Metrics:
         self.pid = kargs['pid']
         self.format_name = kargs['format_name']
         self.language_name = kargs['language_name']
-        self.latitude = Decimal((kargs['latitude']))
-        self.longitude = Decimal((kargs['longitude']))
-        self.year_of_publication = int(kargs['year_of_publication'])
+        self.latitude = Decimal(kargs['latitude']) if kargs['latitude'] != 'NULL' else kargs['latitude']
+        self.longitude = Decimal(kargs['longitude']) if kargs['longitude'] != 'NULL' else kargs['longitude']
+        self.year_of_publication = int(kargs['year_of_publication']) if kargs['year_of_publication'].isdigit() else kargs['year_of_publication']
         self.issn = kargs['issn']
         self.year_month_day = kargs['year_month_day']
         self.total_item_investigations = int(kargs['total_item_investigations'])
         self.total_item_requests = int(kargs['total_item_requests'])
         self.unique_item_investigations = int(kargs['unique_item_investigations'])
         self.unique_item_requests = int(kargs['unique_item_requests'])
+
+    def is_valid_metric(self):
+        # Ignora métrica que latitude é nula
+        if self.latitude == 'NULL':
+            return False
+
+        # Ignora métrica que longitude é nula
+        if self.longitude == 'NULL':
+            return False
+
+        # Ignora métrica que PID é mal-formado
+        if not re.match(REGEX_ARTICLE_PID, self.pid):
+            return False
+
+        # Ignora métricas cujo artigo possui ano de publicação inválido
+        if not isinstance(self.year_of_publication, int):
+            return False
+        elif self.year_of_publication < MIN_YEAR or self.year_of_publication > MAX_YEAR:
+            return False
+
+        return True
+
+    def __str__(self):
+        return '|'.join([str(getattr(self, k)) for k in self.__dict__ if not k.startswith('_')])
 
 
 def sum_metrics(m1, m2):
@@ -61,11 +92,11 @@ def mount_issn_map(session):
                  j.print_issn] if i != '']
         for i in issns:
             if i not in issn_map:
-                issn_map[i] = j.journal_id
+                issn_map[i] = j.id
             else:
-                if issn_map[i] != j.journal_id:
+                if issn_map[i] != j.id:
                     logging.error('Base de periódicos está inconsistente (%s -> %s,  %s -> %s)'
-                                  % (i, j.journal_id, i, issn_map[i]))
+                                  % (i, j.id, i, issn_map[i]))
 
     return issn_map
 
@@ -79,7 +110,7 @@ def mount_localization_map(session):
     localization_map = {}
 
     for m in session.query(Localization):
-        localization_map[(m.latitude, m.longitude)] = m.localization_id
+        localization_map[(m.latitude, m.longitude)] = m.id
     return localization_map
 
 
@@ -92,8 +123,8 @@ def mount_format_map(session):
     format_map = {}
 
     for m in session.query(ArticleFormat):
-        format_code = m.format_id
-        format_name = m.name
+        format_code = m.id
+        format_name = m.format
         format_map[format_name] = format_code
 
     return format_map
@@ -108,9 +139,9 @@ def mount_pid_map(session):
     pid_map = {}
 
     for m in session.query(Article):
-        article_id = m.article_id
+        article_id = m.id
         article_pid = m.pid
-        article_collection = m.collection_acronym
+        article_collection = m.collection
         pid_map[(article_pid, article_collection)] = article_id
 
     return pid_map
@@ -125,8 +156,8 @@ def mount_language_map(session):
     language_map = {}
 
     for m in session.query(ArticleLanguage):
-        language_id = m.language_id
-        language_name = m.name
+        language_id = m.id
+        language_name = m.language
         language_map[language_name] = language_id
 
     return language_map
@@ -153,9 +184,12 @@ def read_r5_metrics(path_file_r5_metrics):
                                                                    'unique_item_investigations',
                                                                    'unique_item_requests'])
         for row in csv_reader:
-            # Ignora linhas que latitude e longitude são nulas (originárias de IPs locais, por exemplo)
-            if row.get('latitude') != 'NULL' and row.get('longitude') != 'NULL':
+            r5 = R5Metrics(**row)
+            if r5.is_valid_metric():
                 r5_metrics.append(R5Metrics(**row))
+            else:
+                logging.debug('Métrica ignorada: %s' % r5.__str__())
+
     return r5_metrics
 
 
@@ -181,7 +215,7 @@ def update_issn_table(issns, db_session):
     :param issns: Lista de ISSNs que não constam no banco de dados
     :param db_session: Sessão de conexão com banco de dados
     """
-    logging.info('Há %d periódicos a serem adicionados no banco de dados' % len(issns))
+    logging.info('Há %d periódico(s) a ser(em) adicionado(s) no banco de dados' % len(issns))
     for issn in issns:
         new_journal = Journal()
         new_journal.pid_issn = issn
@@ -192,8 +226,8 @@ def update_issn_table(issns, db_session):
         db_session.flush()
 
         new_journal_collection = JournalCollection()
-        new_journal_collection.fk_col_journal_id = new_journal.journal_id
-        new_journal_collection.name = values.DEFAULT_COLLECTION
+        new_journal_collection.idjournal_jc = new_journal.id
+        new_journal_collection.collection = values.DEFAULT_COLLECTION
         new_journal_collection.title = ''
 
         db_session.add(new_journal_collection)
@@ -244,13 +278,13 @@ def update_format_table(r5_metrics, db_session, format_map):
 
     for nfmt in new_formats:
         new_fmt = ArticleFormat()
-        new_fmt.name = nfmt
+        new_fmt.format = nfmt
 
         logging.info('Adicionado formato %s' % nfmt)
         db_session.add(new_fmt)
         db_session.commit()
 
-        format_map[new_fmt.name] = new_fmt.format_id
+        format_map[new_fmt.format] = new_fmt.id
 
 
 def update_language_table(r5_metrics, db_session, language_map):
@@ -265,13 +299,13 @@ def update_language_table(r5_metrics, db_session, language_map):
 
     for nlang in new_languages:
         new_language = ArticleLanguage()
-        new_language.name = nlang
+        new_language.language = nlang
 
         logging.info('Adicionado idioma %s' % nlang)
         db_session.add(new_language)
         db_session.commit()
 
-        language_map[new_language.name] = new_language.language_id
+        language_map[new_language.language] = new_language.id
 
 
 def update_article_table(r5_metrics, db_session, issn_map, pid_map):
@@ -295,8 +329,8 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
         pid, col = k
         if (pid, col) not in pid_map:
             new_article = Article()
-            new_article.collection_acronym = COLLECTION_ACRONYM
-            new_article.fk_art_journal_id = issn_map[v.issn]
+            new_article.collection = COLLECTION_ACRONYM
+            new_article.idjournal_a = issn_map[v.issn]
             new_article.pid = v.pid
             new_article.yop = v.year_of_publication
 
@@ -311,69 +345,112 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
         return True
 
 
-def add_article_metrics(r5_metrics, db_session, maps):
+def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
     """
-    Adiciona métricas de artigo no banco de dados
+    Adiciona métricas no banco de dados
     :param r5_metrics: lista de instâncias R5Metric
     :param db_session: Sessão de conexão com banco de dados
     :param maps: Dicionários que mapeiam insumos a seus respectivos IDs no banco de dados
+    :param key_list: Lista de chaves
+    :param table_class: Classe que representa a tabela a ser persistida
     """
     objects = []
+
+    # Obtém um dicionário de métricas agregadas pelos valores associados a chave de key_list
+    aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
+
+    # Obtém último ID
+    last_id = db_tools.get_last_id(db_session, table_class)
+    next_id = 1 + last_id if last_id else 1
+
+    # Transforma dicionário de métricas em itens persistíveis no banco de dados
+    for k, v in aggregated_metrics.items():
+        row = {}
+        tii, tir, uii, uir = v
+        row.update({'id': next_id,
+                    'total_item_investigations': tii,
+                    'total_item_requests': tir,
+                    'unique_item_investigations': uii,
+                    'unique_item_requests': uir})
+
+        # É métrica agregada para artigo
+        if table_class.__tablename__ == 'counter_article_metric':
+            idarticle, idlanguage, idformat, idlocalization, year_month_day = k
+            row.update({'idarticle': idarticle,
+                        'idlanguage': idlanguage,
+                        'idformat': idformat,
+                        'idlocalization': idlocalization,
+                        'year_month_day': year_month_day})
+
+        # É métrica agregada para periódico
+        elif table_class.__tablename__ == 'counter_journal_metric':
+            idjournal_cjm, idlanguage_cjm, idformat_cjm, yop, year_month_day = k
+            row.update({'idjournal_cjm': idjournal_cjm,
+                        'idlanguage_cjm': idlanguage_cjm,
+                        'idformat_cjm': idformat_cjm,
+                        'yop': yop,
+                        'year_month_day': year_month_day})
+
+        # É métrica agregada para periódico e ano de publicação na tabela Sushi
+        elif table_class.__tablename__ == 'sushi_journal_yop_metric':
+            idjournal_sjym, yop, year_month_day = k
+            row.update({'idjournal_sjym': idjournal_sjym,
+                        'yop': yop,
+                        'year_month_day': year_month_day})
+
+        # É métricas agregada para periódico na tabela SUSHI
+        elif table_class.__tablename__ == 'sushi_journal_metric':
+            idjournal_sjm, year_month_day = k
+            row.update({'idjournal_sjm': idjournal_sjm,
+                        'year_month_day': year_month_day})
+
+        objects.append(row)
+        next_id += 1
+
+    db_session.bulk_insert_mappings(table_class, objects)
+    db_session.commit()
+
+
+def _aggregate_by_keylist(r5_metrics, key_list, maps):
+    """
+    Agrega métricas de acordo com uma lista de chaves de agregação
+
+    :param r5_metrics: Lista de métricas do tipo R5Metric
+    :param key_list:  Lista de chaves agregadoras
+    :param maps: Dicionários que mapeiam insumos a seus respectivos IDs no banco de dados
+    :return: Um dicionário que mapeia as métricas a suas respectivas chaves
+    """
     aggregated_metrics = {}
 
-    # Como uma mesma chave ocorre diversas vezes (IPs diferentes podem apontar para uma mesma Localização),
-    #  é preciso agregar os valores das métricas por chave
     for r in r5_metrics:
-        fk_article_id = maps['pid'][(r.pid, COLLECTION_ACRONYM)]
-        fk_article_language_id = maps['language'][r.language_name]
-        fk_article_format_id = maps['format'][r.format_name]
-        fk_localization_id = maps['localization'][(r.latitude, r.longitude)]
-        year_month_day = r.year_month_day
+        attrs = {'idjournal_cjm': maps['issn'][r.issn],
+                 'idjournal_sjm': maps['issn'][r.issn],
+                 'idjournal_sjym': maps['issn'][r.issn],
+                 'idarticle': maps['pid'][(r.pid, COLLECTION_ACRONYM)],
+                 'idlanguage': maps['language'][r.language_name],
+                 'idlanguage_cjm': maps['language'][r.language_name],
+                 'idformat': maps['format'][r.format_name],
+                 'idformat_cjm': maps['format'][r.format_name],
+                 'idlocalization': maps['localization'][(r.latitude, r.longitude)],
+                 'yop': r.year_of_publication,
+                 'year_month_day': r.year_month_day}
 
-        # Cria uma chave para a métrica r
-        key = (fk_article_id,
-               fk_article_language_id,
-               fk_article_format_id,
-               fk_localization_id,
-               year_month_day)
+        # Monta chave de agregação de métricas
+        key = tuple(attrs[k] for k in key_list)
 
-        # Adiciona métrica r no dicionário que agrega métricas por key
+        # Adiciona métricas no dicionário
         if key not in aggregated_metrics:
             aggregated_metrics[key] = [r.total_item_investigations,
                                        r.total_item_requests,
                                        r.unique_item_investigations,
                                        r.unique_item_requests]
-
         else:
             # Caso key já esteja no dicionário de métricas, faz a somatória dos valores
             aggregated_metrics[key] = sum_metrics(aggregated_metrics[key], [r.total_item_investigations,
                                                                             r.total_item_requests,
                                                                             r.unique_item_investigations,
                                                                             r.unique_item_requests])
-
-    for key, values in aggregated_metrics.items():
-        art_id, lang_id, fmt_id, geo_id, ymd = key
-        tii, tir, uii, uir = values
-
-        new_metric_article = ArticleMetric()
-        new_metric_article.fk_article_id = art_id
-        new_metric_article.fk_article_format_id = fmt_id
-        new_metric_article.fk_article_language_id = lang_id
-        new_metric_article.fk_localization_id = geo_id
-        new_metric_article.year_month_day = ymd
-        new_metric_article.total_item_investigations = tii
-        new_metric_article.total_item_requests = tir
-        new_metric_article.unique_item_investigations = uii
-        new_metric_article.unique_item_requests = uir
-
-        objects.append(new_metric_article)
-        logging.debug('Adicionada métrica (%s, %s, %s, %s, %s)' % (new_metric_article.fk_article_id,
-                                                                   new_metric_article.fk_article_format_id,
-                                                                   new_metric_article.fk_article_language_id,
-                                                                   new_metric_article.fk_localization_id,
-                                                                   new_metric_article.year_month_day))
-    db_session.bulk_save_objects(objects)
-    db_session.commit()
+    return aggregated_metrics
 
 
 def main():
@@ -393,6 +470,14 @@ def main():
         help='Diretório com arquivos r5_metrics'
     )
 
+    parser.add_argument(
+        '-t', '--tables',
+        dest='tables',
+        default='counter_foreign,sushi_journal_metric',
+        type=str,
+        help='Lista de tabelas a serem persistidas (indicar os nomes das tabelas separadaos por vírgula)'
+    )
+
     params = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO,
@@ -401,6 +486,10 @@ def main():
 
     # Obtém sessão de conexão com banco de dados COUNTER/Matomo
     db_session = db_tools.get_db_session(params.matomo_db_uri)
+
+    # Obtém os nomes das tabelas a serem persistidas
+    target_tables = params.tables.split(',')
+    logging.info('Tabelas a serem persistidas: (%s)' % ','.join(target_tables))
 
     # Obtém dicionários que mapeia ISSN a ISSN-Chave, Idioma a ID e Formato a ID
     issn_map = mount_issn_map(db_session)
@@ -411,10 +500,10 @@ def main():
 
     # Obtém lista de arquivos r5_metrics a serem lidos
     files_r5 = sorted([os.path.join(params.dir_r5_metrics, f) for f in os.listdir(params.dir_r5_metrics) if 'r5_metrics' in f])
-    logging.info('Há %d arquivos para serem processados' % len(files_r5))
+    logging.info('Há %d arquivo(s) para ser(em) processado(s)' % len(files_r5))
 
-    # Processa cada arquivo r5_metrics
     for f in files_r5:
+        time_start = time.time()
         logging.info('Processando arquivo %s' % f)
 
         # Lê arquivo r5
@@ -422,44 +511,63 @@ def main():
         r5_metrics = read_r5_metrics(f)
 
         # Obtém lista de ISSNs que não existem no banco de dados
-        logging.info('Obtendo ISSNs...')
-        new_issns = update_issn_map(r5_metrics, issn_map)
+        if 'counter_foreign' in target_tables:
+            logging.info('Obtendo ISSNs...')
+            new_issns = update_issn_map(r5_metrics, issn_map)
 
-        # Atualiza banco de dados com ISSNs não encontrados
-        if new_issns:
-            logging.info('Atualizando lista de ISSNs...')
-            update_issn_table(new_issns, db_session)
+            # Atualiza banco de dados com ISSNs não encontrados
+            if new_issns:
+                logging.info('Atualizando lista de ISSNs...')
+                update_issn_table(new_issns, db_session)
+                issn_map = mount_issn_map(db_session)
 
-        # Atualiza lista de pares (Latitude, Longitude) no banco de dados
-        logging.info('Atualizando lista de pares (latitude, longitude)...')
-        exist_new_localizations = update_localization_table(r5_metrics, db_session, localization_map)
+            # Atualiza lista de pares (Latitude, Longitude) no banco de dados
+            logging.info('Atualizando lista de pares (latitude, longitude)...')
+            exist_new_localizations = update_localization_table(r5_metrics, db_session, localization_map)
 
-        if exist_new_localizations:
-            logging.info('Recarregando dados de localização')
-            localization_map = mount_localization_map(db_session)
+            if exist_new_localizations and ('counter_article_metric' in target_tables or 'counter_journal_metric' in target_tables or 'sushi_journal_metric' in target_tables):
+                logging.info('Recarregando dados de localização')
+                localization_map = mount_localization_map(db_session)
 
-        # Atualiza formatos de artigo no banco de dados
-        logging.info('Atualizando formatos...')
-        update_format_table(r5_metrics, db_session, format_map)
+            # Atualiza formatos de artigo no banco de dados
+            logging.info('Atualizando formatos...')
+            update_format_table(r5_metrics, db_session, format_map)
 
-        # Atualiza idiomas de artigo no banco de dados
-        logging.info('Atualizando idiomas...')
-        update_language_table(r5_metrics, db_session, language_map)
+            # Atualiza idiomas de artigo no banco de dados
+            logging.info('Atualizando idiomas...')
+            update_language_table(r5_metrics, db_session, language_map)
 
-        # Atualiza artigos no banco de dados
-        logging.info('Atualizando artigos...')
-        exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
+            # Atualiza artigos no banco de dados
+            logging.info('Atualizando artigos...')
+            exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
 
-        if exist_new_pids:
-            logging.info('Recarregando dados de PID e COLLECTION_ACRONYM')
-            pid_map = mount_pid_map(db_session)
+            if exist_new_pids and ('counter_article_metric' in target_tables or 'counter_journal_metric' in target_tables or 'sushi_journal_metric' in target_tables):
+                logging.info('Recarregando dados de PID e COLLECTION_ACRONYM')
+                pid_map = mount_pid_map(db_session)
 
-        # Adiciona métricas de artigo no banco de dados
-        logging.info('Adicionando métricas...')
-        add_article_metrics(r5_metrics, db_session, {'pid': pid_map,
-                                                     'language': language_map,
-                                                     'format': format_map,
-                                                     'localization': localization_map})
+        maps = {'pid': pid_map, 'language': language_map, 'format': format_map, 'localization': localization_map, 'issn': issn_map}
+
+        if 'counter_article_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para counter_article...')
+            keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric)
+
+        if 'counter_journal_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para counter_journal...')
+            keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric)
+
+        if 'sushi_journal_yop_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para sushi_journal_yop...')
+            keys_sushi_journal_yop = ['idjournal_sjym', 'yop', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric)
+
+        if 'sushi_journal_metric' in target_tables:
+            logging.info('Adicionando métricas agregadas para sushi_journal...')
+            keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric)
+
+        logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
 
 
 if __name__ == '__main__':
