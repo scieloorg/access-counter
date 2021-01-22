@@ -54,7 +54,7 @@ def get_pretables(path_pretables: str):
         pretables.append(path_pretables)
     elif os.path.isdir(path_pretables):
         pretables.extend([os.path.join(os.path.abspath(path_pretables), f) for f in os.listdir(path_pretables)])
-    return pretables
+    return sorted(pretables)
 
 
 def get_pretable_date_value(path_pretable: str):
