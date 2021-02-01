@@ -8,8 +8,9 @@ import time
 
 from decimal import Decimal
 from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
-from utils import db_tools, values
-from utils.sql_declarative import (
+from utils import values
+from libs import lib_database
+from models.declarative import (
     Journal,
     JournalCollection,
     Localization,
@@ -23,7 +24,10 @@ from utils.sql_declarative import (
 )
 
 
-COLLECTION_ACRONYM = os.environ.get('COLLECTION_ACRONYM', 'scl')
+COLLECTION = os.environ.get('COLLECTION', 'scl')
+DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5/metrics')
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 MAX_YEAR = datetime.datetime.now().year + 5
 
@@ -134,7 +138,7 @@ def mount_pid_map(session):
     """
     Cria mapa de PID e COLLECTION ACRONYM a ID na base de dados
     :param session: Sessão de conexão com banco de dados COUNTER
-    :return: Um dicionário que mapeia PID e COLLECTION_ACRONYM a ID
+    :return: Um dicionário que mapeia PID e COLLECTION a ID
     """
     pid_map = {}
 
@@ -314,22 +318,22 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
     :param r5_metrics: lista de instâncias R5Metric
     :param db_session: Sessão de conexão com banco de dados
     :param issn_map: Dicionário que mapeia ISSNs
-    :param pid_map: Dicionário que mapeia PID e COLLECTION_ACRONYM a código no banco de dados
+    :param pid_map: Dicionário que mapeia PID e COLLECTION a código no banco de dados
     """
-    all_pids = set([(r.pid, COLLECTION_ACRONYM) for r in r5_metrics])
+    all_pids = set([(r.pid, COLLECTION) for r in r5_metrics])
     new_pids = all_pids.difference(set(pid_map.keys()))
 
     pid_to_r5 = {}
     for r in r5_metrics:
-        if (r.pid, COLLECTION_ACRONYM) in new_pids:
-            pid_to_r5[(r.pid, COLLECTION_ACRONYM)] = r
+        if (r.pid, COLLECTION) in new_pids:
+            pid_to_r5[(r.pid, COLLECTION)] = r
 
     objects = []
     for k, v in pid_to_r5.items():
         pid, col = k
         if (pid, col) not in pid_map:
             new_article = Article()
-            new_article.collection = COLLECTION_ACRONYM
+            new_article.collection = COLLECTION
             new_article.idjournal_a = issn_map[v.issn]
             new_article.pid = v.pid
             new_article.yop = v.year_of_publication
@@ -340,7 +344,7 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
     db_session.bulk_save_objects(objects)
     db_session.commit()
 
-    # Recarrega mapa de PID e COLLECTION_ACRONYM
+    # Recarrega mapa de PID e COLLECTION
     if new_pids:
         return True
 
@@ -360,7 +364,7 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
     aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
 
     # Obtém último ID
-    last_id = db_tools.get_last_id(db_session, table_class)
+    last_id = lib_database.get_last_id(db_session, table_class)
     next_id = 1 + last_id if last_id else 1
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
@@ -426,7 +430,7 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
         attrs = {'idjournal_cjm': maps['issn'][r.issn],
                  'idjournal_sjm': maps['issn'][r.issn],
                  'idjournal_sjym': maps['issn'][r.issn],
-                 'idarticle': maps['pid'][(r.pid, COLLECTION_ACRONYM)],
+                 'idarticle': maps['pid'][(r.pid, COLLECTION)],
                  'idlanguage': maps['language'][r.language_name],
                  'idlanguage_cjm': maps['language'][r.language_name],
                  'idformat': maps['format'][r.format_name],
@@ -458,14 +462,14 @@ def main():
 
     parser.add_argument(
         '-u', '--matomo_db_uri',
-        required=True,
+        default=MATOMO_DATABASE_STRING,
         dest='matomo_db_uri',
         help='String de conexão a base SQL Matomo no formato mysql://username:password@host1:port/database'
     )
 
     parser.add_argument(
         '-d', '--dir_r5_metrics',
-        required=True,
+        default=DIR_R5_METRICS,
         dest='dir_r5_metrics',
         help='Diretório com arquivos r5_metrics'
     )
@@ -473,7 +477,7 @@ def main():
     parser.add_argument(
         '-t', '--tables',
         dest='tables',
-        default='counter_foreign,sushi_journal_metric',
+        default='counter_foreign,sushi_journal_metric,sushi_journal_yop_metric',
         type=str,
         help='Lista de tabelas a serem persistidas (indicar os nomes das tabelas separadaos por vírgula)'
     )
@@ -485,7 +489,7 @@ def main():
                         datefmt='%d/%b/%Y %H:%M:%S')
 
     # Obtém sessão de conexão com banco de dados COUNTER/Matomo
-    db_session = db_tools.get_db_session(params.matomo_db_uri)
+    db_session = lib_database.get_db_session(params.matomo_db_uri)
 
     # Obtém os nomes das tabelas a serem persistidas
     target_tables = params.tables.split(',')
@@ -542,7 +546,7 @@ def main():
             exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
 
             if exist_new_pids and ('counter_article_metric' in target_tables or 'counter_journal_metric' in target_tables or 'sushi_journal_metric' in target_tables):
-                logging.info('Recarregando dados de PID e COLLECTION_ACRONYM')
+                logging.info('Recarregando dados de PID e COLLECTION')
                 pid_map = mount_pid_map(db_session)
 
         maps = {'pid': pid_map, 'language': language_map, 'format': format_map, 'localization': localization_map, 'issn': issn_map}

@@ -2,7 +2,8 @@ import logging
 
 from datetime import datetime
 from socket import inet_ntoa
-from utils import counter_tools, map_actions as at, hit_tools as ht
+from utils import map_actions as at
+from libs import lib_hit as ht, lib_counter
 
 
 class Hit:
@@ -160,10 +161,10 @@ class HitManager:
         hit.action_params = ht.get_url_params_from_action(hit.action_name)
 
         # Gera um ID de sessão
-        hit.session_id = counter_tools.generate_session_id(hit.ip,
-                                                           hit.browser_name,
-                                                           hit.browser_version,
-                                                           hit.server_time)
+        hit.session_id = lib_counter.generate_session_id(hit.ip,
+                                                         hit.browser_name,
+                                                         hit.browser_version,
+                                                         hit.server_time)
 
         # Obtém dados a partir dos parâmetros extraídos
         hit.pid = hit.action_params.get('pid', '').upper()
@@ -250,7 +251,7 @@ class HitManager:
                             past_hit = sorted_hits[i]
                             current_hit = sorted_hits[i + 1]
 
-                            if not counter_tools.is_double_click(group, past_hit, current_hit):
+                            if not lib_counter.is_double_click(group, past_hit, current_hit):
                                 cleaned_hits.append(past_hit)
                                 if i + 2 == len(sorted_hits):
                                     cleaned_hits.append(current_hit)

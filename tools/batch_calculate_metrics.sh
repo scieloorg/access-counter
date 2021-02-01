@@ -15,7 +15,7 @@ usage(){
 }
 
 usage_example(){
-  echo "./batch_main.sh" \
+  echo "./batch_calculate.sh" \
        "-d testing-batch/" \
        "-u mysql://user:pass@localhost:3306/matomo" \
        "-s 1 -c scl" \
@@ -121,7 +121,7 @@ for f in "$dir_pretables"/*.tsv; do
   echo ""
   echo "* Iniciando para arquivo $f"
   echo ""
-  run_with_lock .venv/bin/python main.py \
+  run_with_lock .venv/bin/python calculate.py \
   -c $collection \
   -i $id_site \
   --dict_pdf $dict_pdf \

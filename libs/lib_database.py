@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 
-from utils.sql_declarative import (
+from models.declarative import (
     Base,
     LogLinkVisitAction,
     LogAction,

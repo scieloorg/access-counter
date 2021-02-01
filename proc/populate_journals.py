@@ -2,18 +2,21 @@ import argparse
 import logging
 import re
 import sys
+sys.path.append('')
 
 from sqlalchemy.exc import IntegrityError
-
-sys.path.append('..')
-
 from articlemeta.client import RestfulClient, ThriftClient
 from sqlalchemy.sql import null
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from urllib import parse
-from utils import db_tools, dicts
+from utils import dicts
+from libs import lib_database
 from utils.regular_expressions import REGEX_ISSN
-from utils.sql_declarative import Journal, JournalCollection
+from models.declarative import Journal, JournalCollection
+
+
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 
 def format_publisher_names(publisher_names: list):
@@ -110,7 +113,7 @@ def populate(articlemeta, db_session):
 
             # Tenta localizar registro de Periódico com base nos ISSNs
             try:
-                existing_journal = db_tools.get_journal_from_issns(db_session, possible_issns)
+                existing_journal = lib_database.get_journal_from_issns(db_session, possible_issns)
 
                 # Atualiza registros. Caso sejam diferentes, há algo muito errado
                 update_journal_issn(existing_journal, 'online_issn', online_issn)
@@ -169,7 +172,7 @@ def main():
 
     parser.add_argument(
         '-u', '--matomo_db_uri',
-        required=True,
+        default=MATOMO_DATABASE_STRING,
         dest='matomodb_uri',
         help='String de conexão a base SQL no formato mysql://username:password@host1:port/database'
     )
@@ -186,7 +189,7 @@ def main():
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
-        default='INFO',
+        default=LOGGING_LEVEL,
         help='Nível de log'
     )
 
@@ -199,7 +202,7 @@ def main():
     else:
         articlemeta = ThriftClient()
 
-    db_session = db_tools.get_db_session(params.matomodb_uri)
+    db_session = lib_database.get_db_session(params.matomodb_uri)
     populate(articlemeta=articlemeta, db_session=db_session)
 
 
