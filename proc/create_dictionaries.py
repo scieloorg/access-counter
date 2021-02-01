@@ -1,16 +1,23 @@
 import argparse
+import logging
 import pickle
+import os
 
-from pymongo import MongoClient
+from pymongo import MongoClient, uri_parser
 from urllib.parse import urlparse
 
 
-MONGO_DATABASE = 'articlemeta'
-MONGO_COLLECTION = 'articles'
+ARTICLEMETA_DATABASE_STRING = os.environ.get('ARTICLEMETA_DATABASE_STRING', 'mongodb://username:password@host:port/database.collection')
+DIR_DICTIONARIES = os.environ.get('DIR_DICTIONARIES', '/app/data/dictionaries')
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+
 
 DOMAINS = set()
-
 FULLTEXT_MODES = ['pdf', 'html']
+
+
+def generate_file_path(dir_dictionaries, file_name):
+    return os.path.join(dir_dictionaries, file_name)
 
 
 def get_all_dates(article):
@@ -142,7 +149,7 @@ def main():
 
     parser.add_argument(
         '-u', '--articlemeta_db_uri',
-        required=True,
+        default=ARTICLEMETA_DATABASE_STRING,
         dest='mongo_uri',
         help='String de conexão a base MongoDB do ArticleMeta no formato '
              'mongodb://username:password@host:port/database.collection'
@@ -150,18 +157,37 @@ def main():
 
     parser.add_argument(
         '-v',
-        default='',
+        default=datetime.datetime.now().strftime('%Y-%m-%d'),
         dest='version',
         help='String que representa a versão dos dicionários gerados (usar uma data no formato YYYY-MM-DD)'
     )
 
+    parser.add_argument(
+        '--logging_level',
+        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
+        dest='logging_level',
+        default=LOGGING_LEVEL
+    )
+
     params = parser.parse_args()
 
+    logging.basicConfig(level=params.logging_level)
+
     try:
-        mc = MongoClient(params.mongo_uri)
+        mongo_database_name = uri_parser.parse_uri(params.mongo_uri).get('database')
+        mongo_collection_name = uri_parser.parse_uri(params.mongo_uri).get('collection')
+        mongo_client = MongoClient(params.mongo_uri).get(mongo_database_name).get_collection(mongo_collection_name)
+
+        logging.info('Testando conexão... ', end='')
+        is_conection_ok = True if 'code' in mongo_client.find_one().keys() else False
+        if is_conection_ok:
+            logging.info('Conectado com sucesso')
+        else:
+            logging.error('Não foi possível coletar dados da base informada %s' % params.mongo_uri)
+            exit(1)
     except ConnectionError as e:
-        print('\nNão foi possível conectar a base de dados do ArticleMeta')
-        print(e)
+        logging.error('Não foi possível conectar a base de dados do ArticleMeta')
+        logging.error(e)
         exit(1)
 
     version = params.version
@@ -181,27 +207,17 @@ def main():
     # PID de artigo para lista de datas
     pid_to_dates = {}
 
-    mongo_client = mc[MONGO_DATABASE][MONGO_COLLECTION]
-
-    print('Testando conexão... ', end='')
-    is_conection_ok = True if 'code' in mongo_client.find_one().keys() else False
-    if is_conection_ok:
-        print('Sucesso')
-    else:
-        print('Falhou')
-        exit(1)
-
     total_extracted = 0
     print('Coletando dados...')
     for article in mongo_client.find({}):
         total_extracted += 1
-        print('\rExtraídos: %d' % total_extracted, end='')
+        logging.info('Extraídos: %d' % total_extracted)
 
         pid = article.get('code')
         issns = [i for i in article.get('code_title') if i is not None]
         collection = article.get('collection')
         if not collection:
-            print('\n[WARNING] Coleção indefinida para pid (%s) e issns (%s)' % (pid, issns))
+            logging.warning('Coleção indefinida para pid (%s) e issns (%s)' % (pid, issns))
 
         default_lang = get_default_lang(article)
         acronym = get_journal_acronym(article)
@@ -216,9 +232,9 @@ def main():
                         issn_to_acronym[collection][i] = acronym
                     else:
                         if acronym != issn_to_acronym[collection][i]:
-                            print('\n[WARNING] (%s, %s, %s, %s) já está na lista e é diferente de %s' % (collection, pid, i, acronym, issn_to_acronym[collection][i]))
+                            logging.warning('(%s, %s, %s, %s) já está na lista e é diferente de %s' % (collection, pid, i, acronym, issn_to_acronym[collection][i]))
         else:
-            print('\n[WARNING] %s, %s não possui acrônimo' % (collection, pid))
+            logging.info('%s, %s não possui acrônimo' % (collection, pid))
 
         if collection not in pid_to_issns:
             pid_to_issns[collection] = {}
@@ -266,20 +282,20 @@ def main():
 
     fix_issn_to_acronym_errors(issn_to_acronym)
 
-    pickle.dump(pid_to_issns, open('pid-issns-' + version + '.data', 'wb'))
-    export_pid_to_issn(pid_to_issns, 'pid-issns-' + version + '.csv')
+    pickle.dump(pid_to_issns, open(generate_file_path(DIR_DICTIONARIES, 'pid-issns-' + version + '.data'), 'wb'))
+    export_pid_to_issn(pid_to_issns, generate_file_path(DIR_DICTIONARIES, 'pid-issns-' + version + '.csv'))
 
-    pickle.dump(pid_to_langs, open('pid-format-lang-' + version + '.data', 'wb'))
-    export_lang_format_to_pid(pid_to_langs, 'pid-format-lang-' + version + '.csv')
+    pickle.dump(pid_to_langs, open(generate_file_path(DIR_DICTIONARIES, 'pid-format-lang-' + version + '.data'), 'wb'))
+    export_lang_format_to_pid(pid_to_langs, generate_file_path(DIR_DICTIONARIES, 'pid-format-lang-' + version + '.csv'))
 
-    pickle.dump(path_pdf_to_pid, open('pdf-pid-' + version + '.data', 'wb'))
-    export_path_pdf_to_pid(path_pdf_to_pid, 'pdf-pid-' + version + '.csv')
+    pickle.dump(path_pdf_to_pid, open(generate_file_path(DIR_DICTIONARIES, 'pdf-pid-' + version + '.data'), 'wb'))
+    export_path_pdf_to_pid(path_pdf_to_pid, generate_file_path(DIR_DICTIONARIES, 'pdf-pid-' + version + '.csv'))
 
-    pickle.dump(issn_to_acronym, open('issn-acronym-' + version + '.data', 'wb'))
-    export_issn_to_acronym(issn_to_acronym, 'issn-acronym-' + version + '.csv')
+    pickle.dump(issn_to_acronym, open(generate_file_path(DIR_DICTIONARIES, 'issn-acronym-' + version + '.data'), 'wb'))
+    export_issn_to_acronym(issn_to_acronym, generate_file_path(DIR_DICTIONARIES, 'issn-acronym-' + version + '.csv'))
 
-    pickle.dump(pid_to_dates, open('pid-dates-' + version + '.data', 'wb'))
-    export_pid_to_dates(pid_to_dates, 'pid-dates-' + version + '.csv')
+    pickle.dump(pid_to_dates, open(generate_file_path(DIR_DICTIONARIES, 'pid-dates-' + version + '.data'), 'wb'))
+    export_pid_to_dates(pid_to_dates, generate_file_path(DIR_DICTIONARIES, 'pid-dates-' + version + '.csv'))
 
 
 if __name__ == '__main__':

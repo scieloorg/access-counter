@@ -15,6 +15,10 @@ from utils.regular_expressions import REGEX_ISSN
 from models.declarative import Journal, JournalCollection
 
 
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+
+
 def format_publisher_names(publisher_names: list):
     """
     Caso um periódico tenha mais de um publisher a ele associado, separa os seus nomes por ponto e vírgula
@@ -168,7 +172,7 @@ def main():
 
     parser.add_argument(
         '-u', '--matomo_db_uri',
-        required=True,
+        default=MATOMO_DATABASE_STRING,
         dest='matomodb_uri',
         help='String de conexão a base SQL no formato mysql://username:password@host1:port/database'
     )
@@ -185,7 +189,7 @@ def main():
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
-        default='INFO',
+        default=LOGGING_LEVEL,
         help='Nível de log'
     )
 

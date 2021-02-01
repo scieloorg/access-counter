@@ -6,20 +6,25 @@ sys.path.append('')
 from libs import lib_database
 
 
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
+MATOMO_FIX_DATABASE_COLUMNS = True if os.environ.get('MATOMO_FIX_DATABASE_COLUMNS', '1') else False
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+
+
 def main():
     usage = """Cria tabelas para uso da API SUSHI em relatórios COUNTER."""
     parser = argparse.ArgumentParser(usage)
 
     parser.add_argument(
         '-u', '--matomo_db_uri',
-        required=True,
+        default=MATOMO_DATABASE_STRING,
         dest='matomo_db_uri',
         help='String de conexão a base SQL no formato mysql://username:password@host1:port/database'
     )
 
     parser.add_argument(
         '-f', '--fix_matomo_db',
-        default=False,
+        default=MATOMO_FIX_DATABASE_COLUMNS,
         action='store_true',
         help='1) Cria índice index_ip na tabela matomo_log_link_visit_action.'
              '2) Altera coluna visit_total_interactions (matomo_log_visit) para MEDIUMINT(5).'
@@ -30,7 +35,7 @@ def main():
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
-        default='INFO',
+        default=LOGGING_LEVEL,
         help='Nível de log'
     )
 
