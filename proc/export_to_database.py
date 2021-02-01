@@ -8,8 +8,9 @@ import time
 
 from decimal import Decimal
 from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
-from utils import db_tools, values
-from utils.sql_declarative import (
+from utils import values
+from libs import lib_database
+from models.declarative import (
     Journal,
     JournalCollection,
     Localization,
@@ -360,7 +361,7 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
     aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
 
     # Obtém último ID
-    last_id = db_tools.get_last_id(db_session, table_class)
+    last_id = lib_database.get_last_id(db_session, table_class)
     next_id = 1 + last_id if last_id else 1
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
@@ -473,7 +474,7 @@ def main():
     parser.add_argument(
         '-t', '--tables',
         dest='tables',
-        default='counter_foreign,sushi_journal_metric',
+        default='counter_foreign,sushi_journal_metric,sushi_journal_yop_metric',
         type=str,
         help='Lista de tabelas a serem persistidas (indicar os nomes das tabelas separadaos por vírgula)'
     )
@@ -485,7 +486,7 @@ def main():
                         datefmt='%d/%b/%Y %H:%M:%S')
 
     # Obtém sessão de conexão com banco de dados COUNTER/Matomo
-    db_session = db_tools.get_db_session(params.matomo_db_uri)
+    db_session = lib_database.get_db_session(params.matomo_db_uri)
 
     # Obtém os nomes das tabelas a serem persistidas
     target_tables = params.tables.split(',')

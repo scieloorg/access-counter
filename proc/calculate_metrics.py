@@ -6,13 +6,14 @@ import os
 import pickle
 import re
 
-from counter import CounterStat
-from hit import HitManager
+from models.counter import CounterStat
+from models.hit import HitManager
 from socket import inet_ntoa
 from sqlalchemy.orm.exc import NoResultFound
 from time import time
-from utils import db_tools, dicts, values, hit_tools as ht
-from utils.sql_declarative import (
+from utils import dicts, values
+from libs import lib_hit as ht, lib_database
+from models.declarative import (
     Article,
     ArticleMetric,
     Localization,
@@ -173,7 +174,7 @@ def _export_article(metrics, db_session, collection):
         if article_format_id == -1:
             # Procura formato de artigo na base dados
             try:
-                existing_article_format = db_tools.get_article_format(db_session=db_session, format_name=data_format)
+                existing_article_format = lib_database.get_article_format(db_session=db_session, format_name=data_format)
                 article_format_id = existing_article_format.id
             # Cria formato caso não exista na base de dados
             except NoResultFound:
@@ -194,8 +195,8 @@ def _export_article(metrics, db_session, collection):
         if article_language_id == -1:
             # Procura idioma na base de dados
             try:
-                existing_article_language = db_tools.get_article_language(db_session=db_session,
-                                                                          language_name=lang)
+                existing_article_language = lib_database.get_article_language(db_session=db_session,
+                                                                              language_name=lang)
                 article_language_id = existing_article_language.id
             # Cria um novo idioma na base de dados, caso não exista
             except NoResultFound:
@@ -215,7 +216,7 @@ def _export_article(metrics, db_session, collection):
         for ymd in article_data:
             # Procura periódico na base de dados
             try:
-                existing_journal = db_tools.get_journal(db_session=db_session, issn=issn)
+                existing_journal = lib_database.get_journal(db_session=db_session, issn=issn)
             # Cria um novo periódico caso não exista na base de dados
             except NoResultFound:
                 new_journal = Journal()
@@ -240,9 +241,9 @@ def _export_article(metrics, db_session, collection):
 
             # Procura artigo na base de dados
             try:
-                existing_article = db_tools.get_article(db_session=db_session,
-                                                        pid=pid,
-                                                        collection=collection)
+                existing_article = lib_database.get_article(db_session=db_session,
+                                                            pid=pid,
+                                                            collection=collection)
             # Cria um novo artigo caso artigo não exista na base de dados
             except NoResultFound:
                 new_article = Article()
@@ -257,9 +258,9 @@ def _export_article(metrics, db_session, collection):
 
             # Procura origem do acesso (latitude e longitude) na base de dados
             try:
-                existing_localization = db_tools.get_localization(db_session=db_session,
-                                                                  latitude=latitude,
-                                                                  longitude=longitude)
+                existing_localization = lib_database.get_localization(db_session=db_session,
+                                                                      latitude=latitude,
+                                                                      longitude=longitude)
             # Cria uma nova localização
             except NoResultFound:
                 new_localization = Localization()
@@ -273,12 +274,12 @@ def _export_article(metrics, db_session, collection):
 
             # Procura métrica na base de dados para atualizá-la
             try:
-                existing_article_metric = db_tools.get_article_metric(db_session=db_session,
-                                                                      year_month_day=ymd,
-                                                                      article_id=existing_article.id,
-                                                                      article_format_id=article_format_id,
-                                                                      article_language_id=article_language_id,
-                                                                      localization_id=existing_localization.id)
+                existing_article_metric = lib_database.get_article_metric(db_session=db_session,
+                                                                          year_month_day=ymd,
+                                                                          article_id=existing_article.id,
+                                                                          article_format_id=article_format_id,
+                                                                          article_language_id=article_language_id,
+                                                                          localization_id=existing_localization.id)
 
                 update_metrics(existing_article_metric, article_data[ymd])
                 logging.debug('Atualizada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, LOC_ID: %s, YMD: %s)' % (existing_article_metric.idarticle,
@@ -533,7 +534,7 @@ def main():
     logging.info('Carregando dicionário PID-Datas')
     pid_to_yop = pickle.load(open(params.pid_to_yop, 'rb'))
 
-    db_session = db_tools.get_db_session(params.matomo_db_uri)
+    db_session = lib_database.get_db_session(params.matomo_db_uri)
     hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid,
                              issn_to_acronym=issn_to_acronym,
                              pid_to_format_lang=pid_to_format_lang,
@@ -575,9 +576,9 @@ def main():
             logging.info('Extraindo dados para data {}...'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
 
-            db_data = db_tools.get_matomo_logs_for_date(db_session=db_session,
-                                                        idsite=params.idsite,
-                                                        date=date)
+            db_data = lib_database.get_matomo_logs_for_date(db_session=db_session,
+                                                            idsite=params.idsite,
+                                                            date=date)
 
             run(data=db_data,
                 mode='database',

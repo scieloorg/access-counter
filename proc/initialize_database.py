@@ -1,9 +1,9 @@
 import argparse
 import logging
 import sys
-sys.path.append('..')
+sys.path.append('')
 
-from utils import db_tools
+from libs import lib_database
 
 
 def main():
@@ -39,14 +39,14 @@ def main():
     logging.basicConfig(level=params.logging_level)
 
     logging.info('Criando tabelas COUNTER')
-    db_tools.create_tables(params.matomo_db_uri)
+    lib_database.create_tables(params.matomo_db_uri)
 
     if params.fix_matomo_db:
         logging.info('Criando índice index_ip na tabela matomo_log_visit')
-        db_tools.create_index_ip_on_table_matomo_log_visit(params.matomo_db_uri)
+        lib_database.create_index_ip_on_table_matomo_log_visit(params.matomo_db_uri)
 
         logging.info('Corrigindo colunas visit_total_interactions e interaction_position')
-        db_tools.fix_fields_interactions(params.matomo_db_uri)
+        lib_database.fix_fields_interactions(params.matomo_db_uri)
 
 
 if __name__ == '__main__':

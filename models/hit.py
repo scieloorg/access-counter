@@ -2,7 +2,8 @@ import logging
 
 from datetime import datetime
 from socket import inet_ntoa
-from utils import counter_tools, map_actions as at, hit_tools as ht
+from utils import map_actions as at
+from tools import hit_tools as ht, counter_tools
 
 
 class Hit:
