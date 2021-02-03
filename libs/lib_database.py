@@ -18,6 +18,7 @@ from models.declarative import (
     ArticleLanguage,
     ArticleFormat,
     Localization
+    DateStatus
 )
 
 
@@ -275,3 +276,11 @@ def get_last_id(db_session, table_class):
     :return: um inteiro que representa o último ID associado à tabela
     """
     return db_session.query(func.max(table_class.id)).scalar()
+
+
+def get_date_status(db_session, date):
+    try:
+        existing_date = db_session.query(DateStatus).filter(DateStatus.date == date).one()
+        return existing_date.status
+    except NoResultFound:
+        return ''
