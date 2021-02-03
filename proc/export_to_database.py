@@ -7,6 +7,9 @@ import re
 import time
 
 from decimal import Decimal
+from libs.lib_database import update_date_status, get_date_status
+from libs.lib_status import DATE_STATUS_COMPLETED, DATE_STATUS_COMPUTED
+from proc.calculate_metrics import get_date_from_file_path
 from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
 from utils import values
 from libs import lib_database
@@ -25,10 +28,12 @@ from models.declarative import (
 
 
 COLLECTION = os.environ.get('COLLECTION', 'scl')
-DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5/metrics')
-MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
+DIR_R5 = os.environ.get('DIR_R5', '/app/data/r5')
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
+
+DIR_R5_METRICS = os.path.join(DIR_R5, 'metrics')
 MAX_YEAR = datetime.datetime.now().year + 5
 
 
@@ -457,6 +462,22 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
     return aggregated_metrics
 
 
+def get_files_to_persist(dir_r5_metrics, db_session):
+    files_to_persist = []
+
+    files_dates = [f for f in os.listdir(dir_r5_metrics) if 'r5-metrics' in f]
+    for f in files_dates:
+        f_date = get_date_from_file_path(f)
+        f_status = get_date_status(db_session, f_date)
+
+        if f_status == DATE_STATUS_COMPUTED:
+            files_to_persist.append(os.path.join(dir_r5_metrics, f))
+        elif f_status < DATE_STATUS_COMPUTED:
+            logging.warning('Data %s já está persistida na base de dados' % f)
+
+    return files_to_persist
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -503,12 +524,14 @@ def main():
     pid_map = mount_pid_map(db_session)
 
     # Obtém lista de arquivos r5_metrics a serem lidos
-    files_r5 = sorted([os.path.join(params.dir_r5_metrics, f) for f in os.listdir(params.dir_r5_metrics) if 'r5_metrics' in f])
+    files_r5 = sorted(get_files_to_persist(params.dir_r5_metrics, db_session))
     logging.info('Há %d arquivo(s) para ser(em) processado(s)' % len(files_r5))
 
     for f in files_r5:
         time_start = time.time()
         logging.info('Processando arquivo %s' % f)
+
+        f_date = get_date_from_file_path(f)
 
         # Lê arquivo r5
         logging.info('Convertendo arquivo para R5Metric...')
@@ -571,8 +594,9 @@ def main():
             keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric)
 
+        logging.info('Atualizando tabela control_date_status para %s' % f_date)
+        update_date_status(db_session,
+                           f_date,
+                           DATE_STATUS_COMPLETED)
+
         logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
-
-
-if __name__ == '__main__':
-    main()
