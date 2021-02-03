@@ -74,10 +74,11 @@ def get_dates(date: str):
             return [start + datetime.timedelta(days=x) for x in range(0, (end - start).days)]
 
 
-def get_pretables(path_pretables: str):
+def get_pretables(db_session, path_pretables: str):
     """
     Obtém lista de caminhos de arquivos log com dados previamente extraídos do Matomo
 
+    @param db_session: sessão de conexão com banco de dados
     @param path_pretables: arquivo de log ou pasta com arquivos de log
     @return: lista de caminhos de arquivo(s) log
     """
@@ -86,21 +87,34 @@ def get_pretables(path_pretables: str):
         pretables.append(path_pretables)
     elif os.path.isdir(path_pretables):
         pretables.extend([os.path.join(os.path.abspath(path_pretables), f) for f in os.listdir(path_pretables)])
-    return sorted(pretables)
+
+    pretables_to_compute = []
+    for pt in pretables:
+        pt_date = get_date_from_file_path(pt)
+        date_status = get_date_status(db_session, pt_date)
+        if date_status:
+            if date_status == DATE_STATUS_PRETABLE:
+                pretables_to_compute.append(pt)
+            elif date_status > DATE_STATUS_PRETABLE:
+                logging.warning('Data %s já foi computada' % pt_date)
+        else:
+            logging.error('Data %s não está registrada na base' % pt)
+
+    return sorted(pretables_to_compute)
 
 
-def get_pretable_date_value(path_pretable: str):
+def get_date_from_file_path(file_path: str):
     """
-    Obtém uma data a partir de nome de arquivo de pré-tabelas. Esse valor é utilizado para gravar os valores de métricas em disco.
-    :param path_pretable: caminho completo do arquivo de pré-tabelas
+    Obtém uma data a partir de nome de arquivo.
+    :param file_path: caminho completo do arquivo
     :return: uma data
     """
     pattern_date = r'(\d{4}-\d{2}-\d{2})\.'
-    matched_date = re.search(pattern_date, path_pretable)
+    matched_date = re.search(pattern_date, file_path)
     if matched_date:
-        return matched_date.groups()[0].replace('-', '')
+        return matched_date.groups()[0]
     else:
-        logging.error('Não foi possível detectar data válida em nome de arquivo: %s' % path_pretable)
+        logging.error('Não foi possível detectar data válida em nome de arquivo: %s' % file_path)
         exit(1)
 
 
@@ -127,7 +141,9 @@ def update_metrics(metric, data):
 
 
 def export_article_hits_to_csv(hits: dict, file_prefix: str):
-    with open('r5_hits_' + file_prefix + '.csv', 'a') as f:
+    file_full_path = os.path.join(DIR_R5_HITS, 'r5-hits-' + file_prefix + '.csv')
+
+    with open(file_full_path, 'a') as f:
         for session, hits_data in hits.items():
             for key, hits_list in hits_data.items():
                 pid, fmt, lang, lat, long, yop = key
@@ -156,7 +172,9 @@ def export_article_hits_to_csv(hits: dict, file_prefix: str):
 
 
 def export_article_metrics_to_csv(metrics: dict, file_prefix: str):
-    with open('r5_metrics_' + file_prefix + '.csv', 'a') as f:
+    file_full_path = os.path.join(DIR_R5_METRICS, 'r5-metrics-' + file_prefix + '.csv')
+
+    with open(file_full_path, 'a') as f:
         for key, article_data in metrics.items():
             pid, fmt, lang, lat, long, yop = key
             issn = ht.article_pid_to_journal_issn(pid)
@@ -507,6 +525,13 @@ def main():
              'apenas os dados do dia indicado serão extraídos'
     )
 
+    parser.add_argument(
+        '--v', '--dict_date',
+        dest='dict_date',
+        required=True,
+        help='Data, no formato YYYY-MM-DD, da versão dos dicionários a serem utilizados'
+    )
+
     params = parser.parse_args()
 
     fileLog = logging.FileHandler('r5_' + time().__str__() + '.log')
@@ -520,29 +545,27 @@ def main():
                         datefmt='%d/%b/%Y %H:%M:%S',
                         handlers=[fileLog, consoleLog])
 
-    logging.info('Carregando dicionário PDF-PID')
-    pdf_to_pid = pickle.load(open(os.path.join(DIR_DICTIONARIES, 'pdf-pid.data'), 'rb'))
+    if not os.path.exists(DIR_R5_METRICS):
+        os.makedirs(DIR_R5_METRICS)
 
-    logging.info('Carregando dicionário ISSN-Acrônimo')
-    issn_to_acronym = pickle.load(open(os.path.join(DIR_DICTIONARIES, 'issn-acronym.data'), 'rb'))
+    if not os.path.exists(DIR_R5_HITS):
+        os.makedirs(DIR_R5_HITS)
 
-    logging.info('Carregando dicionário PID-Formato-Idioma')
-    pid_to_format_lang = pickle.load(open(os.path.join(DIR_DICTIONARIES, 'pid-format-lang.data'), 'rb'))
-
-    logging.info('Carregando dicionário PID-Datas')
-    pid_to_yop = pickle.load(open(os.path.join(DIR_DICTIONARIES, 'pid-dates.data'), 'rb'))
+    maps = load_dictionaries(DIR_DICTIONARIES, params.dict_date)
 
     db_session = lib_database.get_db_session(params.matomo_db_uri)
-    hit_manager = HitManager(path_pdf_to_pid=pdf_to_pid,
-                             issn_to_acronym=issn_to_acronym,
-                             pid_to_format_lang=pid_to_format_lang,
-                             pid_to_yop=pid_to_yop,
+    hit_manager = HitManager(path_pdf_to_pid=maps['pdf-pid'],
+                             issn_to_acronym=maps['issn-acronym'],
+                             pid_to_format_lang=maps['pid-format-lang'],
+                             pid_to_yop=maps['pid-dates'],
                              persist_on_database=params.persist_on_database,
                              flag_include_other_hit_types=params.include_other_hit_types)
 
     if params.use_pretables:
         logging.info('Iniciado em modo pré-tabelas')
-        pretables = get_pretables(DIR_PRETABLES)
+        pretables = get_pretables(db_session, DIR_PRETABLES)
+
+        logging.info('Há %d pré-tabela(s) para ser(em) computada(s)' % len(pretables))
 
         for pt in pretables:
             time_start = time()
@@ -550,7 +573,7 @@ def main():
             logging.info('Extraindo dados do arquivo {}...'.format(pt))
             hit_manager.reset()
 
-            pretable_date_value = get_pretable_date_value(pt)
+            pretable_date_value = get_date_from_file_path(pt)
 
             with open(pt) as data:
                 csv_data = csv.DictReader(data, delimiter='\t')
@@ -560,6 +583,11 @@ def main():
                     db_session=db_session,
                     collection=params.collection,
                     result_file_prefix=pretable_date_value)
+
+            logging.info('Atualizando tabela control_date_status para %s' % pretable_date_value)
+            update_date_status(db_session,
+                               pretable_date_value,
+                               DATE_STATUS_COMPUTED)
 
             time_end = time()
             logging.info('Durou %.2f segundos' % (time_end - time_start))
@@ -587,7 +615,3 @@ def main():
 
             time_end = time()
             logging.info('Durou %.2f segundos' % (time_end - time_start))
-
-
-if __name__ == '__main__':
-    main()
