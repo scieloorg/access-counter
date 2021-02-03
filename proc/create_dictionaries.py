@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import logging
 import pickle
 import os
@@ -8,16 +9,22 @@ from urllib.parse import urlparse
 
 
 ARTICLEMETA_DATABASE_STRING = os.environ.get('ARTICLEMETA_DATABASE_STRING', 'mongodb://username:password@host:port/database.collection')
-DIR_DICTIONARIES = os.environ.get('DIR_DICTIONARIES', '/app/data/dictionaries')
+DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
-
+DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
 DOMAINS = set()
 FULLTEXT_MODES = ['pdf', 'html']
 
 
-def generate_file_path(dir_dictionaries, file_name):
-    return os.path.join(dir_dictionaries, file_name)
+def generate_file_path(dir_dictionaries, dict_name, version, extension):
+    if version:
+        file_full_name = dict_name + '-' + version
+    else:
+        file_full_name = dict_name
+    file_full_name += extension
+
+    return os.path.join(dir_dictionaries, file_full_name)
 
 
 def get_all_dates(article):
@@ -44,15 +51,18 @@ def get_default_lang(article: dict):
     return article.get('article', {}).get('v40', [{}])[0].get('_', '').lower()
 
 
-def fix_issn_to_acronym_errors(issn_to_acronym: dict):
+def fix_issn_acronym_errors(issn_acronym: dict):
     """
     Corrige problemas originários dos dados coletados do ArticleMeta
 
-    :param issn_to_acronym: dicionário a ser corrigido
+    :param issn_acronym: dicionário a ser corrigido
     """
-    issn_to_acronym['bol']['2077-3323'] = 'rcc'
-    issn_to_acronym['bol']['1817-7433'] = 'rccm'
-    issn_to_acronym['bol']['2220-2234'] = 'rccm'
+    try:
+        issn_acronym['bol']['2077-3323'] = 'rcc'
+        issn_acronym['bol']['1817-7433'] = 'rccm'
+        issn_acronym['bol']['2220-2234'] = 'rccm'
+    except KeyError:
+        pass
 
 
 def get_journal_acronym(article: dict):
@@ -80,53 +90,70 @@ def get_fulltext_langs(article: dict):
     return ftls
 
 
-def export_pid_to_dates(pid_to_dates: dict, filename: str):
+def save_csv(dictionary, csv_file_name):
+    if 'pid-dates' in csv_file_name:
+        _save_csv_pid_dates(dictionary, csv_file_name)
+
+    if 'issn-acronym' in csv_file_name:
+        _save_csv_issn_acronym(dictionary, csv_file_name)
+
+    if 'pdf-pid' in csv_file_name:
+        _save_csv_pdf_pid(dictionary, csv_file_name)
+
+    if 'pid-format-lang' in csv_file_name:
+        _save_csv_pid_format_lang(dictionary, csv_file_name)
+
+    if 'pid-issn' in csv_file_name:
+        _save_csv_pid_issns(dictionary, csv_file_name)
+
+
+def _save_csv_pid_dates(pid_dates: dict, filename: str):
     with open(filename, 'w') as f:
         keys = ['created_at', 'processing_date', 'publication_year', 'updated_at', 'publication_date']
 
         f.write('collection_acronym,pid,' + ','.join(keys) + '\n')
 
-        for col, pid_values in pid_to_dates.items():
+        for col, pid_values in pid_dates.items():
             for pid, values in pid_values.items():
                 date_values = [values[k] for k in keys]
 
                 f.write(','.join([col, pid, ','.join(date_values)]) + '\n')
 
 
-def export_pid_to_issn(pid_to_issns: dict, filename: str):
+def _save_csv_pid_issns(pid_issns: dict, filename: str):
     with open(filename, 'w') as f:
         f.write('collection_acronym,pid,issn\n')
 
-        for col, values in pid_to_issns.items():
+        for col, values in pid_issns.items():
             for k, issns in values.items():
                 for i in issns:
                     f.write(','.join([col, k, i]) + '\n')
 
 
-def export_issn_to_acronym(issn_to_acronyms: dict, filename: str):
+def _save_csv_issn_acronym(issn_acronym: dict, filename: str):
     with open(filename, 'w') as f:
         f.write('collection_acronym,issn,journal_acronym\n')
 
-        for col, values in issn_to_acronyms.items():
+        for col, values in issn_acronym.items():
             for issn, acronym in values.items():
                 f.write(','.join([col, issn, acronym]) + '\n')
 
 
-def export_path_pdf_to_pid(path_pdf_to_pid: dict, filename: str):
+def _save_csv_pdf_pid(pdf_pid: dict, filename: str):
     with open(filename, 'w') as f:
         f.write('collection_acronym\tpid\tpdf\n')
 
-        for col, values in path_pdf_to_pid.items():
+        for col, values in pdf_pid.items():
             for pdf, v in values.items():
                 for vi in v:
                     f.write('\t'.join([col, vi, pdf]) + '\n')
 
 
-def export_lang_format_to_pid(pid_to_langs: dict, filename: str):
+def _save_csv_pid_format_lang(pid_format_lang: dict, filename: str):
     with open(filename, 'w') as f:
         f.write('collection_acronym,pid,format,language,is_default\n')
 
-        for col, values in pid_to_langs.items():
+        for col, values in pid_format_lang.items():
             for pid, format_langs in values.items():
                 default_value = format_langs['default']
 
@@ -179,47 +206,50 @@ def main():
 
     params = parser.parse_args()
 
-    logging.basicConfig(level=params.logging_level)
+    logging.basicConfig(level=LOGGING_LEVEL,
+                        format='[%(asctime)s] %(levelname)s %(message)s',
+                        datefmt='%d/%b/%Y %H:%M:%S')
 
     try:
-        mongo_database_name = uri_parser.parse_uri(params.mongo_uri).get('database')
-        mongo_collection_name = uri_parser.parse_uri(params.mongo_uri).get('collection')
-        mongo_client = MongoClient(params.mongo_uri).get(mongo_database_name).get_collection(mongo_collection_name)
-
-        logging.info('Testando conexão... ', end='')
-        is_conection_ok = True if 'code' in mongo_client.find_one().keys() else False
-        if is_conection_ok:
-            logging.info('Conectado com sucesso')
-        else:
-            logging.error('Não foi possível coletar dados da base informada %s' % params.mongo_uri)
-            exit(1)
+        logging.info('Conectando ao banco de dados ArticleMeta...')
+        dbname = uri_parser.parse_uri(params.mongo_uri).get('database')
+        colname = uri_parser.parse_uri(params.mongo_uri).get('collection')
+        articlemeta = MongoClient(params.mongo_uri)[dbname].get_collection(colname)
     except ConnectionError as e:
-        logging.error('Não foi possível conectar a base de dados do ArticleMeta')
         logging.error(e)
+        exit(1)
+
+    logging.info('Testando conexão...')
+    is_conection_ok = True if 'code' in articlemeta.find_one().keys() else False
+    if is_conection_ok:
+        logging.info('Sucesso')
+    else:
+        logging.error('Não foi possível coletar dados da base informada %s' % params.mongo_uri)
         exit(1)
 
     version = params.version
 
     # PID de artigo -> lista de ISSNs
-    pid_to_issns = {}
+    pid_issns = {}
 
     # PID de artigo para lista de idiomas disponíveis (para PDF e para HTML)
-    pid_to_langs = {}
+    pid_format_lang = {}
 
     # Caminho de arquivo PDF -> PID de artigo
-    path_pdf_to_pid = {}
+    pdf_pid = {}
 
     # ISSN -> acrônimo
-    issn_to_acronym = {}
+    issn_acronym = {}
 
     # PID de artigo para lista de datas
-    pid_to_dates = {}
+    pid_dates = {}
 
     total_extracted = 0
-    print('Coletando dados...')
-    for article in mongo_client.find({}):
+    logging.info('Coletando dados...')
+    for article in articlemeta.find({}):
         total_extracted += 1
-        logging.info('Extraídos: %d' % total_extracted)
+        if total_extracted % 1000 == 0:
+            logging.info('Extraídos: %d' % total_extracted)
 
         pid = article.get('code')
         issns = [i for i in article.get('code_title') if i is not None]
@@ -230,37 +260,37 @@ def main():
         default_lang = get_default_lang(article)
         acronym = get_journal_acronym(article)
 
-        if collection not in issn_to_acronym:
-            issn_to_acronym[collection] = {}
+        if collection not in issn_acronym:
+            issn_acronym[collection] = {}
 
         if acronym:
             for i in issns:
                 if i:
-                    if i not in issn_to_acronym[collection]:
-                        issn_to_acronym[collection][i] = acronym
+                    if i not in issn_acronym[collection]:
+                        issn_acronym[collection][i] = acronym
                     else:
-                        if acronym != issn_to_acronym[collection][i]:
-                            logging.warning('(%s, %s, %s, %s) já está na lista e é diferente de %s' % (collection, pid, i, acronym, issn_to_acronym[collection][i]))
+                        if acronym != issn_acronym[collection][i]:
+                            logging.warning('(%s, %s, %s, %s) já está na lista e é diferente de %s' % (collection, pid, i, acronym, issn_acronym[collection][i]))
         else:
             logging.info('%s, %s não possui acrônimo' % (collection, pid))
 
-        if collection not in pid_to_issns:
-            pid_to_issns[collection] = {}
+        if collection not in pid_issns:
+            pid_issns[collection] = {}
 
-        if collection not in pid_to_langs:
-            pid_to_langs[collection] = {}
+        if collection not in pid_format_lang:
+            pid_format_lang[collection] = {}
 
-        if collection not in path_pdf_to_pid:
-            path_pdf_to_pid[collection] = {}
+        if collection not in pdf_pid:
+            pdf_pid[collection] = {}
 
-        if collection not in pid_to_dates:
-            pid_to_dates[collection] = {}
+        if collection not in pid_dates:
+            pid_dates[collection] = {}
 
-        if pid not in pid_to_issns[collection]:
-            pid_to_issns[collection][pid] = []
-        pid_to_issns[collection][pid].extend(issns)
+        if pid not in pid_issns[collection]:
+            pid_issns[collection][pid] = []
+        pid_issns[collection][pid].extend(issns)
 
-        pid_to_dates[collection][pid] = get_all_dates(article)
+        pid_dates[collection][pid] = get_all_dates(article)
 
         ftls = get_fulltext_langs(article)
 
@@ -268,30 +298,28 @@ def main():
             for i in fl_els:
                 lang, url_host, url_path = i
 
-                if pid not in pid_to_langs[collection]:
-                    pid_to_langs[collection][pid] = {'default': default_lang}
+                if pid not in pid_format_lang[collection]:
+                    pid_format_lang[collection][pid] = {'default': default_lang}
 
                 if fl_mode == 'pdf':
-                    if url_path not in path_pdf_to_pid[collection]:
-                        path_pdf_to_pid[collection][url_path] = set()
-                    path_pdf_to_pid[collection][url_path].add(pid)
+                    if url_path not in pdf_pid[collection]:
+                        pdf_pid[collection][url_path] = set()
+                    pdf_pid[collection][url_path].add(pid)
 
-                    if len(path_pdf_to_pid[collection][url_path]) > 1:
-                        print('\n[WARNING] Há mais de um PID em path_pdf_to_pid[%s][%s] = %s' % (collection, url_path, path_pdf_to_pid[collection][url_path]))
+                    if len(pdf_pid[collection][url_path]) > 1:
+                        logging.warning('Há mais de um PID em path_pdf_to_pid[%s][%s] = %s' % (collection, url_path, pdf_pid[collection][url_path]))
 
-                    if 'pdf' not in pid_to_langs[collection][pid]:
-                        pid_to_langs[collection][pid]['pdf'] = set()
-                    pid_to_langs[collection][pid]['pdf'].add(lang)
+                    if 'pdf' not in pid_format_lang[collection][pid]:
+                        pid_format_lang[collection][pid]['pdf'] = set()
+                    pid_format_lang[collection][pid]['pdf'].add(lang)
 
                 else:
-                    if 'html' not in pid_to_langs[collection][pid]:
-                        pid_to_langs[collection][pid]['html'] = set()
-                    pid_to_langs[collection][pid]['html'].add(lang)
+                    if 'html' not in pid_format_lang[collection][pid]:
+                        pid_format_lang[collection][pid]['html'] = set()
+                    pid_format_lang[collection][pid]['html'].add(lang)
 
-    fix_issn_to_acronym_errors(issn_to_acronym)
+    fix_issn_acronym_errors(issn_acronym)
 
-    pickle.dump(pid_to_issns, open(generate_file_path(DIR_DICTIONARIES, 'pid-issns-' + version + '.data'), 'wb'))
-    export_pid_to_issn(pid_to_issns, generate_file_path(DIR_DICTIONARIES, 'pid-issns-' + version + '.csv'))
     for d in [(pid_issns, 'pid-issn'),
               (pid_format_lang, 'pid-format-lang'),
               (pdf_pid, 'pdf-pid'),
