@@ -156,6 +156,14 @@ def main():
     )
 
     parser.add_argument(
+        '-c', '--generate_csv',
+        default=False,
+        dest='generate_csv',
+        action='store_true',
+        help='Booleano que indica para também gerar a versão CSV dos dicionários'
+    )
+
+    parser.add_argument(
         '-v',
         default=datetime.datetime.now().strftime('%Y-%m-%d'),
         dest='version',
