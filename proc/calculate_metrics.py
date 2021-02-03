@@ -41,6 +41,22 @@ DIR_PRETABLES = os.path.join(DIR_DATA, 'pretables')
 DIR_R5_HITS = os.path.join(DIR_DATA, 'r5/hits')
 DIR_R5_METRICS = os.path.join(DIR_DATA, 'r5/metrics')
 
+
+def load_dictionaries(dir_dictionaries, date):
+    maps = {}
+    for d_name in ['pdf-pid', 'issn-acronym', 'pid-format-lang', 'pid-dates']:
+        logging.info('Carregando dicionário %s' % d_name)
+        d_full_path = os.path.join(dir_dictionaries, d_name + '-' + date + '.data')
+
+        if not os.path.exists(d_full_path):
+            logging.error('Não há dicionário %s' % d_full_path)
+            exit(1)
+
+        maps[d_name] = pickle.load(open(d_full_path, 'rb'))
+
+    return maps
+
+
 def get_dates(date: str):
     """
     Obtém lista de dias para extrair informações do Matomo
