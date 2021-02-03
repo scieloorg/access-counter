@@ -284,3 +284,15 @@ def get_date_status(db_session, date):
         return existing_date.status
     except NoResultFound:
         return ''
+
+
+def update_date_status(db_session, date, status):
+    try:
+        existing_date_status = db_session.query(DateStatus).filter(DateStatus.date == date).one()
+        if existing_date_status.status != status:
+            logging.info('Changing status of control_date_status.date=%s from %s to %s' % (date, existing_date_status.status, status))
+            existing_date_status.status = status
+    except NoResultFound:
+        pass
+
+    db_session.commit()
