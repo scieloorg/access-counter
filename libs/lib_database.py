@@ -17,7 +17,8 @@ from models.declarative import (
     ArticleMetric,
     ArticleLanguage,
     ArticleFormat,
-    Localization
+    Localization,
+    JournalCollection,
     DateStatus
 )
 
@@ -183,6 +184,18 @@ def get_journal_from_issns(db_session, issns):
         except NoResultFound:
             pass
     raise NoResultFound()
+
+
+def get_journal_collection(db_session, collection, journal_id):
+    """
+    Obtém um registro de coleção de periódico a partir de id de periódico e coleção
+    :param db_session: sessão de conexão com banco Matomo
+    :param collection: coleção do periódico
+    :param journal_id: ID de um periódico
+    :return: um resultado do tipo JournalCollection
+    """
+    return db_session.query(JournalCollection).filter(and_(JournalCollection.collection == collection,
+                                                           JournalCollection.idjournal_jc == journal_id)).one()
 
 
 def get_journal(db_session, issn):
