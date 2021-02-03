@@ -17,7 +17,9 @@ from models.declarative import (
     ArticleMetric,
     ArticleLanguage,
     ArticleFormat,
-    Localization
+    Localization,
+    JournalCollection,
+    DateStatus
 )
 
 
@@ -184,6 +186,18 @@ def get_journal_from_issns(db_session, issns):
     raise NoResultFound()
 
 
+def get_journal_collection(db_session, collection, journal_id):
+    """
+    Obtém um registro de coleção de periódico a partir de id de periódico e coleção
+    :param db_session: sessão de conexão com banco Matomo
+    :param collection: coleção do periódico
+    :param journal_id: ID de um periódico
+    :return: um resultado do tipo JournalCollection
+    """
+    return db_session.query(JournalCollection).filter(and_(JournalCollection.collection == collection,
+                                                           JournalCollection.idjournal_jc == journal_id)).one()
+
+
 def get_journal(db_session, issn):
     """
     Obtém periódico a partir de ISSN e coleção
@@ -275,3 +289,23 @@ def get_last_id(db_session, table_class):
     :return: um inteiro que representa o último ID associado à tabela
     """
     return db_session.query(func.max(table_class.id)).scalar()
+
+
+def get_date_status(db_session, date):
+    try:
+        existing_date = db_session.query(DateStatus).filter(DateStatus.date == date).one()
+        return existing_date.status
+    except NoResultFound:
+        return ''
+
+
+def update_date_status(db_session, date, status):
+    try:
+        existing_date_status = db_session.query(DateStatus).filter(DateStatus.date == date).one()
+        if existing_date_status.status != status:
+            logging.info('Changing status of control_date_status.date=%s from %s to %s' % (date, existing_date_status.status, status))
+            existing_date_status.status = status
+    except NoResultFound:
+        pass
+
+    db_session.commit()

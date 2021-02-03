@@ -1,10 +1,10 @@
 import argparse
 import logging
+import os
 import re
 import sys
 sys.path.append('')
 
-from sqlalchemy.exc import IntegrityError
 from articlemeta.client import RestfulClient, ThriftClient
 from sqlalchemy.sql import null
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -102,8 +102,13 @@ def populate(articlemeta, db_session):
     @param articlemeta: cliente Thrift ou Restful da API ArticleMeta
     @param db_session: sessão de conexão com banco de dados Matomo
     """
+    counter = 0
     for col in dicts.collection_to_code.keys():
+        logging.info('Collecting journals from %s' % col)
+
         for journal in articlemeta.journals(col):
+            counter += 1
+            logging.info('Collecting journal %d' % counter)
 
             online_issn = format_issn(journal.electronic_issn)
             print_issn = format_issn(journal.print_issn)
@@ -144,26 +149,25 @@ def populate(articlemeta, db_session):
                 db_session.rollback()
                 exit(1)
 
-            # Cria novo registro de JournalCollection. Assume que nenhum periódico é repetido para uma mesma coleção
-            new_journal_collection = JournalCollection()
-
-            new_journal_collection.idjournal_jc = existing_journal.id
-
-            # O título e demais atributos estão no contexto da coleção associada ao periódico
-            new_journal_collection.title = journal.title
-            new_journal_collection.publisher_name = format_publisher_names(journal.publisher_name)
-            new_journal_collection.uri = extract_url(journal)
-            new_journal_collection.collection = col
-
             try:
+                existing_journal_collection = lib_database.get_journal_collection(db_session,
+                                                                                  col,
+                                                                                  existing_journal.id)
+            except NoResultFound:
+                # Cria novo registro de JournalCollection. Assume que nenhum periódico é repetido para uma mesma coleção
+                new_journal_collection = JournalCollection()
+
+                new_journal_collection.idjournal_jc = existing_journal.id
+
+                # O título e demais atributos estão no contexto da coleção associada ao periódico
+                new_journal_collection.title = journal.title
+                new_journal_collection.publisher_name = format_publisher_names(journal.publisher_name)
+                new_journal_collection.uri = extract_url(journal)
+                new_journal_collection.collection = col
+
                 db_session.add(new_journal_collection)
                 db_session.commit()
-                logging.info('Adicionado informações da coleção {} para o periódico {}'.format(col,
-                                                                                               existing_journal.id))
-            except IntegrityError:
-                logging.error('Entrada duplicada para {}-{}'.format(new_journal_collection.collection,
-                                                                    new_journal_collection.idjournal_jc))
-                db_session.rollback()
+                logging.info('Adicionado informações da coleção {} para o periódico {}'.format(col, existing_journal.id))
 
 
 def main():
@@ -204,7 +208,3 @@ def main():
 
     db_session = lib_database.get_db_session(params.matomodb_uri)
     populate(articlemeta=articlemeta, db_session=db_session)
-
-
-if __name__ == '__main__':
-    main()
