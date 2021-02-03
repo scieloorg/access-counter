@@ -292,19 +292,20 @@ def main():
 
     pickle.dump(pid_to_issns, open(generate_file_path(DIR_DICTIONARIES, 'pid-issns-' + version + '.data'), 'wb'))
     export_pid_to_issn(pid_to_issns, generate_file_path(DIR_DICTIONARIES, 'pid-issns-' + version + '.csv'))
+    for d in [(pid_issns, 'pid-issn'),
+              (pid_format_lang, 'pid-format-lang'),
+              (pdf_pid, 'pdf-pid'),
+              (issn_acronym, 'issn-acronym'),
+              (pid_dates, 'pid-dates')]:
 
-    pickle.dump(pid_to_langs, open(generate_file_path(DIR_DICTIONARIES, 'pid-format-lang-' + version + '.data'), 'wb'))
-    export_lang_format_to_pid(pid_to_langs, generate_file_path(DIR_DICTIONARIES, 'pid-format-lang-' + version + '.csv'))
+        d_data, d_name = d
 
-    pickle.dump(path_pdf_to_pid, open(generate_file_path(DIR_DICTIONARIES, 'pdf-pid-' + version + '.data'), 'wb'))
-    export_path_pdf_to_pid(path_pdf_to_pid, generate_file_path(DIR_DICTIONARIES, 'pdf-pid-' + version + '.csv'))
+        d_file_full_path = generate_file_path(DIR_DICTIONARIES, d_name, version, '.data')
+        try:
+            pickle.dump(d_data, open(d_file_full_path, 'wb'))
+        except FileExistsError:
+            pickle.dump(d_data, open(d_file_full_path + datetime.datetime.now().timestamp().__str__(), 'wb'))
 
-    pickle.dump(issn_to_acronym, open(generate_file_path(DIR_DICTIONARIES, 'issn-acronym-' + version + '.data'), 'wb'))
-    export_issn_to_acronym(issn_to_acronym, generate_file_path(DIR_DICTIONARIES, 'issn-acronym-' + version + '.csv'))
-
-    pickle.dump(pid_to_dates, open(generate_file_path(DIR_DICTIONARIES, 'pid-dates-' + version + '.data'), 'wb'))
-    export_pid_to_dates(pid_to_dates, generate_file_path(DIR_DICTIONARIES, 'pid-dates-' + version + '.csv'))
-
-
-if __name__ == '__main__':
-    main()
+        if params.generate_csv:
+            d_csv_name = generate_file_path(DIR_DICTIONARIES, d_name, version, '.csv')
+            save_csv(d_data, d_csv_name)
