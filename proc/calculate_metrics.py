@@ -6,6 +6,8 @@ import os
 import pickle
 import re
 
+from libs.lib_database import update_date_status, get_date_status
+from libs.lib_status import DATE_STATUS_PRETABLE, DATE_STATUS_COMPUTED
 from models.counter import CounterStat
 from models.hit import HitManager
 from socket import inet_ntoa
@@ -25,18 +27,19 @@ from models.declarative import (
 
 
 COLLECTION = os.environ.get('COLLECTION', 'scl')
-DIR_DICTIONARIES = os.environ.get('DIR_DICTIONARIES', '/app/data/dictionaries')
-DIR_PRETABLES = os.environ.get('DIR_PRETABLES', '/app/data/pretables')
-DIR_R5_HITS = os.environ.get('DIR_R5_HITS', '/app/data/r5/hits')
-DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5/metrics')
+DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
+MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '100000'))
 MATOMO_ID_SITE = os.environ.get('MATOMO_ID_SITE', '1')
 MATOMO_URL = os.environ.get('MATOMO_URL', 'http://172.17.0.4')
-LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
-MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '100000'))
-MAX_YEAR = datetime.datetime.now().year + 5
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 
+MAX_YEAR = datetime.datetime.now().year + 5
+DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
+DIR_PRETABLES = os.path.join(DIR_DATA, 'pretables')
+DIR_R5_HITS = os.path.join(DIR_DATA, 'r5/hits')
+DIR_R5_METRICS = os.path.join(DIR_DATA, 'r5/metrics')
 
 def get_dates(date: str):
     """
