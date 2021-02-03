@@ -7,6 +7,16 @@ from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 
+class DateStatus(Base):
+    __tablename__ = 'control_date_status'
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    date = Column(Date(), nullable=False, unique=True, index=True)
+    status = Column(INTEGER, default=0)
+    collection = Column(VARCHAR(3), nullable=False)
+
+
 class Journal(Base):
     __tablename__ = 'counter_journal'
 
