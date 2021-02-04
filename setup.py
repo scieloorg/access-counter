@@ -55,5 +55,6 @@ setup(
     populate_journals=proc.populate_journals:main
     calculate_metrics=proc.calculate_metrics:main
     export_to_database=proc.export_to_database:main
+    extract_pretables=proc.extract_pretables:main
     """
 )

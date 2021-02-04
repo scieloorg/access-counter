@@ -1,6 +1,7 @@
 import datetime
 import logging
 
+from libs.lib_status import DATE_STATUS_LOADED
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.exc import OperationalError, IntegrityError
 from sqlalchemy.sql import func
@@ -309,3 +310,42 @@ def update_date_status(db_session, date, status):
         pass
 
     db_session.commit()
+
+
+def extract_pretable(database_uri, date):
+    currente_date = date
+    next_date = date + datetime.timedelta(days=1)
+
+    raw_query = 'SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, location_latitude as latitude, location_longitude as longitude, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE server_time >= "{0}" AND server_time < "{1}" ORDER BY ip;'.format(currente_date, next_date)
+
+    engine = create_engine(database_uri)
+    return engine.execute(raw_query)
+
+
+def get_dates_able_to_extract(database_uri, collection, number_of_days):
+    dates = []
+
+    db_session = get_db_session(database_uri)
+    try:
+        ds_results = db_session.query(DateStatus).filter(DateStatus.collection == collection).filter(DateStatus.status >= DATE_STATUS_LOADED).order_by(DateStatus.date.desc())
+
+        date_to_status = {}
+        for r in ds_results:
+            date_to_status[r.date] = r.status
+
+        days_counter = 0
+        for date, status in date_to_status.items():
+            previous_day = date + datetime.timedelta(days=-1)
+            next_day = date + datetime.timedelta(days=1)
+
+            if status == DATE_STATUS_LOADED and previous_day in date_to_status and next_day in date_to_status:
+                dates.append(date)
+                days_counter += 1
+
+                if days_counter >= number_of_days:
+                    break
+
+    except NoResultFound:
+        logging.info('There are no dates to be extracted')
+
+    return sorted(dates, reverse=True)
