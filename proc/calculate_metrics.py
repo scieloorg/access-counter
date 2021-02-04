@@ -575,7 +575,7 @@ def main():
 
             pretable_date_value = get_date_from_file_path(pt)
 
-            with open(pt) as data:
+            with open(pt, errors='ignore') as data:
                 csv_data = csv.DictReader(data, delimiter='\t')
                 run(data=csv_data,
                     mode='pretable',
