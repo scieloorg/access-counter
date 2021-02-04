@@ -227,6 +227,9 @@ def main():
         logging.error('Não foi possível coletar dados da base informada %s' % params.mongo_uri)
         exit(1)
 
+    if not os.path.exists(DIR_DICTIONARIES):
+        os.makedirs(DIR_DICTIONARIES)
+
     version = params.version
 
     # PID de artigo -> lista de ISSNs
