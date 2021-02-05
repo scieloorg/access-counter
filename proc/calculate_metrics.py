@@ -159,7 +159,7 @@ def export_article_hits_to_csv(hits: dict, file_prefix: str):
                     year = hit.server_time.year
                     month = hit.server_time.month
                     day = hit.server_time.day
-                    hour =hit.server_time.hour
+                    hour = hit.server_time.hour
                     minute = hit.server_time.minute
                     second = hit.server_time.second
 
