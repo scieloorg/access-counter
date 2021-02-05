@@ -33,6 +33,7 @@ MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:
 MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '100000'))
 MATOMO_ID_SITE = os.environ.get('MATOMO_ID_SITE', '1')
 MATOMO_URL = os.environ.get('MATOMO_URL', 'http://172.17.0.4')
+MAX_PRETABLE_DAYS = int(os.environ.get('MAX_PRETABLE_DAYS', '10'))
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 
 MAX_YEAR = datetime.datetime.now().year + 5
@@ -95,6 +96,8 @@ def get_pretables(db_session, path_pretables: str):
         if date_status:
             if date_status == DATE_STATUS_PRETABLE:
                 pretables_to_compute.append(pt)
+                if len(pretables_to_compute) >= MAX_PRETABLE_DAYS:
+                    break
             elif date_status > DATE_STATUS_PRETABLE:
                 logging.warning('Data %s já foi computada' % pt_date)
         else:
