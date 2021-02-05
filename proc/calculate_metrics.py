@@ -538,16 +538,16 @@ def main():
 
     params = parser.parse_args()
 
-    fileLog = logging.FileHandler('r5_' + time().__str__() + '.log')
-    fileLog.setLevel(params.logging_level)
+    file_log = logging.FileHandler('r5_' + time().__str__() + '.log')
+    file_log.setLevel(params.logging_level)
 
-    consoleLog = logging.StreamHandler()
-    consoleLog.setLevel(logging.INFO)
+    console_log = logging.StreamHandler()
+    console_log.setLevel(logging.INFO)
 
     logging.basicConfig(level=params.logging_level,
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S',
-                        handlers=[fileLog, consoleLog])
+                        handlers=[file_log, console_log])
 
     if not os.path.exists(DIR_R5_METRICS):
         os.makedirs(DIR_R5_METRICS)
