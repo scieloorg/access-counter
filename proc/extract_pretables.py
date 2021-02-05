@@ -5,15 +5,14 @@ from libs.lib_database import extract_pretable, get_dates_able_to_extract, updat
 from libs.lib_status import DATE_STATUS_PRETABLE
 
 
+LOG_FILE_DATABASE_STRING = os.environ.get('LOG_FILE_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
+COLLECTION = os.environ.get('COLLECTION', 'scl')
+PRETABLE_DAYS_N = int(os.environ.get('PRETABLE_DAYS_N', '5'))
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+
 DIR_WORKING_LOGS = os.path.join(DIR_DATA, 'working')
 DIR_PRETABLES = os.path.join(DIR_DATA, 'pretables')
-LOG_FILE_DATABASE_STRING = os.environ.get('LOG_FILE_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
-
-COLLECTION = os.environ.get('COLLECTION', 'scl')
-MAX_PRETABLE_DAYS = int(os.environ.get('MAX_PRETABLE_DAYS', '10'))
-
-LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 
 def save_pretable(str_date, query_result_data):
@@ -36,9 +35,9 @@ def save_pretable(str_date, query_result_data):
                 ip = i.ip if i.ip else 'NULL'
                 latitude = str(i.latitude) if i.latitude else 'NULL'
                 longitude = str(i.longitude) if i.longitude else 'NULL'
-                actionName = i.actionName if i.actionName else 'NULL'
+                action_name = i.actionName if i.actionName else 'NULL'
 
-                line = '\t'.join([timestamp, browser_name, browser_version, ip, latitude, longitude, actionName])
+                line = '\t'.join([timestamp, browser_name, browser_version, ip, latitude, longitude, action_name])
                 f.write(line + '\n')
     except IOError:
         pass
@@ -52,7 +51,7 @@ def main():
     if not os.path.exists(DIR_PRETABLES):
         os.makedirs(DIR_PRETABLES)
 
-    dates = get_dates_able_to_extract(LOG_FILE_DATABASE_STRING, COLLECTION, MAX_PRETABLE_DAYS)
+    dates = get_dates_able_to_extract(LOG_FILE_DATABASE_STRING, COLLECTION, PRETABLE_DAYS_N)
 
     logging.info('There are %d dates to be extracted', len(dates))
 

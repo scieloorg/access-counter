@@ -26,15 +26,16 @@ from models.declarative import (
 )
 
 
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 COLLECTION = os.environ.get('COLLECTION', 'scl')
 DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
-LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
-MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '100000'))
 MATOMO_ID_SITE = os.environ.get('MATOMO_ID_SITE', '1')
 MATOMO_URL = os.environ.get('MATOMO_URL', 'http://172.17.0.4')
-MAX_PRETABLE_DAYS = int(os.environ.get('MAX_PRETABLE_DAYS', '10'))
+COMPUTING_TIMEDELTA = int(os.environ.get('COMPUTING_TIMEDELTA', '15'))
+COMPUTING_DAYS_N = int(os.environ.get('COMPUTING_DAYS_N', '30'))
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 MAX_YEAR = datetime.datetime.now().year + 5
 DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
@@ -75,35 +76,53 @@ def get_dates(date: str):
             return [start + datetime.timedelta(days=x) for x in range(0, (end - start).days)]
 
 
-def get_pretables(db_session, path_pretables: str):
+def _is_valid_for_computing(date_value, date_status, max_permitted_day, all_computed_days_in_dir):
+    if date_value in all_computed_days_in_dir:
+        logging.warning('Dados de %s já existem. Este dia não será calculado novamente' % date_value)
+        return False
+
+    date = datetime.datetime.strptime(date_value, '%Y-%m-%d')
+
+    if date_status == DATE_STATUS_PRETABLE:
+        if date <= max_permitted_day:
+            return True
+        else:
+            logging.info('Data %s é recente e exige dicionário mais atualizado' % date_value)
+    elif date_status > DATE_STATUS_PRETABLE:
+        logging.warning('Data %s já foi computada (status = %d)' % (date_value, date_status))
+    else:
+        logging.warning('Registro indica não haver pré-tabela para data %s' % date_value)
+
+
+def get_pretables(db_session, max_day: datetime.datetime):
     """
     Obtém lista de caminhos de arquivos log com dados previamente extraídos do Matomo
 
     @param db_session: sessão de conexão com banco de dados
-    @param path_pretables: arquivo de log ou pasta com arquivos de log
+    @param max_day: dia mais recente a ser computado
     @return: lista de caminhos de arquivo(s) log
     """
     pretables = []
-    if os.path.isfile(path_pretables):
-        pretables.append(path_pretables)
-    elif os.path.isdir(path_pretables):
-        pretables.extend([os.path.join(os.path.abspath(path_pretables), f) for f in os.listdir(path_pretables)])
+    if os.path.isdir(DIR_PRETABLES):
+        pretables.extend([os.path.join(os.path.abspath(DIR_PRETABLES), f) for f in os.listdir(DIR_PRETABLES)])
+
+    all_computed_days_in_dir = [get_date_from_file_path(f) for f in set(os.listdir(DIR_R5_HITS) + os.listdir(DIR_R5_METRICS))]
 
     pretables_to_compute = []
-    for pt in pretables:
-        pt_date = get_date_from_file_path(pt)
-        date_status = get_date_status(db_session, pt_date)
+
+    for pt in sorted(pretables):
+        date_value = get_date_from_file_path(pt)
+        date_status = get_date_status(db_session, date_value)
+        
         if date_status:
-            if date_status == DATE_STATUS_PRETABLE:
+            if _is_valid_for_computing(date_value, date_status, max_day, all_computed_days_in_dir):
                 pretables_to_compute.append(pt)
-                if len(pretables_to_compute) >= MAX_PRETABLE_DAYS:
+                if len(pretables_to_compute) >= COMPUTING_DAYS_N:
                     break
-            elif date_status > DATE_STATUS_PRETABLE:
-                logging.warning('Data %s já foi computada' % pt_date)
         else:
             logging.error('Data %s não está registrada na base' % pt)
 
-    return sorted(pretables_to_compute)
+    return pretables_to_compute
 
 
 def get_date_from_file_path(file_path: str):
@@ -158,7 +177,7 @@ def export_article_hits_to_csv(hits: dict, file_prefix: str):
                     year = hit.server_time.year
                     month = hit.server_time.month
                     day = hit.server_time.day
-                    hour =hit.server_time.hour
+                    hour = hit.server_time.hour
                     minute = hit.server_time.minute
                     second = hit.server_time.second
 
@@ -289,7 +308,7 @@ def _export_article(metrics, db_session, collection):
                 db_session.add(new_journal_collection)
                 db_session.flush()
 
-                logging.debug('Adicionado periódico (ISSN: %s)' % (new_journal.pid_issn))
+                logging.debug('Adicionado periódico (ISSN: %s)' % new_journal.pid_issn)
 
             # Procura artigo na base de dados
             try:
@@ -537,16 +556,16 @@ def main():
 
     params = parser.parse_args()
 
-    fileLog = logging.FileHandler('r5_' + time().__str__() + '.log')
-    fileLog.setLevel(params.logging_level)
+    file_log = logging.FileHandler('r5_' + time().__str__() + '.log')
+    file_log.setLevel(params.logging_level)
 
-    consoleLog = logging.StreamHandler()
-    consoleLog.setLevel(logging.INFO)
+    console_log = logging.StreamHandler()
+    console_log.setLevel(logging.INFO)
 
     logging.basicConfig(level=params.logging_level,
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S',
-                        handlers=[fileLog, consoleLog])
+                        handlers=[file_log, console_log])
 
     if not os.path.exists(DIR_R5_METRICS):
         os.makedirs(DIR_R5_METRICS)
@@ -555,8 +574,10 @@ def main():
         os.makedirs(DIR_R5_HITS)
 
     maps = load_dictionaries(DIR_DICTIONARIES, params.dict_date)
+    
+    computing_time_delta = datetime.timedelta(days=COMPUTING_TIMEDELTA)
+    max_day_available_for_computing = datetime.datetime.strptime(params.dict_date, '%Y-%m-%d') - computing_time_delta
 
-    db_session = lib_database.get_db_session(params.matomo_db_uri)
     hit_manager = HitManager(path_pdf_to_pid=maps['pdf-pid'],
                              issn_to_acronym=maps['issn-acronym'],
                              pid_to_format_lang=maps['pid-format-lang'],
@@ -564,9 +585,12 @@ def main():
                              persist_on_database=params.persist_on_database,
                              flag_include_other_hit_types=params.include_other_hit_types)
 
+    db_session = lib_database.get_db_session(params.matomo_db_uri)
+
     if params.use_pretables:
         logging.info('Iniciado em modo pré-tabelas')
-        pretables = get_pretables(db_session, DIR_PRETABLES)
+
+        pretables = get_pretables(db_session, max_day_available_for_computing)
 
         logging.info('Há %d pré-tabela(s) para ser(em) computada(s)' % len(pretables))
 
