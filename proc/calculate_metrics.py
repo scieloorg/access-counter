@@ -290,7 +290,7 @@ def _export_article(metrics, db_session, collection):
                 db_session.add(new_journal_collection)
                 db_session.flush()
 
-                logging.debug('Adicionado periódico (ISSN: %s)' % (new_journal.pid_issn))
+                logging.debug('Adicionado periódico (ISSN: %s)' % new_journal.pid_issn)
 
             # Procura artigo na base de dados
             try:
