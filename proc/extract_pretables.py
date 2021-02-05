@@ -5,15 +5,14 @@ from libs.lib_database import extract_pretable, get_dates_able_to_extract, updat
 from libs.lib_status import DATE_STATUS_PRETABLE
 
 
+LOG_FILE_DATABASE_STRING = os.environ.get('LOG_FILE_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
+COLLECTION = os.environ.get('COLLECTION', 'scl')
+PRETABLE_DAYS_N = int(os.environ.get('PRETABLE_DAYS_N', '5'))
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+
 DIR_WORKING_LOGS = os.path.join(DIR_DATA, 'working')
 DIR_PRETABLES = os.path.join(DIR_DATA, 'pretables')
-LOG_FILE_DATABASE_STRING = os.environ.get('LOG_FILE_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
-
-COLLECTION = os.environ.get('COLLECTION', 'scl')
-MAX_PRETABLE_DAYS = int(os.environ.get('MAX_PRETABLE_DAYS', '10'))
-
-LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 
 def save_pretable(str_date, query_result_data):

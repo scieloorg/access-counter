@@ -26,15 +26,16 @@ from models.declarative import (
 )
 
 
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 COLLECTION = os.environ.get('COLLECTION', 'scl')
 DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
-LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
-MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 MATOMO_DB_IP_COUNTER_LIMIT = int(os.environ.get('MATOMO_DB_IP_COUNTER_LIMIT', '100000'))
 MATOMO_ID_SITE = os.environ.get('MATOMO_ID_SITE', '1')
 MATOMO_URL = os.environ.get('MATOMO_URL', 'http://172.17.0.4')
-MAX_PRETABLE_DAYS = int(os.environ.get('MAX_PRETABLE_DAYS', '10'))
+COMPUTING_TIMEDELTA = int(os.environ.get('COMPUTING_TIMEDELTA', '15'))
+COMPUTING_DAYS_N = int(os.environ.get('COMPUTING_DAYS_N', '30'))
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 MAX_YEAR = datetime.datetime.now().year + 5
 DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')

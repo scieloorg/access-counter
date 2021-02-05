@@ -27,11 +27,11 @@ from models.declarative import (
 )
 
 
+MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 COLLECTION = os.environ.get('COLLECTION', 'scl')
 DIR_R5 = os.environ.get('DIR_R5', '/app/data/r5')
-LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
-MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
+LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 DIR_R5_METRICS = os.path.join(DIR_R5, 'metrics')
 MAX_YEAR = datetime.datetime.now().year + 5
