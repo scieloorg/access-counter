@@ -8,6 +8,7 @@ from libs.lib_status import DATE_STATUS_PRETABLE
 LOG_FILE_DATABASE_STRING = os.environ.get('LOG_FILE_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
 COLLECTION = os.environ.get('COLLECTION', 'scl')
+MATOMO_ID_SITE = int(os.environ.get('MATOMO_ID_SITE', '1'))
 PRETABLE_DAYS_N = int(os.environ.get('PRETABLE_DAYS_N', '5'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
@@ -60,7 +61,7 @@ def main():
 
         logging.info('Extracting pretable of %s' % str_date)
 
-        query_result_data = extract_pretable(LOG_FILE_DATABASE_STRING, d)
+        query_result_data = extract_pretable(LOG_FILE_DATABASE_STRING, d, MATOMO_ID_SITE)
         save_pretable(str_date, query_result_data)
 
         db_session = get_db_session(LOG_FILE_DATABASE_STRING)
