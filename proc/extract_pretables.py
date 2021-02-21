@@ -2,8 +2,7 @@ import logging
 import os
 
 from libs.lib_database import extract_pretable, get_dates_able_to_extract, update_date_status, get_db_session
-from libs.lib_status import DATE_STATUS_PRETABLE
-
+from libs.lib_status import DATE_STATUS_PRETABLE, DATE_STATUS_EXTRACTING_PRETABLE
 
 LOG_FILE_DATABASE_STRING = os.environ.get('LOG_FILE_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
@@ -61,6 +60,8 @@ def main():
 
         logging.info('Extracting pretable of %s' % str_date)
 
+        db_session = get_db_session(LOG_FILE_DATABASE_STRING)
+        update_date_status(db_session, COLLECTION, d, DATE_STATUS_EXTRACTING_PRETABLE)
         query_result_data = extract_pretable(LOG_FILE_DATABASE_STRING, d, MATOMO_ID_SITE)
         save_pretable(str_date, query_result_data)
 

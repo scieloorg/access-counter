@@ -472,8 +472,10 @@ def get_files_to_persist(dir_r5_metrics, db_session):
 
         if f_status == DATE_STATUS_COMPUTED:
             files_to_persist.append(os.path.join(dir_r5_metrics, f))
-        elif f_status < DATE_STATUS_COMPUTED:
+        elif f_status > DATE_STATUS_COMPUTED:
             logging.warning('Data %s já está persistida na base de dados' % f)
+        elif f_status < DATE_STATUS_COMPUTED:
+            logging.warning('Data %s não contém métricas calculadas' % f)
 
     return files_to_persist
 
