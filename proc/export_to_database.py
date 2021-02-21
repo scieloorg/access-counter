@@ -596,6 +596,7 @@ def main():
 
         logging.info('Atualizando tabela control_date_status para %s' % f_date)
         update_date_status(db_session,
+                           COLLECTION,
                            f_date,
                            DATE_STATUS_COMPLETED)
 

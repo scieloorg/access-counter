@@ -613,6 +613,7 @@ def main():
 
             logging.info('Atualizando tabela control_date_status para %s' % pretable_date_value)
             update_date_status(db_session,
+                               COLLECTION,
                                pretable_date_value,
                                DATE_STATUS_COMPUTED)
 

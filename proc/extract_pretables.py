@@ -65,4 +65,4 @@ def main():
         save_pretable(str_date, query_result_data)
 
         db_session = get_db_session(LOG_FILE_DATABASE_STRING)
-        update_date_status(db_session, d, DATE_STATUS_PRETABLE)
+        update_date_status(db_session, COLLECTION, d, DATE_STATUS_PRETABLE)
