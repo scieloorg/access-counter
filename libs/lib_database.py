@@ -324,7 +324,8 @@ def get_dates_able_to_extract(database_uri, collection, number_of_days):
 
     db_session = get_db_session(database_uri)
     try:
-        ds_results = db_session.query(DateStatus).filter(DateStatus.collection == collection).filter(DateStatus.status >= DATE_STATUS_LOADED).order_by(DateStatus.date.desc())
+        ds_results = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
+                                                              DateStatus.status >= DATE_STATUS_LOADED)).order_by(DateStatus.date.desc())
 
         date_to_status = {}
         for r in ds_results:
@@ -332,10 +333,17 @@ def get_dates_able_to_extract(database_uri, collection, number_of_days):
 
         days_counter = 0
         for date, status in date_to_status.items():
-            previous_day = date + datetime.timedelta(days=-1)
-            next_day = date + datetime.timedelta(days=1)
+            arround_days = [date + datetime.timedelta(days=-2),
+                            date + datetime.timedelta(days=-1),
+                            date + datetime.timedelta(days=1)]
 
-            if status == DATE_STATUS_LOADED and previous_day in date_to_status and next_day in date_to_status:
+            is_valid_for_extracting = True
+            for ad in arround_days:
+                if ad not in date_to_status:
+                    is_valid_for_extracting = False
+                    break
+
+            if status == DATE_STATUS_LOADED and is_valid_for_extracting:
                 dates.append(date)
                 days_counter += 1
 
