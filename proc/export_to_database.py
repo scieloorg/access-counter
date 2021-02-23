@@ -468,7 +468,7 @@ def get_files_to_persist(dir_r5_metrics, db_session):
     files_dates = [f for f in os.listdir(dir_r5_metrics) if 'r5-metrics' in f]
     for f in files_dates:
         f_date = get_date_from_file_path(f)
-        f_status = get_date_status(db_session, f_date)
+        f_status = get_date_status(db_session, COLLECTION, f_date)
 
         if f_status == DATE_STATUS_COMPUTED:
             files_to_persist.append(os.path.join(dir_r5_metrics, f))

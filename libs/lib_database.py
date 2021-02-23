@@ -288,9 +288,10 @@ def get_last_id(db_session, table_class):
     return db_session.query(func.max(table_class.id)).scalar()
 
 
-def get_date_status(db_session, date):
+def get_date_status(db_session, collection, date):
     try:
-        existing_date = db_session.query(DateStatus).filter(DateStatus.date == date).one()
+        existing_date = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
+                                                                 DateStatus.date == date)).one()
         return existing_date.status
     except NoResultFound:
         return ''
