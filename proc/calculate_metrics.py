@@ -112,7 +112,7 @@ def get_pretables(db_session, max_day: datetime.datetime):
 
     for pt in sorted(pretables):
         date_value = get_date_from_file_path(pt)
-        date_status = get_date_status(db_session, date_value)
+        date_status = get_date_status(db_session, COLLECTION, date_value)
         
         if date_status:
             if _is_valid_for_computing(date_value, date_status, max_day, all_computed_days_in_dir):
