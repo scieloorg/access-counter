@@ -297,6 +297,26 @@ def get_date_status(db_session, collection, date):
         return ''
 
 
+def get_missing_aggregations(db_session, collection, date):
+    try:
+        missing_aggregations = []
+
+        existing_date = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
+                                                                 DateStatus.date == date)).one()
+
+        for i_name in ['status_counter_article_metric',
+                       'status_counter_journal_metric',
+                       'status_sushi_article_metric',
+                       'status_sushi_journal_metric',
+                       'status_sushi_journal_yop_metric']:
+            i_value = getattr(existing_date, i_name)
+            if i_value == 0:
+                missing_aggregations.append(i_name.replace('status_', ''))
+
+        return missing_aggregations
+    except NoResultFound:
+        return []
+
 def update_date_status(db_session, collection, date, status):
     try:
         existing_date_status = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
