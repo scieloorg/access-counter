@@ -497,6 +497,17 @@ def get_files_to_persist(dir_r5_metrics, db_session):
     return files_to_persist
 
 
+def need_to_update_memory_data(target_tables):
+    for t in ['counter_article_metric',
+              'counter_journal_metric',
+              'sushi_article_metric',
+              'sushi_journal_metric',
+              'sushi_journal_yop_metric']:
+        if t in target_tables:
+            return True
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -571,7 +582,7 @@ def main():
             logging.info('Atualizando lista de pares (latitude, longitude)...')
             exist_new_localizations = update_localization_table(r5_metrics, db_session, localization_map)
 
-            if exist_new_localizations and ('counter_article_metric' in target_tables or 'counter_journal_metric' in target_tables or 'sushi_journal_metric' in target_tables):
+            if exist_new_localizations and need_to_update_memory_data(target_tables):
                 logging.info('Recarregando dados de localização')
                 localization_map = mount_localization_map(db_session)
 
@@ -587,7 +598,7 @@ def main():
             logging.info('Atualizando artigos...')
             exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
 
-            if exist_new_pids and ('counter_article_metric' in target_tables or 'counter_journal_metric' in target_tables or 'sushi_journal_metric' in target_tables):
+            if exist_new_pids and need_to_update_memory_data(target_tables):
                 logging.info('Recarregando dados de PID e COLLECTION')
                 pid_map = mount_pid_map(db_session)
 
