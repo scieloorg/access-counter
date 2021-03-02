@@ -7,7 +7,13 @@ import re
 import time
 
 from decimal import Decimal
-from libs.lib_database import update_date_status, get_date_status
+from libs.lib_database import (
+    update_date_status,
+    get_date_status,
+    update_date_metric_status,
+    compute_date_metric_status,
+    get_missing_aggregations
+)
 from libs.lib_status import DATE_STATUS_COMPLETED, DATE_STATUS_COMPUTED
 from proc.calculate_metrics import get_date_from_file_path
 from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
@@ -23,7 +29,8 @@ from models.declarative import (
     ArticleMetric,
     JournalMetric,
     SushiJournalMetric,
-    SushiJournalYOPMetric
+    SushiJournalYOPMetric,
+    SushiArticleMetric
 )
 
 
@@ -32,6 +39,7 @@ COLLECTION = os.environ.get('COLLECTION', 'scl')
 DIR_R5 = os.environ.get('DIR_R5', '/app/data/r5')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+TABLES_TO_PERSIST = os.environ.get('TABLES_TO_PERSIST', 'counter_foreign,counter_article_metric,counter_journal_metric,sushi_article_metric,sushi_journal_metric,sushi_journal_yop_metric')
 
 DIR_R5_METRICS = os.path.join(DIR_R5, 'metrics')
 MAX_YEAR = datetime.datetime.now().year + 5
