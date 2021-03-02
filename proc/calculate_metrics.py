@@ -641,5 +641,11 @@ def main():
                 collection=params.collection,
                 result_file_prefix=date.strftime('%Y%m%d'))
 
+            logging.info('Atualizando tabela control_date_status para %s' % date.strftime('%Y%m%d'))
+            update_date_status(db_session,
+                               COLLECTION,
+                               date.strftime('%Y%m%d'),
+                               DATE_STATUS_COMPUTED)
+
             time_end = time()
             logging.info('Durou %.2f segundos' % (time_end - time_start))
