@@ -1,5 +1,5 @@
 from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DateTime, DECIMAL
-from sqlalchemy.dialects.mysql import BIGINT, BINARY, INTEGER, TINYINT, VARBINARY, VARCHAR
+from sqlalchemy.dialects.mysql import BIGINT, BINARY, BOOLEAN, INTEGER, TINYINT, VARBINARY, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -9,12 +9,19 @@ Base = declarative_base()
 
 class DateStatus(Base):
     __tablename__ = 'control_date_status'
+    __table_args__ = (UniqueConstraint('collection', 'date', name='uni_collection_date'), )
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    date = Column(Date(), nullable=False, unique=True, index=True)
-    status = Column(INTEGER, default=0)
+    date = Column(Date, nullable=False, index=True)
     collection = Column(VARCHAR(3), nullable=False)
+    status = Column(INTEGER, default=0)
+
+    status_counter_article_metric = Column(BOOLEAN, default=False)
+    status_counter_journal_metric = Column(BOOLEAN, default=False)
+    status_sushi_article_metric = Column(BOOLEAN, default=False)
+    status_sushi_journal_metric = Column(BOOLEAN, default=False)
+    status_sushi_journal_yop_metric = Column(BOOLEAN, default=False)
 
 
 class Journal(Base):
