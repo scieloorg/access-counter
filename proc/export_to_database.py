@@ -482,7 +482,7 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
 def get_files_to_persist(dir_r5_metrics, db_session):
     files_to_persist = []
 
-    files_dates = [f for f in os.listdir(dir_r5_metrics) if 'r5-metrics' in f]
+    files_dates = sorted([f for f in os.listdir(dir_r5_metrics) if 'r5-metrics' in f])
     for f in files_dates:
         f_date = get_date_from_file_path(f)
         f_status = get_date_status(db_session, COLLECTION, f_date)
