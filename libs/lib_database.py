@@ -331,6 +331,25 @@ def compute_date_metric_status(db_session, collection, date):
     except NoResultFound:
         return
 
+
+def update_date_metric_status(db_session, collection, date, metric, status):
+    try:
+        existing_date_status = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
+                                                                        DateStatus.date == date)).one()
+
+        current_metric_status = getattr(existing_date_status, metric)
+        if current_metric_status != status:
+            logging.info('Changing status of control_date_status.%s=%s from %s to %s' % (metric,
+                                                                                         date,
+                                                                                         current_metric_status,
+                                                                                         status))
+            setattr(existing_date_status, metric, status)
+    except NoResultFound:
+        pass
+
+    db_session.commit()
+
+
 def update_date_status(db_session, collection, date, status):
     try:
         existing_date_status = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
