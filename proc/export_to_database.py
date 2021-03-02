@@ -623,21 +623,25 @@ def main():
             logging.info('Adicionando métricas agregadas para counter_article...')
             keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric)
+            update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_article_metric', True)
 
         if 'counter_journal_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para counter_journal...')
             keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric)
+            update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_journal_metric', True)
 
         if 'sushi_journal_yop_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal_yop...')
             keys_sushi_journal_yop = ['idjournal_sjym', 'yop', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric)
+            update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_yop_metric', True)
 
         if 'sushi_journal_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal...')
             keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric)
+            update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_metric', True)
 
         if 'sushi_article_metric' in target_tables:
             logging.info('Adicinando métricas agregadas para sushi_article...')
@@ -645,5 +649,17 @@ def main():
             persist_metrics(r5_metrics, db_session, maps, keys_sushi_article, SushiArticleMetric)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_article_metric', True)
 
+        date_status_value = compute_date_metric_status(db_session,
+                                                       COLLECTION,
+                                                       f_date)
+
+        if date_status_value == DATE_STATUS_COMPLETED:
+            logging.info('Atualizando tabela control_date_status para %s' % f_date)
+            update_date_status(db_session,
+                               COLLECTION,
+                               f_date,
+                               DATE_STATUS_COMPLETED)
+        else:
+            logging.info('Data %s ainda contém agregações a serem calculadas' % f_date)
 
         logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
