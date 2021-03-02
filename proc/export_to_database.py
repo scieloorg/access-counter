@@ -47,6 +47,7 @@ MAX_YEAR = datetime.datetime.now().year + 5
 
 class R5Metrics:
     def __init__(self, **kargs):
+        self.collection = COLLECTION
         self.pid = kargs['pid']
         self.format_name = kargs['format_name']
         self.language_name = kargs['language_name']
@@ -408,14 +409,14 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
                         'yop': yop,
                         'year_month_day': year_month_day})
 
-        # É métrica agregada para periódico e ano de publicação na tabela Sushi
+        # É métrica agregada para periódico e ano de publicação na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_journal_yop_metric':
             idjournal_sjym, yop, year_month_day = k
             row.update({'idjournal_sjym': idjournal_sjym,
                         'yop': yop,
                         'year_month_day': year_month_day})
 
-        # É métricas agregada para periódico na tabela SUSHI
+        # É métrica agregada para periódico na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_journal_metric':
             idjournal_sjm, year_month_day = k
             row.update({'idjournal_sjm': idjournal_sjm,
