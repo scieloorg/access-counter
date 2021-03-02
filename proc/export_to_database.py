@@ -422,6 +422,12 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
             row.update({'idjournal_sjm': idjournal_sjm,
                         'year_month_day': year_month_day})
 
+        # É métrica agregada para artigo na tabela SUSHI
+        elif table_class.__tablename__ == 'sushi_article_metric':
+            idarticle_sam, year_month_day = k
+            row.update({'idarticle_sam': idarticle_sam,
+                        'year_month_day': year_month_day})
+
         objects.append(row)
         next_id += 1
 
@@ -441,10 +447,12 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
     aggregated_metrics = {}
 
     for r in r5_metrics:
-        attrs = {'idjournal_cjm': maps['issn'][r.issn],
+        attrs = {'collection': COLLECTION,
+                 'idjournal_cjm': maps['issn'][r.issn],
                  'idjournal_sjm': maps['issn'][r.issn],
                  'idjournal_sjym': maps['issn'][r.issn],
                  'idarticle': maps['pid'][(r.pid, COLLECTION)],
+                 'idarticle_sam': maps['pid'][(r.pid, COLLECTION)],
                  'idlanguage': maps['language'][r.language_name],
                  'idlanguage_cjm': maps['language'][r.language_name],
                  'idformat': maps['format'][r.format_name],
@@ -605,10 +613,11 @@ def main():
             keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric)
 
-        logging.info('Atualizando tabela control_date_status para %s' % f_date)
-        update_date_status(db_session,
-                           COLLECTION,
-                           f_date,
-                           DATE_STATUS_COMPLETED)
+        if 'sushi_article_metric' in target_tables:
+            logging.info('Adicinando métricas agregadas para sushi_article...')
+            keys_sushi_article = ['idarticle_sam', 'year_month_day']
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_article, SushiArticleMetric)
+            update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_article_metric', True)
+
 
         logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
