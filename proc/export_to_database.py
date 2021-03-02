@@ -528,9 +528,19 @@ def main():
     parser.add_argument(
         '-t', '--tables',
         dest='tables',
-        default='counter_foreign,sushi_journal_metric,sushi_journal_yop_metric',
+        default=TABLES_TO_PERSIST,
         type=str,
-        help='Lista de tabelas a serem persistidas (indicar os nomes das tabelas separadaos por vírgula)'
+        help='Lista de tabelas a serem persistidas (indicar os nomes das tabelas separados por vírgula). '
+             'Por padrão é o valor da variável de ambiente TABLES_TO_PERSIST ou '
+             'counter_foreign,counter_journal_metric,sushi_journal_metric,sushi_journal_yop_metric'
+    )
+
+    parser.add_argument(
+        '--auto',
+        dest='auto',
+        action='store_true',
+        default=False,
+        help='Obtém por meio do banco de dados os nomes das tabelas de agregação a serem persistidas'
     )
 
     params = parser.parse_args()
@@ -541,10 +551,6 @@ def main():
 
     # Obtém sessão de conexão com banco de dados COUNTER/Matomo
     db_session = lib_database.get_db_session(params.matomo_db_uri)
-
-    # Obtém os nomes das tabelas a serem persistidas
-    target_tables = params.tables.split(',')
-    logging.info('Tabelas a serem persistidas: (%s)' % ','.join(target_tables))
 
     # Obtém dicionários que mapeia ISSN a ISSN-Chave, Idioma a ID e Formato a ID
     issn_map = mount_issn_map(db_session)
@@ -566,6 +572,15 @@ def main():
         # Lê arquivo r5
         logging.info('Convertendo arquivo para R5Metric...')
         r5_metrics = read_r5_metrics(f)
+
+        # Obtém os nomes das tabelas a serem persistidas
+        if params.auto:
+            target_tables = ['counter_foreign']
+            target_tables.extend(get_missing_aggregations(db_session, COLLECTION, f_date))
+        else:
+            target_tables = params.tables.split(',')
+
+        logging.info('Tabelas a serem persistidas: (%s)' % ','.join(target_tables))
 
         # Obtém lista de ISSNs que não existem no banco de dados
         if 'counter_foreign' in target_tables:
