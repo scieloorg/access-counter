@@ -164,6 +164,22 @@ class SushiJournalMetric(Base):
     unique_item_investigations = Column(Integer, nullable=False)
 
 
+class SushiArticleMetric(Base):
+    __tablename__ = 'sushi_article_metric'
+    __table_args__ = (UniqueConstraint('year_month_day', 'idarticle_sam', name='uni_date_art_sam'),)
+    __table_args__ += (Index('idx_date_sam', 'year_month_day', 'idarticle_sam'),)
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    idarticle_sam = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle_sam'))
+    year_month_day = Column(Date, nullable=False)
+
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)
+
+
 class LogAction(Base):
     __tablename__ = 'matomo_log_action'
 
