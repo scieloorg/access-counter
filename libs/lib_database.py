@@ -317,6 +317,20 @@ def get_missing_aggregations(db_session, collection, date):
     except NoResultFound:
         return []
 
+
+def compute_date_metric_status(db_session, collection, date):
+    try:
+        existing_date = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
+                                                                 DateStatus.date == date)).one()
+
+        return sum([existing_date.status_counter_article_metric,
+                    existing_date.status_counter_journal_metric,
+                    existing_date.status_sushi_article_metric,
+                    existing_date.status_sushi_journal_metric,
+                    existing_date.status_sushi_journal_yop_metric])
+    except NoResultFound:
+        return
+
 def update_date_status(db_session, collection, date, status):
     try:
         existing_date_status = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
