@@ -549,6 +549,14 @@ def main():
         help='Obtém por meio do banco de dados os nomes das tabelas de agregação a serem persistidas'
     )
 
+    parser.add_argument(
+        '-i', '--ignore_counter_metric_tables',
+        dest='ignore_counter_metric_tables',
+        action='store_true',
+        default=False,
+        help='Não persiste dados nas tabelas counter_article_metric e counter_journal_metric'
+    )
+
     params = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO,
@@ -625,13 +633,13 @@ def main():
 
         maps = {'pid': pid_map, 'language': language_map, 'format': format_map, 'localization': localization_map, 'issn': issn_map}
 
-        if 'counter_article_metric' in target_tables:
+        if 'counter_article_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_article...')
             keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_article_metric', True)
 
-        if 'counter_journal_metric' in target_tables:
+        if 'counter_journal_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_journal...')
             keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
             persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric)
