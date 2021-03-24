@@ -94,6 +94,11 @@ def _is_valid_for_computing(date_value, date_status, max_permitted_day, all_comp
         logging.warning('Registro indica não haver pré-tabela para data %s' % date_value)
 
 
+def _list_files(dir_path):
+    results = os.listdir(dir_path)
+    return [f for f in results if os.path.isfile(os.path.join(dir_path, f))]
+
+
 def get_pretables(db_session, max_day: datetime.datetime):
     """
     Obtém lista de caminhos de arquivos log com dados previamente extraídos do Matomo
