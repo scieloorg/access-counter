@@ -36,12 +36,11 @@ from models.declarative import (
 
 MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 COLLECTION = os.environ.get('COLLECTION', 'scl')
-DIR_R5 = os.environ.get('DIR_R5', '/app/data/r5')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 TABLES_TO_PERSIST = os.environ.get('TABLES_TO_PERSIST', 'counter_foreign,counter_article_metric,counter_journal_metric,sushi_article_metric,sushi_journal_metric,sushi_journal_yop_metric')
 
-DIR_R5_METRICS = os.path.join(DIR_R5, 'metrics')
+DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5')
 MAX_YEAR = datetime.datetime.now().year + 5
 
 
