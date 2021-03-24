@@ -154,10 +154,12 @@ class SushiJournalYOPMetric(Base):
 
 class SushiJournalMetric(Base):
     __tablename__ = 'sushi_journal_metric'
-    __table_args__ = (UniqueConstraint('year_month_day', 'idjournal_sjm', name='uni_date_jou_sjm'),)
-    __table_args__ += (Index('idx_date_sjm', 'year_month_day', 'idjournal_sjm'),)
+    __table_args__ = (UniqueConstraint('year_month_day', 'collection', 'idjournal_sjm', name='uni_col_date_jou_sjm'),)
+    __table_args__ += (Index('idx_col_date_sjm', 'collection', 'year_month_day', 'idjournal_sjm'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    collection = Column(VARCHAR(3), nullable=False)
 
     idjournal_sjm = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_sjm'))
     year_month_day = Column(Date, nullable=False)
