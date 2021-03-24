@@ -109,9 +109,9 @@ def get_pretables(db_session, max_day: datetime.datetime):
     """
     pretables = []
     if os.path.isdir(DIR_PRETABLES):
-        pretables.extend([os.path.join(os.path.abspath(DIR_PRETABLES), f) for f in os.listdir(DIR_PRETABLES)])
+        pretables.extend([os.path.join(os.path.abspath(DIR_PRETABLES), f) for f in _list_files(DIR_PRETABLES)])
 
-    all_computed_days_in_dir = [get_date_from_file_path(f) for f in set(os.listdir(DIR_R5_HITS) + os.listdir(DIR_R5_METRICS))]
+    all_computed_days_in_dir = [get_date_from_file_path(f) for f in set(_list_files(DIR_R5_HITS) + _list_files(DIR_R5_METRICS))]
 
     pretables_to_compute = []
 
