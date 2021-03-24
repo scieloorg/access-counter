@@ -113,10 +113,12 @@ class Localization(Base):
 
 class JournalMetric(Base):
     __tablename__ = 'counter_journal_metric'
-    __table_args__ = (UniqueConstraint('year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'idjournal_cjm', 'yop', name='uni_date_all_cjm'),)
-    __table_args__ += (Index('idx_date_all_cjm', 'year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'yop', 'idjournal_cjm'),)
+    __table_args__ = (UniqueConstraint('year_month_day', 'collection', 'idformat_cjm', 'idlanguage_cjm', 'idjournal_cjm', 'yop', name='uni_col_date_all_cjm'),)
+    __table_args__ += (Index('idx_col_date_all_cjm', 'collection', 'year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'yop', 'idjournal_cjm'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    collection = Column(VARCHAR(3), nullable=False)
 
     idformat_cjm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.id', name='idformat_cjm'))
     idlanguage_cjm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_cjm'))
