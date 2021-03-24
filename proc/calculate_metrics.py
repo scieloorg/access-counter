@@ -39,9 +39,9 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 MAX_YEAR = datetime.datetime.now().year + 5
 DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
-DIR_PRETABLES = os.path.join(DIR_DATA, 'pretables')
-DIR_R5_HITS = os.path.join(DIR_DATA, 'r5/hits')
-DIR_R5_METRICS = os.path.join(DIR_DATA, 'r5/metrics')
+DIR_PRETABLES = os.environ.get('DIR_PRETABLES', os.path.join(DIR_DATA, 'pretables'))
+DIR_R5_HITS = os.environ.get('DIR_R5_HITS', os.path.join(DIR_DATA, 'r5/hits'))
+DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', os.path.join(DIR_DATA, 'r5/metrics'))
 
 
 def load_dictionaries(dir_dictionaries, date):
