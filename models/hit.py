@@ -149,7 +149,7 @@ class HitManager:
             # Caso Hit tenha um conteúdo válido, Obtém outros atributos
             self.set_hit_attrs(new_hit)
 
-            # Caso Hit seja rastreável (associável a um Periódico, Fascíulo ou Artigo)
+            # Caso Hit seja rastreável (associável a um Periódico, Fascículo ou Artigo)
             if new_hit.is_trackable_hit(self.flag_include_other_hit_types):
                 return new_hit
 
