@@ -366,7 +366,7 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
         return True
 
 
-def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
+def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collection):
     """
     Adiciona métricas no banco de dados
     :param r5_metrics: lista de instâncias R5Metric
@@ -374,6 +374,7 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
     :param maps: Dicionários que mapeiam insumos a seus respectivos IDs no banco de dados
     :param key_list: Lista de chaves
     :param table_class: Classe que representa a tabela a ser persistida
+    :param collection: acrônimo da coleção
     """
     objects = []
 
@@ -410,20 +411,23 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
                         'idlanguage_cjm': idlanguage_cjm,
                         'idformat_cjm': idformat_cjm,
                         'yop': yop,
-                        'year_month_day': year_month_day})
+                        'year_month_day': year_month_day,
+                        'collection': collection})
 
         # É métrica agregada para periódico e ano de publicação na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_journal_yop_metric':
             idjournal_sjym, yop, year_month_day = k
             row.update({'idjournal_sjym': idjournal_sjym,
                         'yop': yop,
-                        'year_month_day': year_month_day})
+                        'year_month_day': year_month_day,
+                        'collection': collection})
 
         # É métrica agregada para periódico na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_journal_metric':
             idjournal_sjm, year_month_day = k
             row.update({'idjournal_sjm': idjournal_sjm,
-                        'year_month_day': year_month_day})
+                        'year_month_day': year_month_day,
+                        'collection': collection})
 
         # É métrica agregada para artigo na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_article_metric':
@@ -629,31 +633,31 @@ def main():
         if 'counter_article_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para counter_article...')
             keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_article_metric', True)
 
         if 'counter_journal_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para counter_journal...')
             keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_journal_metric', True)
 
         if 'sushi_journal_yop_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal_yop...')
             keys_sushi_journal_yop = ['idjournal_sjym', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_yop_metric', True)
 
         if 'sushi_journal_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal...')
             keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_metric', True)
 
         if 'sushi_article_metric' in target_tables:
             logging.info('Adicinando métricas agregadas para sushi_article...')
             keys_sushi_article = ['idarticle_sam', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_article, SushiArticleMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_article, SushiArticleMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_article_metric', True)
 
         date_status_value = compute_date_metric_status(db_session,
