@@ -436,12 +436,17 @@ def get_format(hit):
     return hit_format
 
 
-def get_collection(hit):
+def get_collection(action: str):
     """
     Obtém a coleção associada ao Hit (acesso)
 
     @param: um Hit
     @return: a coleção associada ao Hit
     """
-    url_parsed = parse.urlparse(hit.action_name)
+    if not action.startswith('http'):
+        action = ''.join(['http://', action])
+
+    url_parsed = parse.urlparse(action)
     return dicts.domain_to_collection.get(url_parsed.hostname, values.DEFAULT_COLLECTION)
+
+
