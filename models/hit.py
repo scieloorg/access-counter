@@ -34,9 +34,9 @@ class Hit:
         self.action_name = kargs.get('actionName', '').lower()
 
     def _is_from_local_network(self):
-        if self.latitude == '' or not self.latitude:
+        if self.latitude in {'', 'NULL'} or not self.latitude:
             return True
-        if self.longitude == '' or not self.longitude:
+        if self.longitude in {'', 'NULL'} or not self.longitude:
             return True
         return False
 
@@ -78,6 +78,11 @@ class Hit:
                                                at.HIT_TYPE_ISSUE,
                                                at.HIT_TYPE_JOURNAL}:
             logging.debug('Hit ignorado. ISSN não está definido (HitType: %s, ActionName: %s' % (self.hit_type, self.action_name))
+            return False
+
+        # Verifica se Hit possui um PID válido
+        if self.hit_type == at.HIT_TYPE_ARTICLE and not self.pid:
+            logging.debug('Hit ignorado. PID não está definido (HitType: %s, ActionName: %s' % (self.hit_type, self.action_name))
             return False
 
         return True
