@@ -453,3 +453,17 @@ def get_collection(action: str):
     return dicts.domain_to_collection.get(url_parsed.hostname, values.DEFAULT_COLLECTION)
 
 
+def is_new_url_format(action: str):
+    for pattern in [rege.REGEX_NEW_SCL_JOURNAL_ARTICLE_ABSTRACT,
+                    rege.REGEX_NEW_SCL_JOURNAL_ARTICLE,
+                    rege.REGEX_NEW_SCL_JOURNAL_FEED,
+                    rege.REGEX_NEW_SCL_JOURNAL_GRID,
+                    rege.REGEX_NEW_SCL_JOURNAL_TOC,
+                    rege.REGEX_NEW_SCL_JOURNAL,
+                    rege.REGEX_NEW_SCL_JOURNALS_ALFAPHETIC,
+                    rege.REGEX_NEW_SCL_JOURNALS_THEMATIC,
+                    rege.REGEX_NEW_SCL_RAW]:
+        if re.search(pattern, action):
+            return True
+
+    return False
