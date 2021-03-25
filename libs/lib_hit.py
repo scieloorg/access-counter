@@ -103,6 +103,19 @@ def get_url_params_from_action_new_url(action: str):
 
     return action_params
 
+
+def get_attrs_from_ssm_path(ssm_path: str):
+    data = {}
+
+    match = re.search(rege.REGEX_NEW_SCL_RAW_DETAIL, ssm_path)
+    if match and len(match.groups()) == 3:
+        data['issn'] = match.group(1).upper()
+        data['pid'] = match.group(2)
+        data['file'] = match.group(3)
+        if data['file'].endswith('.pdf'):
+            data['format'] = values.FORMAT_PDF
+
+    return data
 def get_hit_type(hit):
     """
     Obtém o tipo de Hit
