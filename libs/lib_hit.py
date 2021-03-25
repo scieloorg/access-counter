@@ -18,15 +18,18 @@ def article_pid_to_issue_code(pid: str):
             return pid[1:18]
 
 
-def article_pid_to_journal_issn(pid: str):
+def article_pid_to_journal_issn(pid: str, pid_to_issn=None):
     """
     Obtém o ISSN do periódico em que o artigo foi publicado, a partir de seu PID
 
+    @param pid_to_issn: dicionário que mapeia PID a ISSN
     @param pid: o PID de um artigo
     """
     if pid.startswith('S'):
-        if len(pid) == 23:
+        if len(pid) == 23 and '-' in pid:
             return pid[1:10]
+
+    return sorted(pid_to_issn.get(pid, {''}))[0]
 
 
 def issue_code_to_journal_issn(pid: str):
