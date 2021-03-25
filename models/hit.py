@@ -31,7 +31,7 @@ class Hit:
         self.browser_version = kargs.get('browserVersion', '').lower()
 
         # URL da ação
-        self.action_name = kargs.get('actionName', '').lower()
+        self.action_name = kargs.get('actionName', '')
 
     def _is_from_local_network(self):
         if self.latitude in {'', 'NULL'} or not self.latitude:
