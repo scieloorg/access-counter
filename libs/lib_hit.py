@@ -355,6 +355,59 @@ def get_issn(hit, acronym2pid: dict):
     return acronym2pid.get(hit.collection, {}).get(hit.acronym, [''])[0]
 
 
+def get_content_type_new_url(hit):
+    action_lowered = hit.action_name.lower()
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_ARTICLE_ABSTRACT, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_ARTICLE_ABSTRACT
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_ARTICLE, action_lowered):
+        if hit.format == 'html':
+            if 'fragment' in hit.__dict__.keys():
+                if hit.fragment == 'modaltutors':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_AUTHORS
+                if hit.fragment == 'modaltablesfigures':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_TABLES_AND_FIGURES
+                if hit.fragment == 'modaldownloads':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_REQUEST_PDF
+                if hit.fragment == 'modalarticles':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_HOW_TO_CITE
+                if hit.fragment == 'modalversionstranslations':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_TRANSLATE
+            return ma.HIT_CONTENT_NEW_SCL_ARTICLE_HTML
+
+        if hit.format == 'xml':
+            return ma.HIT_CONTENT_NEW_SCL_ARTICLE_XML
+
+        if hit.format == 'pdf':
+            return ma.HIT_CONTENT_NEW_SCL_ARTICLE_PDF
+
+    if re.search(rege.REGEX_NEW_SCL_RAW, action_lowered):
+        match = re.search(rege.REGEX_NEW_SCL_RAW_DETAIL, action_lowered)
+        if match and len(match.groups()) == 3:
+            if '.pdf' in match.group(3):
+                return ma.HIT_CONTENT_NEW_SCL_ARTICLE_PDF
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_FEED, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL_FEED
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_GRID, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL_GRID
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_TOC, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL_TOC
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNALS_ALFAPHETIC, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNALS_ALPHABETIC
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNALS_THEMATIC, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNALS_THEMATIC
+
+    return ma.HIT_CONTENT_OTHERS
+
+
 def get_content_type(hit):
     scl_domain = dicts.collection_to_domain.get(hit.collection, values.DEFAULT_DOMAIN)
 
