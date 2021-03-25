@@ -286,8 +286,10 @@ def get_issn(hit, acronym2pid: dict):
 
 
 def get_content_type(hit):
-    # É scielo.br/scielo.php
-    if re.search(ma.ACTION_SCLBR_SCLPHP, hit.action_name):
+    scl_domain = dicts.collection_to_domain.get(hit.collection, values.DEFAULT_DOMAIN)
+
+    # É domínio/scielo.php
+    if re.search(ma.ACTION_SCLBR_SCLPHP.format(scl_domain), hit.action_name):
         # Caso possua parâmero script
         if hit.script:
             return dicts.script_to_hit_content.get(hit.script, ma.HIT_CONTENT_OTHERS)
@@ -301,20 +303,20 @@ def get_content_type(hit):
             return ma.HIT_CONTENT_JOURNAL_SERIAL
         return ma.HIT_CONTENT_PLATFORM_MAIN_PAGE
 
-    # É scielo.br/article_plus.php? + pid={}
-    if re.search(ma.ACTION_SCLBR_ARTICLE_PLUS, hit.action_name):
+    # É domínio/article_plus.php? + pid={}
+    if re.search(ma.ACTION_SCLBR_ARTICLE_PLUS.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_ARTICLE_PLUS
 
-    # É scielo.br/pdf/ + arquivo.pdf
-    if re.search(ma.ACTION_SCLBR_PDF, hit.action_name):
+    # É domínio/pdf/ + arquivo.pdf
+    if re.search(ma.ACTION_SCLBR_PDF.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_ARTICLE_PDF
 
-    # É scielo.br/pdf/readcube/epdf.php? + pid={}
-    if re.search(ma.ACTION_SCLBR_READCUBE_EPDF, hit.action_name):
+    # É domínio/pdf/readcube/epdf.php? + pid={}
+    if re.search(ma.ACTION_SCLBR_READCUBE_EPDF.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_ARTICLE_EXTERNAL_PDF
 
-    # É scielo.br/scieloorg/php/{} + pid={}
-    if re.search(ma.ACTION_SCLBR_SCLORG_PHP, hit.action_name):
+    # É domínio/scieloorg/php/{} + pid={}
+    if re.search(ma.ACTION_SCLBR_SCLORG_PHP.format(scl_domain), hit.action_name):
         if 'articlexml' in hit.action_name:
             return ma.HIT_CONTENT_ARTICLE_ARTICLE_XML
         if 'citedscielo' in hit.action_name:
@@ -326,15 +328,15 @@ def get_content_type(hit):
         if 'translate' in hit.action_name:
             return ma.HIT_CONTENT_ARTICLE_TRANSLATE
 
-    # É scielo.br/rss? + pid={}
-    if re.search(ma.ACTION_SCLBR_RSS, hit.action_name):
+    # É domínio/rss? + pid={}
+    if re.search(ma.ACTION_SCLBR_RSS.format(scl_domain), hit.action_name):
         if re.search(rege.REGEX_ISSUE_PID, hit.pid):
             return ma.HIT_CONTENT_ISSUE_RSS
         if re.search(rege.REGEX_JOURNAL_PID, hit.pid):
             return ma.HIT_CONTENT_JOURNAL_RSS
 
-    # É scielo.br/revistas/ + página ou arquivo
-    if re.search(ma.ACTION_SCLBR_REVISTAS, hit.action_name):
+    # É domínio/revistas/ + página ou arquivo
+    if re.search(ma.ACTION_SCLBR_REVISTAS.format(scl_domain), hit.action_name):
         if 'aboutj.htm' in hit.action_name:
             return ma.HIT_CONTENT_JOURNAL_ABOUT
         if 'edboard.htm' in hit.action_name:
@@ -345,31 +347,31 @@ def get_content_type(hit):
             return ma.HIT_CONTENT_JOURNAL_SUBSCRIPTION
         return ma.HIT_CONTENT_JOURNAL_REVISTAS
 
-    # É scielo.br/google_metrics/get_h5_m5.php? + issn={}
-    if re.search(ma.ACTION_SCLBR_GOOGLE_METRICS_H5_M5, hit.action_name):
+    # É domínio/google_metrics/get_h5_m5.php? + issn={}
+    if re.search(ma.ACTION_SCLBR_GOOGLE_METRICS_H5_M5.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_JOURNAL_GOOGLE_METRICS
 
-    # É scielo.br/img/{fbpe ou revistas} + acrônimo
-    if re.search(ma.ACTION_SCLBR_IMG, hit.action_name):
+    # É domínio/img/{fbpe ou revistas} + acrônimo
+    if re.search(ma.ACTION_SCLBR_IMG.format(scl_domain), hit.action_name):
         if 'fbpe' in hit.action_name:
             return ma.HIT_CONTENT_JOURNAL_IMG_FBPE
         if 'revistas' in hit.action_name:
             return ma.HIT_CONTENT_JOURNAL_IMG_REVISTAS
 
-    # É scielo.br/statjournal.php? + issn={}
-    if re.search(ma.ACTION_SCLBR_STATJOURNAL, hit.action_name):
+    # É domínio/statjournal.php? + issn={}
+    if re.search(ma.ACTION_SCLBR_STATJOURNAL.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_JOURNAL_STAT
 
-    # É scielo.br/avaliacao
-    if re.search(ma.ACTION_SCLBR_AVALIACAO, hit.action_name):
+    # É domínio/avaliacao
+    if re.search(ma.ACTION_SCLBR_AVALIACAO.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_PLATFORM_EVALUATION
 
-    # É scielo.br/equipe
-    if re.search(ma.ACTION_SCLBR_EQUIPE, hit.action_name):
+    # É domínio/equipe
+    if re.search(ma.ACTION_SCLBR_EQUIPE.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_PLATFORM_TEAM
 
-    # É scielo.br
-    if re.search(ma.ACTION_SCLBR, hit.action_name):
+    # É domínio (scielo.br, scielo.org.ar, ...)
+    if re.search(scl_domain, hit.action_name):
         return ma.HIT_CONTENT_PLATFORM_HOME
 
     return ma.HIT_CONTENT_OTHERS
