@@ -70,8 +70,12 @@ class R5Metrics:
             return False
 
         # Ignora métrica que PID é mal-formado
-        if not re.match(REGEX_ARTICLE_PID, self.pid):
-            return False
+        if '-' in self.pid:
+            if not re.match(REGEX_ARTICLE_PID, self.pid):
+                return False
+        else:
+            if len(self.pid) != 23:
+                return False
 
         # Ignora métricas cujo artigo possui ano de publicação inválido
         if not isinstance(self.year_of_publication, int):
