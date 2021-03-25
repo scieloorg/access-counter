@@ -80,6 +80,29 @@ def get_url_params_from_action(action: str):
     return params
 
 
+def get_url_params_from_action_new_url(action: str):
+    action_params = {'pid': '',
+                     'acronym': '',
+                     'format': 'html',
+                     'lang': '',
+                     'fragment': '',
+                     'resource_ssm_path': ''}
+
+    action_evaluated = action
+    if not action_evaluated.startswith('http'):
+        action_evaluated = ''.join(['http://', action_evaluated])
+
+    action_parsed = parse.urlparse(action_evaluated)
+    params = dict(parse.parse_qsl(action_parsed.query))
+    for k, v in params.items():
+        if k in action_params:
+            action_params[k] = v
+
+    action_params['fragment'] = action_parsed.fragment
+    action_params['acronym'], action_params['pid'] = _get_acronym_and_pid_from_action_new_url(action)
+
+    return action_params
+
 def get_hit_type(hit):
     """
     Obtém o tipo de Hit
