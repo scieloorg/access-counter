@@ -236,6 +236,14 @@ def _get_journal_acronym_from_action(action: str):
                 return matched_acronym.group(1)
 
 
+def _get_acronym_and_pid_from_action_new_url(action: str):
+    match = re.search(rege.REGEX_NEW_SCL_JOURNAL_ARTICLE, action)
+    if match:
+        if len(match.groups()) == 2:
+            return match.group(1), match.group(2)
+    return '', ''
+
+
 def get_year_of_publication(hit, pid2yop: dict):
     """
     Obtém o ano de publicação (yop) associado ao PID.
