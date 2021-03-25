@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from socket import inet_ntoa
 from utils import map_actions as at
-from libs import lib_hit as ht, lib_counter
+from libs import lib_hit, lib_counter
 
 
 class Hit:
