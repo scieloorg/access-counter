@@ -116,6 +116,29 @@ def get_attrs_from_ssm_path(ssm_path: str):
             data['format'] = values.FORMAT_PDF
 
     return data
+
+
+def get_hit_type_new_url(action: str):
+    for pattern in [rege.REGEX_NEW_SCL_JOURNAL_ARTICLE,
+                    rege.REGEX_NEW_SCL_RAW]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_ARTICLE
+
+    for pattern in [rege.REGEX_NEW_SCL_JOURNAL_FEED,
+                    rege.REGEX_NEW_SCL_JOURNAL_GRID,
+                    rege.REGEX_NEW_SCL_JOURNAL_TOC,
+                    rege.REGEX_NEW_SCL_JOURNAL]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_JOURNAL
+
+    for pattern in [rege.REGEX_NEW_SCL_JOURNALS_ALFAPHETIC,
+                    rege.REGEX_NEW_SCL_JOURNALS_THEMATIC]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_PLATFORM
+
+    return ma.HIT_TYPE_OTHERS
+
+
 def get_hit_type(hit):
     """
     Obtém o tipo de Hit
