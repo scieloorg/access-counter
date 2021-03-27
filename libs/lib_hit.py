@@ -517,15 +517,15 @@ def get_language(hit, pid2format2lang: dict):
     # Idioma padrão originário do dicionário
     pid_langs = pid2format2lang.get(hit.collection, {}).get(hit.pid)
     if not pid_langs:
-        logging.debug('PID não encontrado em PID-Datas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
-                                                                                              hit.format,
-                                                                                              hit.action_name))
+        logging.debug('PID não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
+                                                                                                        hit.format,
+                                                                                                        hit.action_name))
 
     default_lang = pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default')
     if not default_lang:
-        logging.debug('Idioma padrão não encontrado em PID-Datas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
-                                                                                                        hit.format,
-                                                                                                        hit.action_name))
+        logging.debug('Idioma padrão não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
+                                                                                                                  hit.format,
+                                                                                                                  hit.action_name))
         default_lang = values.DEFAULT_LANGUAGE
 
     # Se idioma já está definido, verifica se é válido
