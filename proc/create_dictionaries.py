@@ -17,6 +17,26 @@ DOMAINS = set()
 FULLTEXT_MODES = ['pdf', 'html']
 
 
+def load_old_dictionaries(dir_dictionaries, version):
+    old_dictionaries = {
+        'pid-dates': {},
+        'issn-acronym': {},
+        'pdf-pid': {},
+        'pid-format-lang': {},
+        'pid-issn': {}
+    }
+
+    old_dicts_names = os.listdir(dir_dictionaries)
+
+    for d in old_dicts_names:
+        for name in old_dictionaries.keys():
+            if name in d and version in d:
+                logging.info('Loading old dictionary %s' % d)
+                old_dictionaries[name] = pickle.load(open(os.path.join(dir_dictionaries, d), 'rb'))
+
+    return old_dictionaries
+
+
 def generate_file_path(dir_dictionaries, dict_name, version, extension):
     if version:
         file_full_name = dict_name + '-' + version
@@ -191,6 +211,21 @@ def main():
     )
 
     parser.add_argument(
+        '--until_date',
+        required=True
+    )
+
+    parser.add_argument(
+        '--from_date',
+        required=True
+    )
+
+    parser.add_argument(
+        '--old_dictionaries_version',
+        dest='old_version'
+    )
+
+    parser.add_argument(
         '-v',
         default=datetime.datetime.now().strftime('%Y-%m-%d'),
         dest='version',
@@ -232,24 +267,26 @@ def main():
 
     version = params.version
 
+    old_dicts = load_old_dictionaries(DIR_DICTIONARIES, params.old_version)
+
     # PID de artigo -> lista de ISSNs
-    pid_issns = {}
+    pid_issns = old_dicts['pid-issn']
 
     # PID de artigo para lista de idiomas disponíveis (para PDF e para HTML)
-    pid_format_lang = {}
+    pid_format_lang = old_dicts['pid-format-lang']
 
     # Caminho de arquivo PDF -> PID de artigo
-    pdf_pid = {}
+    pdf_pid = old_dicts['pdf-pid']
 
     # ISSN -> acrônimo
-    issn_acronym = {}
+    issn_acronym = old_dicts['issn-acronym']
 
     # PID de artigo para lista de datas
-    pid_dates = {}
+    pid_dates = old_dicts['pid-dates']
 
     total_extracted = 0
     logging.info('Coletando dados...')
-    for article in articlemeta.find({}):
+    for article in articlemeta.find({'processing_date': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}}):
         total_extracted += 1
         if total_extracted % 1000 == 0:
             logging.info('Extraídos: %d' % total_extracted)
@@ -293,7 +330,9 @@ def main():
             pid_issns[collection][pid] = []
         pid_issns[collection][pid].extend(issns)
 
-        pid_dates[collection][pid] = get_all_dates(article)
+        if pid not in pid_dates[collection]:
+            pid_dates[collection][pid] = {}
+        pid_dates[collection][pid].update(get_all_dates(article))
 
         ftls = get_fulltext_langs(article)
 
@@ -302,7 +341,8 @@ def main():
                 lang, url_host, url_path = i
 
                 if pid not in pid_format_lang[collection]:
-                    pid_format_lang[collection][pid] = {'default': default_lang}
+                    pid_format_lang[collection][pid] = {}
+                pid_format_lang[collection][pid].update({'default': default_lang})
 
                 if fl_mode == 'pdf':
                     if url_path not in pdf_pid[collection]:
