@@ -235,6 +235,10 @@ def _get_journal_acronym_from_action(action: str):
             if len(matched_acronym.groups()) == 1:
                 return matched_acronym.group(1)
 
+    matched_acronym = re.match(rege.REGEX_ARTICLE_PDF_ACRONYM, action)
+    if matched_acronym:
+        return matched_acronym.group(1)
+
 
 def _get_acronym_and_pid_from_action_new_url(action: str):
     match = re.search(rege.REGEX_NEW_SCL_JOURNAL_ARTICLE, action)
