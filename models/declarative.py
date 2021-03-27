@@ -113,10 +113,12 @@ class Localization(Base):
 
 class JournalMetric(Base):
     __tablename__ = 'counter_journal_metric'
-    __table_args__ = (UniqueConstraint('year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'idjournal_cjm', 'yop', name='uni_date_all_cjm'),)
-    __table_args__ += (Index('idx_date_all_cjm', 'year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'yop', 'idjournal_cjm'),)
+    __table_args__ = (UniqueConstraint('year_month_day', 'collection', 'idformat_cjm', 'idlanguage_cjm', 'idjournal_cjm', 'yop', name='uni_col_date_all_cjm'),)
+    __table_args__ += (Index('idx_col_date_all_cjm', 'collection', 'year_month_day', 'idformat_cjm', 'idlanguage_cjm', 'yop', 'idjournal_cjm'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    collection = Column(VARCHAR(3), nullable=False)
 
     idformat_cjm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_format.id', name='idformat_cjm'))
     idlanguage_cjm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_cjm'))
@@ -133,10 +135,12 @@ class JournalMetric(Base):
 
 class SushiJournalYOPMetric(Base):
     __tablename__ = 'sushi_journal_yop_metric'
-    __table_args__ = (UniqueConstraint('year_month_day', 'yop', 'idjournal_sjym', name='uni_date_yop_jou_sjym'),)
-    __table_args__ += (Index('idx_date_yop_sjym', 'year_month_day', 'yop', 'idjournal_sjym'),)
+    __table_args__ = (UniqueConstraint('year_month_day', 'collection', 'yop', 'idjournal_sjym', name='uni_col_date_yop_jou_sjym'),)
+    __table_args__ += (Index('idx_col_date_yop_sjym', 'collection', 'year_month_day', 'yop', 'idjournal_sjym'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    collection = Column(VARCHAR(3), nullable=False)
 
     idjournal_sjym = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_sjym'))
     yop = Column(INTEGER(4))
@@ -150,10 +154,12 @@ class SushiJournalYOPMetric(Base):
 
 class SushiJournalMetric(Base):
     __tablename__ = 'sushi_journal_metric'
-    __table_args__ = (UniqueConstraint('year_month_day', 'idjournal_sjm', name='uni_date_jou_sjm'),)
-    __table_args__ += (Index('idx_date_sjm', 'year_month_day', 'idjournal_sjm'),)
+    __table_args__ = (UniqueConstraint('year_month_day', 'collection', 'idjournal_sjm', name='uni_col_date_jou_sjm'),)
+    __table_args__ += (Index('idx_col_date_sjm', 'collection', 'year_month_day', 'idjournal_sjm'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    collection = Column(VARCHAR(3), nullable=False)
 
     idjournal_sjm = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_sjm'))
     year_month_day = Column(Date, nullable=False)

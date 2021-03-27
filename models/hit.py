@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from socket import inet_ntoa
 from utils import map_actions as at
-from libs import lib_hit as ht, lib_counter
+from libs import lib_hit, lib_counter
 
 
 class Hit:
@@ -31,12 +31,12 @@ class Hit:
         self.browser_version = kargs.get('browserVersion', '').lower()
 
         # URL da ação
-        self.action_name = kargs.get('actionName', '').lower()
+        self.action_name = kargs.get('actionName', '')
 
     def _is_from_local_network(self):
-        if self.latitude == '' or not self.latitude:
+        if self.latitude in {'', 'NULL'} or not self.latitude:
             return True
-        if self.longitude == '' or not self.longitude:
+        if self.longitude in {'', 'NULL'} or not self.longitude:
             return True
         return False
 
@@ -80,6 +80,11 @@ class Hit:
             logging.debug('Hit ignorado. ISSN não está definido (HitType: %s, ActionName: %s' % (self.hit_type, self.action_name))
             return False
 
+        # Verifica se Hit possui um PID válido
+        if self.hit_type == at.HIT_TYPE_ARTICLE and not self.pid:
+            logging.debug('Hit ignorado. PID não está definido (HitType: %s, ActionName: %s' % (self.hit_type, self.action_name))
+            return False
+
         return True
 
 
@@ -95,6 +100,7 @@ class HitManager:
         self.issn_to_acronym = issn_to_acronym
         self.pid_to_format_lang = pid_to_format_lang
         self.pid_to_yop = pid_to_yop
+        self.pid_to_issn = {}
 
         # Gera um dicionário reverso de acrônimos
         self.acronym_to_issn = self._generate_acronym_to_issn()
@@ -144,7 +150,7 @@ class HitManager:
             # Caso Hit tenha um conteúdo válido, Obtém outros atributos
             self.set_hit_attrs(new_hit)
 
-            # Caso Hit seja rastreável (associável a um Periódico, Fascíulo ou Artigo)
+            # Caso Hit seja rastreável (associável a um Periódico, Fascículo ou Artigo)
             if new_hit.is_trackable_hit(self.flag_include_other_hit_types):
                 return new_hit
 
@@ -157,51 +163,89 @@ class HitManager:
 
         @hit: um objeto Hit
         """
-        # Extrai parâmetros da URL de ação de um Hit
-        hit.action_params = ht.get_url_params_from_action(hit.action_name)
-
         # Gera um ID de sessão
         hit.session_id = lib_counter.generate_session_id(hit.ip,
                                                          hit.browser_name,
                                                          hit.browser_version,
                                                          hit.server_time)
 
-        # Obtém dados a partir dos parâmetros extraídos
+        # Obtém coleção ao qual o Hit pertence
+        hit.collection = lib_hit.get_collection(hit.action_name.lower())
+
+        if lib_hit.is_new_url_format(hit.action_name.lower()):
+            self._set_hit_attrs_new_url(hit)
+        else:
+            self._set_hit_attrs_classic_url(hit)
+
+    def _set_hit_attrs_new_url(self, hit):
+        hit.action_params = lib_hit.get_url_params_from_action_new_url(hit.action_name)
+
+        hit.pid = hit.action_params['pid']
+        hit.acronym = hit.action_params['acronym'].lower()
+        hit.format = hit.action_params['format'].lower()
+        hit.lang = hit.action_params['lang'].lower()
+
+        if hit.action_params['resource_ssm_path']:
+            hit.action_params.update(lib_hit.get_attrs_from_ssm_path(hit.action_params['resource_ssm_path']))
+            hit.issn = hit.action_params['issn'].upper()
+            hit.format = hit.action_params['format'].lower()
+            hit.pid = hit.action_params['pid']
+
+        hit.content_type = lib_hit.get_content_type_new_url(hit)
+        hit.hit_type = lib_hit.get_hit_type_new_url(hit.action_name.lower())
+
+        if hit.hit_type == at.HIT_TYPE_ARTICLE:
+            # ToDo: ao atualizar dicionários, esse tratamento não será mais necessário
+            collection_to_check = 'scl' if hit.collection == 'nbr' else hit.collection
+
+            if 'issn' not in hit.__dict__.keys() or not hit.issn:
+                hit.issn = self.acronym_to_issn.get(collection_to_check, {}).get(hit.acronym, [''])[0].upper()
+
+            if hit.pid not in self.pid_to_issn:
+                if hit.issn:
+                    self.pid_to_issn[hit.pid] = {hit.issn}
+            else:
+                self.pid_to_issn[hit.pid].add(hit.issn)
+                if len(self.pid_to_issn[hit.pid]) > 2:
+                    logging.warning('PID %s está associado a mais de dois ISSNs: %s' %(hit.pid, self.pid_to_issn[hit.pid]))
+
+            # ToDo: atualizar os dicionários de ano de publicação e idiomas oficiais suportados
+            hit.yop = lib_hit.get_year_of_publication(hit, self.pid_to_yop)
+            hit.lang = lib_hit.get_language(hit, self.pid_to_format_lang)
+
+    def _set_hit_attrs_classic_url(self, hit):
+        hit.action_name = hit.action_name.lower()
+
+        # Extrai parâmetros da URL de ação de um Hit
+        hit.action_params = lib_hit.get_url_params_from_action(hit.action_name)
+
+        # Obtém dados a partir dos parâmetros extraídos (relacionados ao formato de URL clássica)
         hit.pid = hit.action_params.get('pid', '').upper()
         hit.lang = hit.action_params.get('tlng', '')
         hit.script = hit.action_params.get('script', '')
         hit.issn = hit.action_params.get('issn', '').upper()
 
-        # Obtém coleção ao qual o Hit pertence
-        hit.collection = ht.get_collection(hit)
-
         # Obtém PID do Hit, caso parâmetro de URL não tenha conseguido obtê-lo
         if not hit.pid:
-            hit.pid = ht.get_pid_from_pdf_path(hit, self.pdf_path_to_pid)
+            hit.pid = lib_hit.get_pid_from_pdf_path(hit, self.pdf_path_to_pid)
 
         # Obtém o tipo de conteúdo associado ao Hit
-        hit.content_type = ht.get_content_type(hit)
+        hit.content_type = lib_hit.get_content_type(hit)
 
         # Obtém o formato do Hit (PDF ou HTML)
-        hit.format = ht.get_format(hit)
+        hit.format = lib_hit.get_format(hit)
 
         # Obtém o tipo de Hit
-        hit.hit_type = ht.get_hit_type(hit)
+        hit.hit_type = lib_hit.get_hit_type(hit)
 
-        # Obtém o ISSN, YOP e Lang do Hit a partir do PID, caso seja artigo
+        hit.issn = lib_hit.article_pid_to_journal_issn(hit.pid, self.pid_to_issn)
+        hit.acronym = lib_hit.get_journal_acronym(hit, self.issn_to_acronym)
+        if not hit.issn:
+            hit.issn = lib_hit.get_issn(hit, self.acronym_to_issn)
+
         if hit.hit_type == at.HIT_TYPE_ARTICLE:
-            hit.issn = ht.article_pid_to_journal_issn(hit.pid)
-            hit.yop = ht.get_year_of_publication(hit, self.pid_to_yop)
-            hit.lang = ht.get_language(hit, self.pid_to_format_lang)
-
-        # Situação em que outros tipos de Hit são considerados
-        if self.flag_include_other_hit_types:
-            # Obtém acrônimo de periódico, se for o caso
-            if hit.hit_type in {at.HIT_TYPE_ISSUE,
-                                at.HIT_TYPE_JOURNAL}:
-                hit.acronym = ht.get_journal_acronym(hit, self.issn_to_acronym)
-                if not hit.issn:
-                    hit.issn = ht.get_issn(hit, self.acronym_to_issn)
+            hit.yop = lib_hit.get_year_of_publication(hit, self.pid_to_yop)
+            hit.lang = lib_hit.get_language(hit, self.pid_to_format_lang)
 
     def reset(self):
         """

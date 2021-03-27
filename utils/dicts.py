@@ -18,24 +18,56 @@ script_to_hit_content = {
     'sci_subject': ma.HIT_CONTENT_PLATFORM_LIST_JOURNALS_SUBJECT,
 }
 
-# Mapeia url ou domínio ao acrônimo da respectiva coleção
+# Mapeia domínio ao acrônimo da respectiva coleção
 domain_to_collection = {
-    'www.scielo.org.bo': 'bol',
-    'www.scielo.cl': 'chi',
-    'www.scielosp.org': 'spa',
-    'www.scielo.br': 'scl',
-    'www.scielo.mec.pt': 'prt',
+    'scielo.org.ar': 'arg',
+    'scielo.org.bo': 'bol',
+    'scielo.cl': 'chi',
+    'scielo.sa.cr': 'cri',
+    'scielo.org.co': 'col',
+    'scielo.sld.cu': 'cub',
+    'scielo.senescyt.gob.ec': 'ecu',
     'scielo.isciii.es': 'esp',
-    'www.scielo.org.za': 'sza',
+    'scielo.org.mx': 'mex',
+    'new.scielo.br': 'nbr',
+    'scielo.org.pe': 'per',
+    'scielo.mec.pt': 'prt',
+    'scielo.iics.una.py': 'pry',
     'pepsic.bvsalud.org': 'psi',
-    'www.scielo.org.pe': 'per',
-    'www.scielo.org.ar': 'arg',
-    'www.scielo.edu.uy': 'ury',
-    'www.scielo.org.mx': 'mex',
-    'www.scielo.org.co': 'col',
-    'www.scielo.org.ve': 'ven',
-    'www.scielo.sa.cr': 'cri',
-    'scielo.sld.cu': 'cub'
+    'revenf.bvs.br': 'rve',
+    'scielo.br': 'scl',
+    'scielosp.org': 'ssp',
+    'socialsciences.scielo.org': 'sss',
+    'scielo.org.za': 'sza',
+    'scielo.edu.uy': 'ury',
+    'scielo.org.ve': 'ven',
+    'westindies.scielo.org': 'wid'
+}
+
+# Mapeia acrônimo de coleção ao domínio
+collection_to_domain = {
+    'arg': 'scielo.org.ar',
+    'bol': 'scielo.org.bo',
+    'chi': 'scielo.cl',
+    'cri': 'scielo.sa.cr',
+    'col': 'scielo.org.co',
+    'cub': 'scielo.sld.cu',
+    'ecu': 'scielo.senescyt.gob.ec',
+    'esp': 'scielo.isciii.es',
+    'mex': 'scielo.org.mx',
+    'nbr': 'new.scielo.br',
+    'per': 'scielo.org.pe',
+    'prt': 'scielo.mec.pt',
+    'pry': 'scielo.iics.una.py',
+    'psi': 'pepsic.bvsalud.org',
+    'rve': 'revenf.bvs.br',
+    'scl': 'scielo.br',
+    'ssp': 'scielosp.org',
+    'sss': 'socialsciences.scielo.org',
+    'sza': 'scielo.org.za',
+    'ury': 'scielo.edu.uy',
+    'ven': 'scielo.org.ve',
+    'wid': 'westindies.scielo.org'
 }
 
 # Mapeia acrônimo do idioma ao respectivo código numérico usado na base de dados

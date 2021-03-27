@@ -3,6 +3,9 @@ FORMAT_PDF = 'pdf'
 FORMAT_HTML = 'html'
 LANGUAGE_PT = 'pt'
 
+# Domínio padrão
+DEFAULT_DOMAIN = 'scielo.br'
+
 # Coleção padrão
 DEFAULT_COLLECTION = COLLECTION_SCL
 

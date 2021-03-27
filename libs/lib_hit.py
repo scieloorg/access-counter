@@ -18,15 +18,18 @@ def article_pid_to_issue_code(pid: str):
             return pid[1:18]
 
 
-def article_pid_to_journal_issn(pid: str):
+def article_pid_to_journal_issn(pid: str, pid_to_issn=None):
     """
     Obtém o ISSN do periódico em que o artigo foi publicado, a partir de seu PID
 
+    @param pid_to_issn: dicionário que mapeia PID a ISSN
     @param pid: o PID de um artigo
     """
     if pid.startswith('S'):
-        if len(pid) == 23:
+        if len(pid) == 23 and '-' in pid:
             return pid[1:10]
+
+    return sorted(pid_to_issn.get(pid, {''}))[0]
 
 
 def issue_code_to_journal_issn(pid: str):
@@ -75,6 +78,65 @@ def get_url_params_from_action(action: str):
             params[k] = sanitized_value
 
     return params
+
+
+def get_url_params_from_action_new_url(action: str):
+    action_params = {'pid': '',
+                     'acronym': '',
+                     'format': 'html',
+                     'lang': '',
+                     'fragment': '',
+                     'resource_ssm_path': ''}
+
+    action_evaluated = action
+    if not action_evaluated.startswith('http'):
+        action_evaluated = ''.join(['http://', action_evaluated])
+
+    action_parsed = parse.urlparse(action_evaluated)
+    params = dict(parse.parse_qsl(action_parsed.query))
+    for k, v in params.items():
+        if k in action_params:
+            action_params[k] = v
+
+    action_params['fragment'] = action_parsed.fragment
+    action_params['acronym'], action_params['pid'] = _get_acronym_and_pid_from_action_new_url(action)
+
+    return action_params
+
+
+def get_attrs_from_ssm_path(ssm_path: str):
+    data = {}
+
+    match = re.search(rege.REGEX_NEW_SCL_RAW_DETAIL, ssm_path)
+    if match and len(match.groups()) == 3:
+        data['issn'] = match.group(1).upper()
+        data['pid'] = match.group(2)
+        data['file'] = match.group(3)
+        if data['file'].endswith('.pdf'):
+            data['format'] = values.FORMAT_PDF
+
+    return data
+
+
+def get_hit_type_new_url(action: str):
+    for pattern in [rege.REGEX_NEW_SCL_JOURNAL_ARTICLE,
+                    rege.REGEX_NEW_SCL_RAW]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_ARTICLE
+
+    for pattern in [rege.REGEX_NEW_SCL_JOURNAL_FEED,
+                    rege.REGEX_NEW_SCL_JOURNAL_GRID,
+                    rege.REGEX_NEW_SCL_JOURNAL_TOC,
+                    rege.REGEX_NEW_SCL_JOURNAL]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_JOURNAL
+
+    for pattern in [rege.REGEX_NEW_SCL_JOURNALS_ALFAPHETIC,
+                    rege.REGEX_NEW_SCL_JOURNALS_THEMATIC]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_PLATFORM
+
+    return ma.HIT_TYPE_OTHERS
 
 
 def get_hit_type(hit):
@@ -173,6 +235,18 @@ def _get_journal_acronym_from_action(action: str):
             if len(matched_acronym.groups()) == 1:
                 return matched_acronym.group(1)
 
+    matched_acronym = re.match(rege.REGEX_ARTICLE_PDF_ACRONYM, action)
+    if matched_acronym:
+        return matched_acronym.group(1)
+
+
+def _get_acronym_and_pid_from_action_new_url(action: str):
+    match = re.search(rege.REGEX_NEW_SCL_JOURNAL_ARTICLE, action)
+    if match:
+        if len(match.groups()) == 2:
+            return match.group(1), match.group(2)
+    return '', ''
+
 
 def get_year_of_publication(hit, pid2yop: dict):
     """
@@ -250,6 +324,8 @@ def get_pid_from_pdf_path(hit, pdf2pid: dict):
     extracted_pid = sorted(pdf2pid.get(hit.collection, {}).get(pdf_path, set()))
     if extracted_pid:
         return extracted_pid[0]
+
+    logging.debug('PDF não foi associado a PID: (%s, %s)' % (pdf_path, hit.action_name))
     return ''
 
 
@@ -285,9 +361,64 @@ def get_issn(hit, acronym2pid: dict):
     return acronym2pid.get(hit.collection, {}).get(hit.acronym, [''])[0]
 
 
+def get_content_type_new_url(hit):
+    action_lowered = hit.action_name.lower()
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_ARTICLE_ABSTRACT, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_ARTICLE_ABSTRACT
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_ARTICLE, action_lowered):
+        if hit.format == 'html':
+            if 'fragment' in hit.__dict__.keys():
+                if hit.fragment == 'modaltutors':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_AUTHORS
+                if hit.fragment == 'modaltablesfigures':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_TABLES_AND_FIGURES
+                if hit.fragment == 'modaldownloads':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_REQUEST_PDF
+                if hit.fragment == 'modalarticles':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_HOW_TO_CITE
+                if hit.fragment == 'modalversionstranslations':
+                    return ma.HIT_CONTENT_NEW_SCL_ARTICLE_TRANSLATE
+            return ma.HIT_CONTENT_NEW_SCL_ARTICLE_HTML
+
+        if hit.format == 'xml':
+            return ma.HIT_CONTENT_NEW_SCL_ARTICLE_XML
+
+        if hit.format == 'pdf':
+            return ma.HIT_CONTENT_NEW_SCL_ARTICLE_PDF
+
+    if re.search(rege.REGEX_NEW_SCL_RAW, action_lowered):
+        match = re.search(rege.REGEX_NEW_SCL_RAW_DETAIL, action_lowered)
+        if match and len(match.groups()) == 3:
+            if '.pdf' in match.group(3):
+                return ma.HIT_CONTENT_NEW_SCL_ARTICLE_PDF
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_FEED, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL_FEED
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_GRID, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL_GRID
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL_TOC, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL_TOC
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNAL, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNAL
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNALS_ALFAPHETIC, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNALS_ALPHABETIC
+
+    if re.search(rege.REGEX_NEW_SCL_JOURNALS_THEMATIC, action_lowered):
+        return ma.HIT_CONTENT_NEW_SCL_JOURNALS_THEMATIC
+
+    return ma.HIT_CONTENT_OTHERS
+
+
 def get_content_type(hit):
-    # É scielo.br/scielo.php
-    if re.search(ma.ACTION_SCLBR_SCLPHP, hit.action_name):
+    scl_domain = dicts.collection_to_domain.get(hit.collection, values.DEFAULT_DOMAIN)
+
+    # É domínio/scielo.php
+    if re.search(ma.ACTION_SCLBR_SCLPHP.format(scl_domain), hit.action_name):
         # Caso possua parâmero script
         if hit.script:
             return dicts.script_to_hit_content.get(hit.script, ma.HIT_CONTENT_OTHERS)
@@ -301,20 +432,20 @@ def get_content_type(hit):
             return ma.HIT_CONTENT_JOURNAL_SERIAL
         return ma.HIT_CONTENT_PLATFORM_MAIN_PAGE
 
-    # É scielo.br/article_plus.php? + pid={}
-    if re.search(ma.ACTION_SCLBR_ARTICLE_PLUS, hit.action_name):
+    # É domínio/article_plus.php? + pid={}
+    if re.search(ma.ACTION_SCLBR_ARTICLE_PLUS.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_ARTICLE_PLUS
 
-    # É scielo.br/pdf/ + arquivo.pdf
-    if re.search(ma.ACTION_SCLBR_PDF, hit.action_name):
+    # É domínio/pdf/ + arquivo.pdf
+    if re.search(ma.ACTION_SCLBR_PDF.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_ARTICLE_PDF
 
-    # É scielo.br/pdf/readcube/epdf.php? + pid={}
-    if re.search(ma.ACTION_SCLBR_READCUBE_EPDF, hit.action_name):
+    # É domínio/pdf/readcube/epdf.php? + pid={}
+    if re.search(ma.ACTION_SCLBR_READCUBE_EPDF.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_ARTICLE_EXTERNAL_PDF
 
-    # É scielo.br/scieloorg/php/{} + pid={}
-    if re.search(ma.ACTION_SCLBR_SCLORG_PHP, hit.action_name):
+    # É domínio/scieloorg/php/{} + pid={}
+    if re.search(ma.ACTION_SCLBR_SCLORG_PHP.format(scl_domain), hit.action_name):
         if 'articlexml' in hit.action_name:
             return ma.HIT_CONTENT_ARTICLE_ARTICLE_XML
         if 'citedscielo' in hit.action_name:
@@ -326,15 +457,15 @@ def get_content_type(hit):
         if 'translate' in hit.action_name:
             return ma.HIT_CONTENT_ARTICLE_TRANSLATE
 
-    # É scielo.br/rss? + pid={}
-    if re.search(ma.ACTION_SCLBR_RSS, hit.action_name):
+    # É domínio/rss? + pid={}
+    if re.search(ma.ACTION_SCLBR_RSS.format(scl_domain), hit.action_name):
         if re.search(rege.REGEX_ISSUE_PID, hit.pid):
             return ma.HIT_CONTENT_ISSUE_RSS
         if re.search(rege.REGEX_JOURNAL_PID, hit.pid):
             return ma.HIT_CONTENT_JOURNAL_RSS
 
-    # É scielo.br/revistas/ + página ou arquivo
-    if re.search(ma.ACTION_SCLBR_REVISTAS, hit.action_name):
+    # É domínio/revistas/ + página ou arquivo
+    if re.search(ma.ACTION_SCLBR_REVISTAS.format(scl_domain), hit.action_name):
         if 'aboutj.htm' in hit.action_name:
             return ma.HIT_CONTENT_JOURNAL_ABOUT
         if 'edboard.htm' in hit.action_name:
@@ -345,31 +476,31 @@ def get_content_type(hit):
             return ma.HIT_CONTENT_JOURNAL_SUBSCRIPTION
         return ma.HIT_CONTENT_JOURNAL_REVISTAS
 
-    # É scielo.br/google_metrics/get_h5_m5.php? + issn={}
-    if re.search(ma.ACTION_SCLBR_GOOGLE_METRICS_H5_M5, hit.action_name):
+    # É domínio/google_metrics/get_h5_m5.php? + issn={}
+    if re.search(ma.ACTION_SCLBR_GOOGLE_METRICS_H5_M5.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_JOURNAL_GOOGLE_METRICS
 
-    # É scielo.br/img/{fbpe ou revistas} + acrônimo
-    if re.search(ma.ACTION_SCLBR_IMG, hit.action_name):
+    # É domínio/img/{fbpe ou revistas} + acrônimo
+    if re.search(ma.ACTION_SCLBR_IMG.format(scl_domain), hit.action_name):
         if 'fbpe' in hit.action_name:
             return ma.HIT_CONTENT_JOURNAL_IMG_FBPE
         if 'revistas' in hit.action_name:
             return ma.HIT_CONTENT_JOURNAL_IMG_REVISTAS
 
-    # É scielo.br/statjournal.php? + issn={}
-    if re.search(ma.ACTION_SCLBR_STATJOURNAL, hit.action_name):
+    # É domínio/statjournal.php? + issn={}
+    if re.search(ma.ACTION_SCLBR_STATJOURNAL.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_JOURNAL_STAT
 
-    # É scielo.br/avaliacao
-    if re.search(ma.ACTION_SCLBR_AVALIACAO, hit.action_name):
+    # É domínio/avaliacao
+    if re.search(ma.ACTION_SCLBR_AVALIACAO.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_PLATFORM_EVALUATION
 
-    # É scielo.br/equipe
-    if re.search(ma.ACTION_SCLBR_EQUIPE, hit.action_name):
+    # É domínio/equipe
+    if re.search(ma.ACTION_SCLBR_EQUIPE.format(scl_domain), hit.action_name):
         return ma.HIT_CONTENT_PLATFORM_TEAM
 
-    # É scielo.br
-    if re.search(ma.ACTION_SCLBR, hit.action_name):
+    # É domínio (scielo.br, scielo.org.ar, ...)
+    if re.search(scl_domain, hit.action_name):
         return ma.HIT_CONTENT_PLATFORM_HOME
 
     return ma.HIT_CONTENT_OTHERS
@@ -386,15 +517,15 @@ def get_language(hit, pid2format2lang: dict):
     # Idioma padrão originário do dicionário
     pid_langs = pid2format2lang.get(hit.collection, {}).get(hit.pid)
     if not pid_langs:
-        logging.debug('PID não encontrado em PID-Datas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
-                                                                                              hit.format,
-                                                                                              hit.action_name))
+        logging.debug('PID não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
+                                                                                                        hit.format,
+                                                                                                        hit.action_name))
 
     default_lang = pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default')
     if not default_lang:
-        logging.debug('Idioma padrão não encontrado em PID-Datas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
-                                                                                                        hit.format,
-                                                                                                        hit.action_name))
+        logging.debug('Idioma padrão não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
+                                                                                                                  hit.format,
+                                                                                                                  hit.action_name))
         default_lang = values.DEFAULT_LANGUAGE
 
     # Se idioma já está definido, verifica se é válido
@@ -434,12 +565,31 @@ def get_format(hit):
     return hit_format
 
 
-def get_collection(hit):
+def get_collection(action: str):
     """
     Obtém a coleção associada ao Hit (acesso)
 
     @param: um Hit
     @return: a coleção associada ao Hit
     """
-    url_parsed = parse.urlparse(hit.action_name)
-    return dicts.domain_to_collection.get(url_parsed.hostname, values.DEFAULT_COLLECTION)
+    if not action.startswith('http'):
+        action = ''.join(['http://', action])
+
+    url_parsed = parse.urlparse(action)
+    return dicts.domain_to_collection.get(url_parsed.hostname.replace('www.', ''), values.DEFAULT_COLLECTION)
+
+
+def is_new_url_format(action: str):
+    for pattern in [rege.REGEX_NEW_SCL_JOURNAL_ARTICLE_ABSTRACT,
+                    rege.REGEX_NEW_SCL_JOURNAL_ARTICLE,
+                    rege.REGEX_NEW_SCL_JOURNAL_FEED,
+                    rege.REGEX_NEW_SCL_JOURNAL_GRID,
+                    rege.REGEX_NEW_SCL_JOURNAL_TOC,
+                    rege.REGEX_NEW_SCL_JOURNAL,
+                    rege.REGEX_NEW_SCL_JOURNALS_ALFAPHETIC,
+                    rege.REGEX_NEW_SCL_JOURNALS_THEMATIC,
+                    rege.REGEX_NEW_SCL_RAW]:
+        if re.search(pattern, action):
+            return True
+
+    return False

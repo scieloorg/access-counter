@@ -15,7 +15,16 @@ COUNTER_ARTICLE_ITEM_INVESTIGATIONS = [ma.HIT_CONTENT_ARTICLE_FULL_TEXT,
                                        ma.HIT_CONTENT_ARTICLE_RELATED,
                                        ma.HIT_CONTENT_ARTICLE_TRANSLATE,
                                        ma.HIT_CONTENT_ARTICLE_DOWNLOAD_CITATION,
-                                       ma.HIT_CONTENT_ARTICLE_EXTERNAL_PDF]
+                                       ma.HIT_CONTENT_ARTICLE_EXTERNAL_PDF,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_HTML,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_ABSTRACT,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_XML,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_PDF,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_HOW_TO_CITE,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_REQUEST_PDF,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_TRANSLATE,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_AUTHORS,
+                                       ma.HIT_CONTENT_NEW_SCL_ARTICLE_TABLES_AND_FIGURES]
 
 # Conteúdos válidos para métrica Request de artigos
 COUNTER_ARTICLE_ITEM_REQUESTS = [ma.HIT_CONTENT_ARTICLE_FULL_TEXT,
@@ -23,7 +32,10 @@ COUNTER_ARTICLE_ITEM_REQUESTS = [ma.HIT_CONTENT_ARTICLE_FULL_TEXT,
                                  ma.HIT_CONTENT_ARTICLE_ARTICLE_XML,
                                  ma.HIT_CONTENT_ARTICLE_PDF,
                                  ma.HIT_CONTENT_ARTICLE_EXTERNAL_PDF,
-                                 ma.HIT_CONTENT_ARTICLE_PLUS]
+                                 ma.HIT_CONTENT_ARTICLE_PLUS,
+                                 ma.HIT_CONTENT_NEW_SCL_ARTICLE_HTML,
+                                 ma.HIT_CONTENT_NEW_SCL_ARTICLE_XML,
+                                 ma.HIT_CONTENT_NEW_SCL_ARTICLE_PDF]
 
 # Conteúdos válidos para métrica Investigation de fascículos
 COUNTER_ISSUE_ITEM_INVESTIGATIONS = [ma.HIT_CONTENT_ISSUE_TOC,

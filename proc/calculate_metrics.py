@@ -5,6 +5,8 @@ import logging
 import os
 import pickle
 import re
+import sys
+sys.path.append(os.getcwd())
 
 from libs.lib_database import update_date_status, get_date_status
 from libs.lib_status import DATE_STATUS_PRETABLE, DATE_STATUS_COMPUTED
@@ -14,7 +16,7 @@ from socket import inet_ntoa
 from sqlalchemy.orm.exc import NoResultFound
 from time import time
 from utils import dicts, values
-from libs import lib_hit as ht, lib_database
+from libs import lib_hit, lib_database
 from models.declarative import (
     Article,
     ArticleMetric,
@@ -39,15 +41,15 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 MAX_YEAR = datetime.datetime.now().year + 5
 DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
-DIR_PRETABLES = os.path.join(DIR_DATA, 'pretables')
-DIR_R5_HITS = os.path.join(DIR_DATA, 'r5/hits')
-DIR_R5_METRICS = os.path.join(DIR_DATA, 'r5/metrics')
+DIR_PRETABLES = os.environ.get('DIR_PRETABLES', os.path.join(DIR_DATA, 'pretables'))
+DIR_R5_HITS = os.environ.get('DIR_R5_HITS', os.path.join(DIR_DATA, 'r5/hits'))
+DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', os.path.join(DIR_DATA, 'r5/metrics'))
 
 
 def load_dictionaries(dir_dictionaries, date):
     maps = {}
     for d_name in ['pdf-pid', 'issn-acronym', 'pid-format-lang', 'pid-dates']:
-        logging.info('Carregando dicionário %s' % d_name)
+        logging.info('Carregando dicionário %s-%s' % (d_name, date))
         d_full_path = os.path.join(dir_dictionaries, d_name + '-' + date + '.data')
 
         if not os.path.exists(d_full_path):
@@ -94,6 +96,11 @@ def _is_valid_for_computing(date_value, date_status, max_permitted_day, all_comp
         logging.warning('Registro indica não haver pré-tabela para data %s' % date_value)
 
 
+def _list_files(dir_path):
+    results = os.listdir(dir_path)
+    return [f for f in results if os.path.isfile(os.path.join(dir_path, f))]
+
+
 def get_pretables(db_session, max_day: datetime.datetime):
     """
     Obtém lista de caminhos de arquivos log com dados previamente extraídos do Matomo
@@ -104,9 +111,9 @@ def get_pretables(db_session, max_day: datetime.datetime):
     """
     pretables = []
     if os.path.isdir(DIR_PRETABLES):
-        pretables.extend([os.path.join(os.path.abspath(DIR_PRETABLES), f) for f in os.listdir(DIR_PRETABLES)])
+        pretables.extend([os.path.join(os.path.abspath(DIR_PRETABLES), f) for f in _list_files(DIR_PRETABLES)])
 
-    all_computed_days_in_dir = [get_date_from_file_path(f) for f in set(os.listdir(DIR_R5_HITS) + os.listdir(DIR_R5_METRICS))]
+    all_computed_days_in_dir = [get_date_from_file_path(f) for f in set(_list_files(DIR_R5_HITS) + _list_files(DIR_R5_METRICS))]
 
     pretables_to_compute = []
 
@@ -162,14 +169,14 @@ def update_metrics(metric, data):
             metric.__setattr__(k, data[k])
 
 
-def export_article_hits_to_csv(hits: dict, file_prefix: str):
+def export_article_hits_to_csv(hits: dict, file_prefix: str, pid_to_issn: dict):
     file_full_path = os.path.join(DIR_R5_HITS, 'r5-hits-' + file_prefix + '.csv')
 
     with open(file_full_path, 'a') as f:
         for session, hits_data in hits.items():
             for key, hits_list in hits_data.items():
                 pid, fmt, lang, lat, long, yop = key
-                issn = ht.article_pid_to_journal_issn(pid)
+                issn = lib_hit.article_pid_to_journal_issn(pid, pid_to_issn)
 
                 line_data = [pid, fmt, lang, lat, long, yop, issn]
 
@@ -193,13 +200,13 @@ def export_article_hits_to_csv(hits: dict, file_prefix: str):
                                                   hit.action_name]) + '\n')
 
 
-def export_article_metrics_to_csv(metrics: dict, file_prefix: str):
+def export_article_metrics_to_csv(metrics: dict, file_prefix: str, pid_to_issn: dict):
     file_full_path = os.path.join(DIR_R5_METRICS, 'r5-metrics-' + file_prefix + '.csv')
 
     with open(file_full_path, 'a') as f:
         for key, article_data in metrics.items():
             pid, fmt, lang, lat, long, yop = key
-            issn = ht.article_pid_to_journal_issn(pid)
+            issn = lib_hit.article_pid_to_journal_issn(pid, pid_to_issn)
 
             for ymd in article_data:
                 line_data = [pid, fmt, lang, lat, long, yop, issn, ymd]
@@ -210,7 +217,7 @@ def export_article_metrics_to_csv(metrics: dict, file_prefix: str):
                 f.write('|'.join([str(i) for i in line_data]) + '\n')
 
 
-def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
+def export_metrics_to_matomo(metrics: dict, db_session, collection: str, pid_to_issn):
     """
     Exporta métricas para banco de dados
 
@@ -220,7 +227,7 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
     """
     for group in metrics.keys():
         if group == 'article':
-            _export_article(metrics[group], db_session, collection)
+            _export_article(metrics[group], db_session, collection, pid_to_issn)
 
         elif group == 'issue':
             _export_issue(metrics[group], db_session, collection)
@@ -235,7 +242,7 @@ def export_metrics_to_matomo(metrics: dict, db_session, collection: str):
             _export_others(metrics[group], db_session, collection)
 
 
-def _export_article(metrics, db_session, collection):
+def _export_article(metrics, db_session, collection, pid_to_issn):
     for key, article_data in metrics.items():
         pid, data_format, lang, latitude, longitude, yop = key
 
@@ -282,7 +289,7 @@ def _export_article(metrics, db_session, collection):
                 logging.debug('Adicionado idioma (ID: %s, NAME: %s)' % (new_article_language.id,
                                                                         new_article_language.language))
 
-        issn = ht.article_pid_to_journal_issn(pid)
+        issn = lib_hit.article_pid_to_journal_issn(pid, pid_to_issn)
 
         for ymd in article_data:
             # Procura periódico na base de dados
@@ -475,13 +482,13 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection, file_p
 
     if hit_manager.persist_on_database:
         logging.info('Salvando métricas na base de dados...')
-        export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection)
+        export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection, pid_to_issn=hit_manager.pid_to_issn)
 
     logging.info('Salvando hits em disco...')
-    export_article_hits_to_csv(hit_manager.hits['article'], file_prefix)
+    export_article_hits_to_csv(hit_manager.hits['article'], file_prefix, hit_manager.pid_to_issn)
 
     logging.info('Salvando métricas em disco...')
-    export_article_metrics_to_csv(cs.metrics['article'], file_prefix)
+    export_article_metrics_to_csv(cs.metrics['article'], file_prefix, hit_manager.pid_to_issn)
 
     hit_manager.reset()
 

@@ -37,12 +37,11 @@ from models.declarative import (
 MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 MATOMO_DATABASE_BULK_SIZE = int(os.environ.get('MATOMO_DATABASE_BULK_SIZE', '1000'))
 COLLECTION = os.environ.get('COLLECTION', 'scl')
-DIR_R5 = os.environ.get('DIR_R5', '/app/data/r5')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 TABLES_TO_PERSIST = os.environ.get('TABLES_TO_PERSIST', 'counter_foreign,counter_article_metric,counter_journal_metric,sushi_article_metric,sushi_journal_metric,sushi_journal_yop_metric')
 
-DIR_R5_METRICS = os.path.join(DIR_R5, 'metrics')
+DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5')
 MAX_YEAR = datetime.datetime.now().year + 5
 
 
@@ -72,8 +71,12 @@ class R5Metrics:
             return False
 
         # Ignora métrica que PID é mal-formado
-        if not re.match(REGEX_ARTICLE_PID, self.pid):
-            return False
+        if '-' in self.pid:
+            if not re.match(REGEX_ARTICLE_PID, self.pid):
+                return False
+        else:
+            if len(self.pid) != 23:
+                return False
 
         # Ignora métricas cujo artigo possui ano de publicação inválido
         if not isinstance(self.year_of_publication, int):
@@ -364,7 +367,7 @@ def update_article_table(r5_metrics, db_session, issn_map, pid_map):
         return True
 
 
-def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
+def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collection):
     """
     Adiciona métricas no banco de dados
     :param r5_metrics: lista de instâncias R5Metric
@@ -372,6 +375,7 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
     :param maps: Dicionários que mapeiam insumos a seus respectivos IDs no banco de dados
     :param key_list: Lista de chaves
     :param table_class: Classe que representa a tabela a ser persistida
+    :param collection: acrônimo da coleção
     """
     objects = []
 
@@ -408,20 +412,23 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class):
                         'idlanguage_cjm': idlanguage_cjm,
                         'idformat_cjm': idformat_cjm,
                         'yop': yop,
-                        'year_month_day': year_month_day})
+                        'year_month_day': year_month_day,
+                        'collection': collection})
 
         # É métrica agregada para periódico e ano de publicação na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_journal_yop_metric':
             idjournal_sjym, yop, year_month_day = k
             row.update({'idjournal_sjym': idjournal_sjym,
                         'yop': yop,
-                        'year_month_day': year_month_day})
+                        'year_month_day': year_month_day,
+                        'collection': collection})
 
         # É métrica agregada para periódico na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_journal_metric':
             idjournal_sjm, year_month_day = k
             row.update({'idjournal_sjm': idjournal_sjm,
-                        'year_month_day': year_month_day})
+                        'year_month_day': year_month_day,
+                        'collection': collection})
 
         # É métrica agregada para artigo na tabela SUSHI
         elif table_class.__tablename__ == 'sushi_article_metric':
@@ -488,17 +495,21 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
 def get_files_to_persist(dir_r5_metrics, db_session):
     files_to_persist = []
 
-    files_dates = sorted([f for f in os.listdir(dir_r5_metrics) if 'r5-metrics' in f])
-    for f in files_dates:
-        f_date = get_date_from_file_path(f)
-        f_status = get_date_status(db_session, COLLECTION, f_date)
+    try:
+        files_dates = sorted([f for f in os.listdir(dir_r5_metrics) if 'r5-metrics' in f])
 
-        if f_status == DATE_STATUS_COMPUTED:
-            files_to_persist.append(os.path.join(dir_r5_metrics, f))
-        elif f_status > DATE_STATUS_COMPUTED:
-            logging.warning('Data %s já está persistida na base de dados' % f)
-        elif f_status < DATE_STATUS_COMPUTED:
-            logging.warning('Data %s não contém métricas calculadas' % f)
+        for f in files_dates:
+            f_date = get_date_from_file_path(f)
+            f_status = get_date_status(db_session, COLLECTION, f_date)
+
+            if f_status == DATE_STATUS_COMPUTED:
+                files_to_persist.append(os.path.join(dir_r5_metrics, f))
+            elif f_status > DATE_STATUS_COMPUTED:
+                logging.warning('Data %s já está persistida na base de dados' % f)
+            elif f_status < DATE_STATUS_COMPUTED:
+                logging.warning('Data %s não contém métricas calculadas' % f)
+    except FileNotFoundError:
+        logging.error('Diretório %s não existe' % dir_r5_metrics)
 
     return files_to_persist
 
@@ -636,31 +647,31 @@ def main():
         if 'counter_article_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_article...')
             keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_article_metric', True)
 
         if 'counter_journal_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_journal...')
             keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_journal_metric', True)
 
         if 'sushi_journal_yop_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal_yop...')
             keys_sushi_journal_yop = ['idjournal_sjym', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_yop_metric', True)
 
         if 'sushi_journal_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal...')
             keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_metric', True)
 
         if 'sushi_article_metric' in target_tables:
             logging.info('Adicinando métricas agregadas para sushi_article...')
             keys_sushi_article = ['idarticle_sam', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_article, SushiArticleMetric)
+            persist_metrics(r5_metrics, db_session, maps, keys_sushi_article, SushiArticleMetric, COLLECTION)
             update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_article_metric', True)
 
         date_status_value = compute_date_metric_status(db_session,

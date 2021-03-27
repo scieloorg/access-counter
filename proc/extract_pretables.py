@@ -11,8 +11,7 @@ MATOMO_ID_SITE = int(os.environ.get('MATOMO_ID_SITE', '1'))
 PRETABLE_DAYS_N = int(os.environ.get('PRETABLE_DAYS_N', '5'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
-DIR_WORKING_LOGS = os.path.join(DIR_DATA, 'working')
-DIR_PRETABLES = os.path.join(DIR_DATA, 'pretables')
+DIR_PRETABLES = os.environ.get('DIR_PRETABLES', os.path.join(DIR_DATA, 'pretables'))
 
 
 def save_pretable(str_date, query_result_data):
