@@ -324,6 +324,8 @@ def get_pid_from_pdf_path(hit, pdf2pid: dict):
     extracted_pid = sorted(pdf2pid.get(hit.collection, {}).get(pdf_path, set()))
     if extracted_pid:
         return extracted_pid[0]
+
+    logging.debug('PDF não foi associado a PID: (%s, %s)' % (pdf_path, hit.action_name))
     return ''
 
 
