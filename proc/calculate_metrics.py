@@ -49,7 +49,7 @@ DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', os.path.join(DIR_DATA, 'r5/met
 def load_dictionaries(dir_dictionaries, date):
     maps = {}
     for d_name in ['pdf-pid', 'issn-acronym', 'pid-format-lang', 'pid-dates']:
-        logging.info('Carregando dicionário %s' % d_name)
+        logging.info('Carregando dicionário %s-%s' % (d_name, date))
         d_full_path = os.path.join(dir_dictionaries, d_name + '-' + date + '.data')
 
         if not os.path.exists(d_full_path):
