@@ -238,20 +238,14 @@ class HitManager:
         # Obtém o tipo de Hit
         hit.hit_type = lib_hit.get_hit_type(hit)
 
-        # Obtém o ISSN, YOP e Lang do Hit a partir do PID, caso seja artigo
+        hit.issn = lib_hit.article_pid_to_journal_issn(hit.pid, self.pid_to_issn)
+        hit.acronym = lib_hit.get_journal_acronym(hit, self.issn_to_acronym)
+        if not hit.issn:
+            hit.issn = lib_hit.get_issn(hit, self.acronym_to_issn)
+
         if hit.hit_type == at.HIT_TYPE_ARTICLE:
-            hit.issn = lib_hit.article_pid_to_journal_issn(hit.pid, self.pid_to_issn)
             hit.yop = lib_hit.get_year_of_publication(hit, self.pid_to_yop)
             hit.lang = lib_hit.get_language(hit, self.pid_to_format_lang)
-
-        # Situação em que outros tipos de Hit são considerados
-        if self.flag_include_other_hit_types:
-            # Obtém acrônimo de periódico, se for o caso
-            if hit.hit_type in {at.HIT_TYPE_ISSUE,
-                                at.HIT_TYPE_JOURNAL}:
-                hit.acronym = lib_hit.get_journal_acronym(hit, self.issn_to_acronym)
-                if not hit.issn:
-                    hit.issn = lib_hit.get_issn(hit, self.acronym_to_issn)
 
     def reset(self):
         """
