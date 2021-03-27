@@ -17,6 +17,7 @@ REGEX_ISSN = r'[0-9]{4}-[0-9]{3}[0-9xX]'
 REGEX_PDF = r'.*\.pdf$'
 REGEX_ARTICLE_PDF_PATH = r'.*(/pdf/.*/.*)'
 REGEX_ARTICLE_PDF_FULL_PATH = r'(.*)(/pdf/.*/.*)'
+REGEX_ARTICLE_PDF_ACRONYM = r'.*/pdf/(\w*)/(.*)/(.*)'  # grupo 1 = acrônimo, grupo 2 = fascículo, grupo 3 = arquivo
 
 # Detectam acrônimo de periódico
 REGEX_JOURNAL_IMG_REVISTAS = r'.*/img/revistas/(\w*)/.*'
