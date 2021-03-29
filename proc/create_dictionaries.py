@@ -212,12 +212,14 @@ def main():
 
     parser.add_argument(
         '--until_date',
-        required=True
+        required=True,
+        help='Documentos atualizados até uma data (indicar uma data no formato YYYY-MM-DD)'
     )
 
     parser.add_argument(
         '--from_date',
-        required=True
+        required=True,
+        help='Documentos atualizados a partir de uma data (indicar uma data no formato YYYY-MM-DD)'
     )
 
     parser.add_argument(
@@ -229,7 +231,7 @@ def main():
         '-v',
         default=datetime.datetime.now().strftime('%Y-%m-%d'),
         dest='version',
-        help='String que representa a versão dos dicionários gerados (usar uma data no formato YYYY-MM-DD)'
+        help='String que representa a versão dos dicionários gerados (indicar uma data no formato YYYY-MM-DD)'
     )
 
     parser.add_argument(
@@ -286,7 +288,7 @@ def main():
 
     total_extracted = 0
     logging.info('Coletando dados...')
-    for article in articlemeta.find({'processing_date': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}}):
+    for article in articlemeta.find({'updated_at': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}}):
         total_extracted += 1
         if total_extracted % 1000 == 0:
             logging.info('Extraídos: %d' % total_extracted)
