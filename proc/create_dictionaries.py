@@ -213,13 +213,13 @@ def main():
     parser.add_argument(
         '--until_date',
         required=True,
-        help='Documentos atualizados até uma data (indicar uma data no formato YYYY-MM-DD)'
+        help='Documentos até uma data (indicar uma data no formato YYYY-MM-DD)'
     )
 
     parser.add_argument(
         '--from_date',
         required=True,
-        help='Documentos atualizados a partir de uma data (indicar uma data no formato YYYY-MM-DD)'
+        help='Documentos a partir de uma data (indicar uma data no formato YYYY-MM-DD)'
     )
 
     parser.add_argument(
@@ -288,7 +288,10 @@ def main():
 
     total_extracted = 0
     logging.info('Coletando dados...')
-    for article in articlemeta.find({'updated_at': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}}):
+    for article in articlemeta.find({'$or': [
+        {'updated_at': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}},
+        {'created_at': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}},
+    ]}):
         total_extracted += 1
         if total_extracted % 1000 == 0:
             logging.info('Extraídos: %d' % total_extracted)
@@ -365,6 +368,7 @@ def main():
 
     fix_issn_acronym_errors(issn_acronym)
 
+    logging.info('Gravando dicionários...')
     for d in [(pid_issns, 'pid-issn'),
               (pid_format_lang, 'pid-format-lang'),
               (pdf_pid, 'pdf-pid'),

@@ -526,7 +526,7 @@ def get_language(hit, pid2format2lang: dict):
         logging.debug('Idioma padrão não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
                                                                                                                   hit.format,
                                                                                                                   hit.action_name))
-        default_lang = values.DEFAULT_LANGUAGE
+        default_lang = dicts.collection_to_default_language[hit.collection]
 
     # Se idioma já está definido, verifica se é válido
     if hit.lang:
