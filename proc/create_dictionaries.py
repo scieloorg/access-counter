@@ -288,7 +288,7 @@ def main():
 
     total_extracted = 0
     logging.info('Coletando dados...')
-    for article in articlemeta.find({'processing_date': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}}):
+    for article in articlemeta.find({'updated_at': {'$gte': datetime.datetime.strptime(params.from_date, '%Y-%m-%d'), '$lte': datetime.datetime.strptime(params.until_date, '%Y-%m-%d')}}):
         total_extracted += 1
         if total_extracted % 1000 == 0:
             logging.info('Extraídos: %d' % total_extracted)
