@@ -22,7 +22,7 @@ script_to_hit_content = {
 domain_to_collection = {
     'scielo.org.ar': 'arg',
     'scielo.org.bo': 'bol',
-    'scielo.cl': 'chi',
+    'scielo.cl': 'chl',
     'scielo.sa.cr': 'cri',
     'scielo.org.co': 'col',
     'scielo.sld.cu': 'cub',
@@ -48,7 +48,7 @@ domain_to_collection = {
 collection_to_domain = {
     'arg': 'scielo.org.ar',
     'bol': 'scielo.org.bo',
-    'chi': 'scielo.cl',
+    'chl': 'scielo.cl',
     'cri': 'scielo.sa.cr',
     'col': 'scielo.org.co',
     'cub': 'scielo.sld.cu',
@@ -73,7 +73,7 @@ collection_to_domain = {
 collection_to_default_language = {
     'arg': 'es',
     'bol': 'es',
-    'chi': 'es',
+    'chl': 'es',
     'cri': 'es',
     'col': 'es',
     'cub': 'es',
