@@ -567,7 +567,9 @@ def main():
     if not os.path.exists(DIR_R5_LOGS):
         os.makedirs(DIR_R5_LOGS)
 
-    file_log = logging.FileHandler(COLLECTION + '_' + time().__str__() + '.log')
+    file_log_name = COLLECTION + '_' + time().__str__() + '.log'
+    file_log_path = os.path.join(DIR_R5_LOGS, file_log_name)
+    file_log = logging.FileHandler(file_log_path)
     file_log.setLevel(params.logging_level)
 
     console_log = logging.StreamHandler()
