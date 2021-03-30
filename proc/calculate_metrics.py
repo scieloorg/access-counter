@@ -44,6 +44,7 @@ DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
 DIR_PRETABLES = os.environ.get('DIR_PRETABLES', os.path.join(DIR_DATA, 'pretables'))
 DIR_R5_HITS = os.environ.get('DIR_R5_HITS', os.path.join(DIR_DATA, 'r5/hits'))
 DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', os.path.join(DIR_DATA, 'r5/metrics'))
+DIR_R5_LOGS = os.environ.get('DIR_R5_LOGS', os.path.join(DIR_DATA, 'r5/logs'))
 
 
 def load_dictionaries(dir_dictionaries, date):
@@ -563,7 +564,12 @@ def main():
 
     params = parser.parse_args()
 
-    file_log = logging.FileHandler('r5_' + time().__str__() + '.log')
+    if not os.path.exists(DIR_R5_LOGS):
+        os.makedirs(DIR_R5_LOGS)
+
+    file_log_name = COLLECTION + '_' + time().__str__() + '.log'
+    file_log_path = os.path.join(DIR_R5_LOGS, file_log_name)
+    file_log = logging.FileHandler(file_log_path)
     file_log.setLevel(params.logging_level)
 
     console_log = logging.StreamHandler()
