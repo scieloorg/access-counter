@@ -339,15 +339,17 @@ def main():
             pid_dates[collection][pid] = {}
         pid_dates[collection][pid].update(get_all_dates(article))
 
+        if pid not in pid_format_lang[collection]:
+            pid_format_lang[collection][pid] = {}
+
+        if default_lang:
+            pid_format_lang[collection][pid].update({'default': default_lang})
+
         ftls = get_fulltext_langs(article)
 
         for fl_mode, fl_els in ftls.items():
             for i in fl_els:
                 lang, url_host, url_path = i
-
-                if pid not in pid_format_lang[collection]:
-                    pid_format_lang[collection][pid] = {}
-                pid_format_lang[collection][pid].update({'default': default_lang})
 
                 if fl_mode == 'pdf':
                     if url_path not in pdf_pid[collection]:
