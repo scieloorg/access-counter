@@ -62,11 +62,11 @@ class R5Metrics:
 
     def is_valid_metric(self):
         # Ignora métrica que latitude é nula
-        if self.latitude == 'NULL':
+        if self.latitude in {'NULL', ''} or not self.latitude:
             return False
 
         # Ignora métrica que longitude é nula
-        if self.longitude == 'NULL':
+        if self.longitude in {'NULL', ''} or not self.longitude:
             return False
 
         # Ignora métrica que PID é mal-formado
