@@ -63,11 +63,11 @@ class R5Metrics:
 
     def is_valid_metric(self):
         # Ignora métrica que latitude é nula
-        if self.latitude == 'NULL':
+        if self.latitude in {'NULL', ''} or not self.latitude:
             return False
 
         # Ignora métrica que longitude é nula
-        if self.longitude == 'NULL':
+        if self.longitude in {'NULL', ''} or not self.longitude:
             return False
 
         # Ignora métrica que PID é mal-formado
@@ -242,14 +242,14 @@ def update_issn_table(issns, db_session):
         new_journal = Journal()
         new_journal.pid_issn = issn
         new_journal.print_issn = ''
-        new_journal.online_issn = ''
+        new_journal.online_issn = issn
 
         db_session.add(new_journal)
         db_session.flush()
 
         new_journal_collection = JournalCollection()
         new_journal_collection.idjournal_jc = new_journal.id
-        new_journal_collection.collection = values.DEFAULT_COLLECTION
+        new_journal_collection.collection = COLLECTION
         new_journal_collection.title = ''
 
         db_session.add(new_journal_collection)
