@@ -248,7 +248,7 @@ def update_issn_table(issns, db_session):
 
         new_journal_collection = JournalCollection()
         new_journal_collection.idjournal_jc = new_journal.id
-        new_journal_collection.collection = values.DEFAULT_COLLECTION
+        new_journal_collection.collection = COLLECTION
         new_journal_collection.title = ''
 
         db_session.add(new_journal_collection)
