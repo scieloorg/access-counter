@@ -241,7 +241,7 @@ def update_issn_table(issns, db_session):
         new_journal = Journal()
         new_journal.pid_issn = issn
         new_journal.print_issn = ''
-        new_journal.online_issn = ''
+        new_journal.online_issn = issn
 
         db_session.add(new_journal)
         db_session.flush()
