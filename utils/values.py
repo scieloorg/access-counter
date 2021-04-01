@@ -6,8 +6,5 @@ LANGUAGE_PT = 'pt'
 # Domínio padrão
 DEFAULT_DOMAIN = 'scielo.br'
 
-# Coleção padrão
-DEFAULT_COLLECTION = COLLECTION_SCL
-
 # Formato padrão
 DEFAULT_FORMAT = FORMAT_HTML
