@@ -34,14 +34,14 @@ class Hit:
         self.action_name = kargs.get('actionName', '')
 
     def _is_from_local_network(self):
-        if self.latitude in {'', 'NULL'} or not self.latitude:
+        if not self.latitude or self.latitude.lower() in {'', 'null'}:
             return True
-        if self.longitude in {'', 'NULL'} or not self.longitude:
+        if not self.longitude or self.longitude.lower() in {'', 'null'}:
             return True
         return False
 
     def _is_null_action(self):
-        if self.action_name == '' or not self.action_name or self.action_name == 'null':
+        if not self.action_name or self.action_name.lower() in {'', 'null'}:
             return True
         return False
 
