@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from socket import inet_ntoa
 from utils import map_actions as at
+from utils import values
 from libs import lib_hit, lib_counter
 
 
@@ -34,14 +35,14 @@ class Hit:
         self.action_name = kargs.get('actionName', '')
 
     def _is_from_local_network(self):
-        if self.latitude in {'', 'NULL'} or not self.latitude:
+        if not self.latitude or self.latitude.lower() in {'', 'null'}:
             return True
-        if self.longitude in {'', 'NULL'} or not self.longitude:
+        if not self.longitude or self.longitude.lower() in {'', 'null'}:
             return True
         return False
 
     def _is_null_action(self):
-        if self.action_name == '' or not self.action_name or self.action_name == 'null':
+        if not self.action_name or self.action_name.lower() in {'', 'null'}:
             return True
         return False
 
@@ -128,12 +129,13 @@ class HitManager:
                     new_dict[col][v].append(k)
         return new_dict
 
-    def create_hit(self, row, mode):
+    def create_hit(self, row, mode, default_collection):
         """
         Cria objeto Hit
 
         @param row: um objeto LogLinkVisitAction
         @param mode: possui o valor `file` se crição é a partir de arquivo ou `sql` se é a partir de base de dados
+        @param default_collection: coleção
         @return: um objeto Hit
         """
         if mode == 'database':
@@ -148,7 +150,7 @@ class HitManager:
 
         if new_hit.is_valid_hit():
             # Caso Hit tenha um conteúdo válido, Obtém outros atributos
-            self.set_hit_attrs(new_hit)
+            self.set_hit_attrs(new_hit, default_collection)
 
             # Caso Hit seja rastreável (associável a um Periódico, Fascículo ou Artigo)
             if new_hit.is_trackable_hit(self.flag_include_other_hit_types):
@@ -157,7 +159,7 @@ class HitManager:
         # Caso Hit seja ou inválido ou não rastreável
         return
 
-    def set_hit_attrs(self, hit):
+    def set_hit_attrs(self, hit, default_collection):
         """
         Seta os atributos de um Hit usando dados do Hit Manager
 
@@ -171,6 +173,8 @@ class HitManager:
 
         # Obtém coleção ao qual o Hit pertence
         hit.collection = lib_hit.get_collection(hit.action_name.lower())
+        if not hit.collection:
+            hit.collection = default_collection
 
         if lib_hit.is_new_url_format(hit.action_name.lower()):
             self._set_hit_attrs_new_url(hit)

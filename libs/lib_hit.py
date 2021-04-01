@@ -576,7 +576,9 @@ def get_collection(action: str):
         action = ''.join(['http://', action])
 
     url_parsed = parse.urlparse(action)
-    return dicts.domain_to_collection.get(url_parsed.hostname.replace('www.', ''), values.DEFAULT_COLLECTION)
+    if url_parsed and url_parsed.hostname:
+        return dicts.domain_to_collection.get(url_parsed.hostname.replace('www.', ''), '')
+    return ''
 
 
 def is_new_url_format(action: str):
@@ -593,3 +595,4 @@ def is_new_url_format(action: str):
             return True
 
     return False
+

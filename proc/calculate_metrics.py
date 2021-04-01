@@ -455,7 +455,7 @@ def run(data, mode, hit_manager: HitManager, db_session, collection, result_file
 
             past_ip = current_ip
 
-        hit = hit_manager.create_hit(d, mode)
+        hit = hit_manager.create_hit(d, mode, collection)
 
         if hit:
             hit_manager.add_hit(hit)
