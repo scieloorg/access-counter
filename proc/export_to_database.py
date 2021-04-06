@@ -69,7 +69,11 @@ class R5Metrics:
         if self.longitude in {'NULL', ''} or not self.longitude:
             return False
 
-        # Ignora métrica que PID é mal-formado
+        # Aceita métrica cujo pid é formado por dígitos e a coleção é Preprints
+        if self.collection == 'pre' and self.pid.isdigit():
+            return True
+
+        # Ignora métrica cujo PID é mal-formado
         if '-' in self.pid:
             if not re.match(REGEX_ARTICLE_PID, self.pid):
                 return False
