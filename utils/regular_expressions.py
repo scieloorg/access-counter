@@ -32,7 +32,7 @@ REGEX_JOURNAL_SUBSCRIPTION = r'.*/revistas/(\w*)/[e|i|p]subscrp.htm'
 REGEX_JOURNAL_SCRIPT_SCI_SERIAL = r'.*script_sci_serial.*pid_(\d{4}-\d{3}[\d|x|X]).*'
 REGEX_JOURNAL_SCRIPT_SCI_ISSUES = r'.*script_sci_issues.*pid_(\d{4}-\d{3}[\d|x|X]).*'
 
-# Detecam URLs associadas à versão nova dos sites SciELO
+# Detectam URLs associadas à versão nova dos sites SciELO
 REGEX_NEW_SCL_JOURNAL_ARTICLE_ABSTRACT = r'.*/j/(\w*)/a/(\w*)/abstract'  # grupo 1 = acrônimo, grupo 2 = PID
 REGEX_NEW_SCL_JOURNAL_ARTICLE = r'.*/j/(\w*)/a/(\w*)'  # grupo 1 = acrônimo, grupo 2 = PID
 REGEX_NEW_SCL_JOURNAL_FEED = r'.*/journal/(\w*)/feed'  # grupo 1 = acrônimo
@@ -44,3 +44,12 @@ REGEX_NEW_SCL_JOURNALS_ALFAPHETIC = r'.*/journals/alpha'
 REGEX_NEW_SCL_JOURNALS_THEMATIC = r'.*/journals/thematic'
 REGEX_NEW_SCL_RAW = r'.*/article/ssm/content/raw/'
 REGEX_NEW_SCL_RAW_DETAIL = r'.*/documentstore/([\w|-]*)/(\w*)/([\w|\.]*)' # grupo 1 = ISSN, grupo 2 = código ds, grupo 3 = insumo
+
+# Detectam URLs associadas à coleção Preprints
+REGEX_PREPRINT_VIEW_ABSTRACT = r'preprint/view/(\d+)$'
+REGEX_PREPRINT_DOCUMENT_ABSTRACT = r'documents/article/view/(\d+)$'
+REGEX_PREPRINT_VERSION_ABSTRACT = r'preprint/view/(\d+)/version/(\d+)$'
+REGEX_PREPRINT_VIEW_PDF = r'preprint/view/(\d+)/(\d+)'
+REGEX_PREPRINT_DOWNLOAD_PDF = r'preprint/download/(\d+)/(\d+)'
+REGEX_PREPRINT_DOCUMENT_DOWNLOAD_PDF = r'documents/article/download/(\d+)/(\d+)'
+REGEX_PREPRINT_VERSION_DOWNLOAD_PDF = r'preprint/download/(\d+)/version/(\d+)/(\d+)'
