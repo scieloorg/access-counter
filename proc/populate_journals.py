@@ -30,8 +30,10 @@ def format_publisher_names(publisher_names: list):
     @param publisher_names: lista de nomes dos publishers associados a um periódico
     @return: string contendo os nomes dos publishers separados por ponto e vírgula
     """
-    names_without_semicolon = [n.replace(';', ',') for n in publisher_names]
-    return '; '.join(names_without_semicolon)
+    if publisher_names:
+        names_without_semicolon = [n.replace(';', ',') for n in publisher_names]
+        return '; '.join(names_without_semicolon)
+    return ''
 
 
 def format_issn(issn: str):
