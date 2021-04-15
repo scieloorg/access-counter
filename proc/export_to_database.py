@@ -399,9 +399,9 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         next_id = 1 + last_id if last_id else 1
     except OperationalError:
         year_month_day = r5_metrics[0].year_month_day
-        logging.error('Dumping repairing data %s' % year_month_day)
+        logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
-        exit(1)
+        return False
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
     for k, v in aggregated_metrics.items():
@@ -461,9 +461,11 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         db_session.commit()
     except OperationalError:
         year_month_day = r5_metrics[0].year_month_day
-        logging.error('Dumping repairing data %s' % year_month_day)
+        logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
-        exit(1)
+        return False
+
+    return True
 
 
 def _aggregate_by_keylist(r5_metrics, key_list, maps):
@@ -735,32 +737,32 @@ def main():
         if 'counter_article_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_article...')
             keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
-            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_counter_article, ArticleMetric, COLLECTION)
-            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_counter_article_metric', True)
+            cam_status = persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_counter_article, ArticleMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_counter_article_metric', cam_status)
 
         if 'counter_journal_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_journal...')
             keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_counter_journal, JournalMetric, COLLECTION)
-            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_counter_journal_metric', True)
+            cjm_status = persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_counter_journal, JournalMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_counter_journal_metric', cjm_status)
 
         if 'sushi_journal_yop_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal_yop...')
             keys_sushi_journal_yop = ['idjournal_sjym', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_journal_yop, SushiJournalYOPMetric, COLLECTION)
-            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_journal_yop_metric', True)
+            sjym_status = persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_journal_yop, SushiJournalYOPMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_journal_yop_metric', sjym_status)
 
         if 'sushi_journal_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal...')
             keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
-            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_journal, SushiJournalMetric, COLLECTION)
-            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_journal_metric', True)
+            sjm_status = persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_journal, SushiJournalMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_journal_metric', sjm_status)
 
         if 'sushi_article_metric' in target_tables:
-            logging.info('Adicinando métricas agregadas para sushi_article...')
+            logging.info('Adicionando métricas agregadas para sushi_article...')
             keys_sushi_article = ['idarticle_sam', 'year_month_day']
-            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_article, SushiArticleMetric, COLLECTION)
-            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_article_metric', True)
+            sam_status = persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_article, SushiArticleMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_article_metric', sam_status)
 
         date_status_value = compute_date_metric_status(SESSION_FACTORY(),
                                                        COLLECTION,
