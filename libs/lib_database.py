@@ -303,6 +303,8 @@ def get_missing_aggregations(db_session, collection, date):
         return missing_aggregations
     except NoResultFound:
         return []
+    except OperationalError:
+        return []
 
 
 def compute_date_metric_status(db_session, collection, date):
@@ -316,6 +318,8 @@ def compute_date_metric_status(db_session, collection, date):
                     existing_date.status_sushi_journal_metric,
                     existing_date.status_sushi_journal_yop_metric])
     except NoResultFound:
+        return
+    except OperationalError:
         return
 
 
@@ -331,10 +335,12 @@ def update_date_metric_status(db_session, collection, date, metric, status):
                                                                                          current_metric_status,
                                                                                          status))
             setattr(existing_date_status, metric, status)
+
+        db_session.commit()
     except NoResultFound:
         pass
-
-    db_session.commit()
+    except OperationalError:
+        logging.error('Error while trying to change metric status')
 
 
 def update_date_status(db_session, collection, date, status):
@@ -344,10 +350,12 @@ def update_date_status(db_session, collection, date, status):
         if existing_date_status.status != status:
             logging.info('Changing status of control_date_status.date=%s from %s to %s' % (date, existing_date_status.status, status))
             existing_date_status.status = status
+
+        db_session.commit()
     except NoResultFound:
         pass
-
-    db_session.commit()
+    except OperationalError:
+        logging.error('Error while trying to update date status')
 
 
 def extract_pretable(database_uri, date, idsite):
@@ -392,5 +400,10 @@ def get_dates_able_to_extract(db_session, collection, number_of_days):
 
     except NoResultFound:
         logging.info('There are no dates to be extracted')
+        dates = []
+
+    except OperationalError:
+        logging.error('Error while trying to obtain date to be extracted')
+        dates = []
 
     return sorted(dates, reverse=True)
