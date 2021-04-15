@@ -662,6 +662,9 @@ def main():
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
 
+    logging.info('Checking repairing files...')
+    check_repairing_files()
+
     # Obtém dicionários que mapeia ISSN a ISSN-Chave, Idioma a ID e Formato a ID
     issn_map = mount_issn_map(SESSION_FACTORY())
     localization_map = mount_localization_map(SESSION_FACTORY())
