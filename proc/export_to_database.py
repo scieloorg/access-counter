@@ -6,6 +6,8 @@ import os
 import re
 import time
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from decimal import Decimal
 from libs.lib_database import (
     update_date_status,
@@ -17,7 +19,6 @@ from libs.lib_database import (
 from libs.lib_status import DATE_STATUS_COMPLETED, DATE_STATUS_COMPUTED
 from proc.calculate_metrics import get_date_from_file_path
 from utils.regular_expressions import REGEX_ISSN, REGEX_ARTICLE_PID
-from utils import values
 from libs import lib_database
 from models.declarative import (
     Journal,
@@ -43,6 +44,9 @@ TABLES_TO_PERSIST = os.environ.get('TABLES_TO_PERSIST', 'counter_foreign,counter
 
 DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5')
 MAX_YEAR = datetime.datetime.now().year + 5
+
+ENGINE = create_engine(MATOMO_DATABASE_STRING, pool_recycle=1800)
+SESSION_FACTORY = sessionmaker(bind=ENGINE)
 
 
 class R5Metrics:
@@ -578,18 +582,15 @@ def main():
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
 
-    # Obtém sessão de conexão com banco de dados COUNTER/Matomo
-    db_session = lib_database.get_db_session(params.matomo_db_uri)
-
     # Obtém dicionários que mapeia ISSN a ISSN-Chave, Idioma a ID e Formato a ID
-    issn_map = mount_issn_map(db_session)
-    localization_map = mount_localization_map(db_session)
-    language_map = mount_language_map(db_session)
-    format_map = mount_format_map(db_session)
-    pid_map = mount_pid_map(db_session)
+    issn_map = mount_issn_map(SESSION_FACTORY())
+    localization_map = mount_localization_map(SESSION_FACTORY())
+    language_map = mount_language_map(SESSION_FACTORY())
+    format_map = mount_format_map(SESSION_FACTORY())
+    pid_map = mount_pid_map(SESSION_FACTORY())
 
     # Obtém lista de arquivos r5_metrics a serem lidos
-    files_r5 = sorted(get_files_to_persist(params.dir_r5_metrics, db_session))
+    files_r5 = sorted(get_files_to_persist(params.dir_r5_metrics, SESSION_FACTORY()))
     logging.info('Há %d arquivo(s) para ser(em) processado(s)' % len(files_r5))
 
     for f in files_r5:
@@ -605,7 +606,7 @@ def main():
         # Obtém os nomes das tabelas a serem persistidas
         if params.auto:
             target_tables = ['counter_foreign']
-            target_tables.extend(get_missing_aggregations(db_session, COLLECTION, f_date))
+            target_tables.extend(get_missing_aggregations(SESSION_FACTORY(), COLLECTION, f_date))
         else:
             target_tables = params.tables.split(',')
 
@@ -619,72 +620,72 @@ def main():
             # Atualiza banco de dados com ISSNs não encontrados
             if new_issns:
                 logging.info('Atualizando lista de ISSNs...')
-                update_issn_table(new_issns, db_session)
-                issn_map = mount_issn_map(db_session)
+                update_issn_table(new_issns, SESSION_FACTORY())
+                issn_map = mount_issn_map(SESSION_FACTORY())
 
             # Atualiza lista de pares (Latitude, Longitude) no banco de dados
             logging.info('Atualizando lista de pares (latitude, longitude)...')
-            exist_new_localizations = update_localization_table(r5_metrics, db_session, localization_map)
+            exist_new_localizations = update_localization_table(r5_metrics, SESSION_FACTORY(), localization_map)
 
             if exist_new_localizations and need_to_update_memory_data(target_tables):
                 logging.info('Recarregando dados de localização')
-                localization_map = mount_localization_map(db_session)
+                localization_map = mount_localization_map(SESSION_FACTORY())
 
             # Atualiza formatos de artigo no banco de dados
             logging.info('Atualizando formatos...')
-            update_format_table(r5_metrics, db_session, format_map)
+            update_format_table(r5_metrics, SESSION_FACTORY(), format_map)
 
             # Atualiza idiomas de artigo no banco de dados
             logging.info('Atualizando idiomas...')
-            update_language_table(r5_metrics, db_session, language_map)
+            update_language_table(r5_metrics, SESSION_FACTORY(), language_map)
 
             # Atualiza artigos no banco de dados
             logging.info('Atualizando artigos...')
-            exist_new_pids = update_article_table(r5_metrics, db_session, issn_map, pid_map)
+            exist_new_pids = update_article_table(r5_metrics, SESSION_FACTORY(), issn_map, pid_map)
 
             if exist_new_pids and need_to_update_memory_data(target_tables):
                 logging.info('Recarregando dados de PID e COLLECTION')
-                pid_map = mount_pid_map(db_session)
+                pid_map = mount_pid_map(SESSION_FACTORY())
 
         maps = {'pid': pid_map, 'language': language_map, 'format': format_map, 'localization': localization_map, 'issn': issn_map}
 
         if 'counter_article_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_article...')
             keys_counter_article = ['idarticle', 'idlanguage', 'idformat', 'idlocalization', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_counter_article, ArticleMetric, COLLECTION)
-            update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_article_metric', True)
+            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_counter_article, ArticleMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_counter_article_metric', True)
 
         if 'counter_journal_metric' in target_tables and not params.ignore_counter_metric_tables:
             logging.info('Adicionando métricas agregadas para counter_journal...')
             keys_counter_journal = ['idjournal_cjm', 'idlanguage_cjm', 'idformat_cjm', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_counter_journal, JournalMetric, COLLECTION)
-            update_date_metric_status(db_session, COLLECTION, f_date, 'status_counter_journal_metric', True)
+            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_counter_journal, JournalMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_counter_journal_metric', True)
 
         if 'sushi_journal_yop_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal_yop...')
             keys_sushi_journal_yop = ['idjournal_sjym', 'yop', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal_yop, SushiJournalYOPMetric, COLLECTION)
-            update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_yop_metric', True)
+            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_journal_yop, SushiJournalYOPMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_journal_yop_metric', True)
 
         if 'sushi_journal_metric' in target_tables:
             logging.info('Adicionando métricas agregadas para sushi_journal...')
             keys_sushi_journal = ['idjournal_sjm', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_journal, SushiJournalMetric, COLLECTION)
-            update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_journal_metric', True)
+            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_journal, SushiJournalMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_journal_metric', True)
 
         if 'sushi_article_metric' in target_tables:
             logging.info('Adicinando métricas agregadas para sushi_article...')
             keys_sushi_article = ['idarticle_sam', 'year_month_day']
-            persist_metrics(r5_metrics, db_session, maps, keys_sushi_article, SushiArticleMetric, COLLECTION)
-            update_date_metric_status(db_session, COLLECTION, f_date, 'status_sushi_article_metric', True)
+            persist_metrics(r5_metrics, SESSION_FACTORY(), maps, keys_sushi_article, SushiArticleMetric, COLLECTION)
+            update_date_metric_status(SESSION_FACTORY(), COLLECTION, f_date, 'status_sushi_article_metric', True)
 
-        date_status_value = compute_date_metric_status(db_session,
+        date_status_value = compute_date_metric_status(SESSION_FACTORY(),
                                                        COLLECTION,
                                                        f_date)
 
         if date_status_value == DATE_STATUS_COMPLETED:
             logging.info('Atualizando tabela control_date_status para %s' % f_date)
-            update_date_status(db_session,
+            update_date_status(SESSION_FACTORY(),
                                COLLECTION,
                                f_date,
                                DATE_STATUS_COMPLETED)
