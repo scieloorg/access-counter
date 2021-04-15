@@ -14,8 +14,10 @@ from models.counter import CounterStat
 from models.hit import HitManager
 from socket import inet_ntoa
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from time import time
-from utils import dicts, values
+from utils import dicts
 from libs import lib_hit, lib_database
 from models.declarative import (
     Article,
@@ -45,6 +47,9 @@ DIR_PRETABLES = os.environ.get('DIR_PRETABLES', os.path.join(DIR_DATA, 'pretable
 DIR_R5_HITS = os.environ.get('DIR_R5_HITS', os.path.join(DIR_DATA, 'r5/hits'))
 DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', os.path.join(DIR_DATA, 'r5/metrics'))
 DIR_R5_LOGS = os.environ.get('DIR_R5_LOGS', os.path.join(DIR_DATA, 'r5/logs'))
+
+ENGINE = create_engine(MATOMO_DATABASE_STRING, pool_recycle=1800)
+SESSION_FACTORY = sessionmaker(bind=ENGINE)
 
 
 def load_dictionaries(dir_dictionaries, date):
@@ -598,12 +603,10 @@ def main():
                              persist_on_database=params.persist_on_database,
                              flag_include_other_hit_types=params.include_other_hit_types)
 
-    db_session = lib_database.get_db_session(params.matomo_db_uri)
-
     if params.use_pretables:
         logging.info('Iniciado em modo pré-tabelas')
 
-        pretables = get_pretables(db_session, max_day_available_for_computing)
+        pretables = get_pretables(SESSION_FACTORY(), max_day_available_for_computing)
 
         logging.info('Há %d pré-tabela(s) para ser(em) computada(s)' % len(pretables))
 
@@ -620,12 +623,12 @@ def main():
                 run(data=csv_data,
                     mode='pretable',
                     hit_manager=hit_manager,
-                    db_session=db_session,
+                    db_session=SESSION_FACTORY(),
                     collection=params.collection,
                     result_file_prefix=pretable_date_value)
 
             logging.info('Atualizando tabela control_date_status para %s' % pretable_date_value)
-            update_date_status(db_session,
+            update_date_status(SESSION_FACTORY(),
                                COLLECTION,
                                pretable_date_value,
                                DATE_STATUS_COMPUTED)
@@ -643,19 +646,19 @@ def main():
             logging.info('Extraindo dados para data {}...'.format(date.strftime('%Y-%m-%d')))
             hit_manager.reset()
 
-            db_data = lib_database.get_matomo_logs_for_date(db_session=db_session,
+            db_data = lib_database.get_matomo_logs_for_date(db_session=SESSION_FACTORY(),
                                                             idsite=params.idsite,
                                                             date=date)
 
             run(data=db_data,
                 mode='database',
                 hit_manager=hit_manager,
-                db_session=db_session,
+                db_session=SESSION_FACTORY(),
                 collection=params.collection,
                 result_file_prefix=date.strftime('%Y%m%d'))
 
             logging.info('Atualizando tabela control_date_status para %s' % date.strftime('%Y%m%d'))
-            update_date_status(db_session,
+            update_date_status(SESSION_FACTORY(),
                                COLLECTION,
                                date.strftime('%Y%m%d'),
                                DATE_STATUS_COMPUTED)
