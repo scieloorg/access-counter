@@ -640,9 +640,11 @@ def get_pid_preprint(hit):
             return match.group(1)
 
 
+# ToDo: Integrar com dicionário ainda a ser construído
 def get_language_preprints(hit):
     return 'df'
 
 
+# ToDo: Integrar com dicionário ainda a ser construído
 def get_year_of_publication_preprints(hit):
     return '2021'
