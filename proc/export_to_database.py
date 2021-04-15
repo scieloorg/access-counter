@@ -517,6 +517,66 @@ def _dump_repairing_data(year_month_day, keys):
         file.write('\t'.join([year_month_day] + keys) + '\n')
 
 
+def check_repairing_files():
+    keys_to_table = {'\t'.join(['idarticle',
+                                'idlanguage',
+                                'idformat',
+                                'idlocalization',
+                                'year_month_day']): 'counter_article_metric',
+                     '\t'.join(['idjournal_cjm',
+                                'idlanguage_cjm',
+                                'idformat_cjm',
+                                'yop',
+                                'year_month_day']): 'counter_journal_metric',
+                     '\t'.join(['idjournal_sjym',
+                                'yop',
+                                'year_month_day']): 'sushi_journal_yop_metric',
+                     '\t'.join(['idjournal_sjm',
+                                'year_month_day']): 'sushi_journal_metric',
+                     '\t'.join(['idarticle_sam',
+                                'year_month_day']): 'sushi_article_metric'}
+
+    repairing_files = os.listdir(DIR_R5_METRICS_TO_REPAIR)
+    logging.info('There are(is) %d file(s)' % len(repairing_files))
+
+    for rf in repairing_files:
+        rf_full_path = os.path.join(DIR_R5_METRICS_TO_REPAIR, rf)
+        fixing_task_failed = False
+
+        logging.info('Repairing tables about file %s' % rf_full_path)
+        with open(rf_full_path) as f:
+            for row in f:
+                collection = rf.replace('.csv', '')
+                els = row.strip().split('\t')
+                date = els[0]
+                keys = '\t'.join(els[1:])
+
+                table = keys_to_table.get(keys, '')
+
+                if table:
+                    if table in {'sushi_journal_metric', 'sushi_journal_yop_metric', 'counter_journal_metric'}:
+                        raw_query = 'DELETE FROM {0} WHERE collection = "{1}" AND year_month_day = "{2}";'.format(table, collection, date)
+                    elif table == 'sushi_article_metric':
+                        raw_query = 'DELETE FROM {0} WHERE year_month_day = "{1}" AND idarticle_sam IN (SELECT DISTINCT id FROM counter_article WHERE collection = "{2}");'.format(table, date, collection)
+                    elif table == 'counter_article_metric':
+                        raw_query = 'DELETE FROM {0} WHERE year_month_day = "{1}" AND idarticle IN (SELECT DISTINCT id FROM counter_article WHERE collection = "{2}");'.format(table, date, collection)
+
+                    try:
+                        logging.info('Executing query to fix (%s, %s, %s)...' % (collection, table, date))
+                        ENGINE.execute(raw_query)
+
+                        logging.info('Fixing control_date_status table...')
+                        raw_query_cds = 'UPDATE control_date_status SET status_{0} = 0, status = 4 WHERE collection = "{1}" and date = "{2}";'.format(table, collection, date)
+                        ENGINE.execute(raw_query_cds)
+                    except:
+                        logging.error('Failed to fix tables')
+                        fixing_task_failed = True
+
+        if not fixing_task_failed:
+            logging.info('Removing file %s...' % rf_full_path)
+            os.remove(rf_full_path)
+
+
 def get_files_to_persist(dir_r5_metrics, db_session):
     files_to_persist = []
 
