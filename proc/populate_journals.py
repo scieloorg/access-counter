@@ -8,6 +8,8 @@ sys.path.append('')
 from articlemeta.client import RestfulClient, ThriftClient
 from sqlalchemy.sql import null
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from urllib import parse
 from utils import dicts
 from libs import lib_database
@@ -17,6 +19,8 @@ from models.declarative import Journal, JournalCollection
 
 MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+ENGINE = create_engine(MATOMO_DATABASE_STRING, pool_recycle=1800)
+SESSION_FACTORY = sessionmaker(bind=ENGINE)
 
 
 def format_publisher_names(publisher_names: list):
@@ -206,5 +210,4 @@ def main():
     else:
         articlemeta = ThriftClient()
 
-    db_session = lib_database.get_db_session(params.matomodb_uri)
-    populate(articlemeta=articlemeta, db_session=db_session)
+    populate(articlemeta=articlemeta, db_session=SESSION_FACTORY())
