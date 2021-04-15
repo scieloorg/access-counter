@@ -44,6 +44,7 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 TABLES_TO_PERSIST = os.environ.get('TABLES_TO_PERSIST', 'counter_foreign,counter_article_metric,counter_journal_metric,sushi_article_metric,sushi_journal_metric,sushi_journal_yop_metric')
 
 DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5')
+DIR_R5_METRICS_TO_REPAIR = os.path.join(DIR_R5_METRICS, 'to_repair')
 MAX_YEAR = datetime.datetime.now().year + 5
 
 ENGINE = create_engine(MATOMO_DATABASE_STRING, pool_recycle=1800)
@@ -574,6 +575,9 @@ def main():
     )
 
     params = parser.parse_args()
+
+    if not os.path.exists(DIR_R5_METRICS_TO_REPAIR):
+        os.makedirs(DIR_R5_METRICS_TO_REPAIR)
 
     logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s] %(levelname)s %(message)s',
