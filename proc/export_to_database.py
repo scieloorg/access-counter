@@ -401,6 +401,9 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         year_month_day = r5_metrics[0].year_month_day
         logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
+        logging.info('Sleeping 10 minutes before continue...')
+        time.sleep(600)
+        logging.info('Continuing')
         return False
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
@@ -463,6 +466,9 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         year_month_day = r5_metrics[0].year_month_day
         logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
+        logging.info('Sleeping 10 minutes before continue...')
+        time.sleep(600)
+        logging.info('Continuing')
         return False
 
     return True
