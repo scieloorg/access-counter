@@ -10,6 +10,7 @@ sys.path.append(os.getcwd())
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
 from decimal import Decimal
 from libs.lib_database import (
     update_date_status,
@@ -38,13 +39,13 @@ from models.declarative import (
 
 
 MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
-MATOMO_DATABASE_BULK_SIZE = int(os.environ.get('MATOMO_DATABASE_BULK_SIZE', '1000'))
 COLLECTION = os.environ.get('COLLECTION', 'scl')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 TABLES_TO_PERSIST = os.environ.get('TABLES_TO_PERSIST', 'counter_foreign,counter_article_metric,counter_journal_metric,sushi_article_metric,sushi_journal_metric,sushi_journal_yop_metric')
 
 DIR_R5_METRICS = os.environ.get('DIR_R5_METRICS', '/app/data/r5')
+DIR_R5_METRICS_TO_REPAIR = os.path.join(DIR_R5_METRICS, 'to_repair')
 MAX_YEAR = datetime.datetime.now().year + 5
 
 ENGINE = create_engine(MATOMO_DATABASE_STRING, pool_recycle=1800)
@@ -393,8 +394,14 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
     aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
 
     # Obtém último ID
-    last_id = lib_database.get_last_id(db_session, table_class)
-    next_id = 1 + last_id if last_id else 1
+    try:
+        last_id = lib_database.get_last_id(db_session, table_class)
+        next_id = 1 + last_id if last_id else 1
+    except OperationalError:
+        year_month_day = r5_metrics[0].year_month_day
+        logging.error('Dumping repairing data %s' % year_month_day)
+        _dump_repairing_data(year_month_day, key_list)
+        exit(1)
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
     for k, v in aggregated_metrics.items():
@@ -449,13 +456,14 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         objects.append(row)
         next_id += 1
 
-        if len(objects) >= MATOMO_DATABASE_BULK_SIZE:
-            db_session.bulk_insert_mappings(table_class, objects)
-            db_session.commit()
-            objects = []
-
-    db_session.bulk_insert_mappings(table_class, objects)
-    db_session.commit()
+    try:
+        db_session.bulk_insert_mappings(table_class, objects)
+        db_session.commit()
+    except OperationalError:
+        year_month_day = r5_metrics[0].year_month_day
+        logging.error('Dumping repairing data %s' % year_month_day)
+        _dump_repairing_data(year_month_day, key_list)
+        exit(1)
 
 
 def _aggregate_by_keylist(r5_metrics, key_list, maps):
@@ -500,6 +508,13 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
                                                                             r.unique_item_investigations,
                                                                             r.unique_item_requests])
     return aggregated_metrics
+
+
+def _dump_repairing_data(year_month_day, keys):
+    repair_file_path = os.path.join(DIR_R5_METRICS_TO_REPAIR,
+                                    COLLECTION + '.csv')
+    with open(repair_file_path, 'a') as file:
+        file.write('\t'.join([year_month_day] + keys))
 
 
 def get_files_to_persist(dir_r5_metrics, db_session):
@@ -579,6 +594,9 @@ def main():
     )
 
     params = parser.parse_args()
+
+    if not os.path.exists(DIR_R5_METRICS_TO_REPAIR):
+        os.makedirs(DIR_R5_METRICS_TO_REPAIR)
 
     logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s] %(levelname)s %(message)s',
