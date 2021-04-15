@@ -38,7 +38,6 @@ from models.declarative import (
 
 
 MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
-MATOMO_DATABASE_BULK_SIZE = int(os.environ.get('MATOMO_DATABASE_BULK_SIZE', '1000'))
 COLLECTION = os.environ.get('COLLECTION', 'scl')
 MIN_YEAR = int(os.environ.get('MIN_YEAR', '1900'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
@@ -449,10 +448,6 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         objects.append(row)
         next_id += 1
 
-        if len(objects) >= MATOMO_DATABASE_BULK_SIZE:
-            db_session.bulk_insert_mappings(table_class, objects)
-            db_session.commit()
-            objects = []
 
     db_session.bulk_insert_mappings(table_class, objects)
     db_session.commit()
