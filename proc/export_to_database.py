@@ -514,7 +514,7 @@ def _dump_repairing_data(year_month_day, keys):
     repair_file_path = os.path.join(DIR_R5_METRICS_TO_REPAIR,
                                     COLLECTION + '.csv')
     with open(repair_file_path, 'a') as file:
-        file.write('\t'.join([year_month_day] + keys))
+        file.write('\t'.join([year_month_day] + keys) + '\n')
 
 
 def get_files_to_persist(dir_r5_metrics, db_session):
