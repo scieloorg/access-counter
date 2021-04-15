@@ -10,6 +10,7 @@ sys.path.append(os.getcwd())
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import OperationalError
 from decimal import Decimal
 from libs.lib_database import (
     update_date_status,
@@ -393,8 +394,14 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
     aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
 
     # Obtém último ID
-    last_id = lib_database.get_last_id(db_session, table_class)
-    next_id = 1 + last_id if last_id else 1
+    try:
+        last_id = lib_database.get_last_id(db_session, table_class)
+        next_id = 1 + last_id if last_id else 1
+    except OperationalError:
+        year_month_day = r5_metrics[0].year_month_day
+        logging.error('Dumping repairing data %s' % year_month_day)
+        _dump_repairing_data(year_month_day, key_list)
+        exit(1)
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
     for k, v in aggregated_metrics.items():
@@ -449,9 +456,14 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         objects.append(row)
         next_id += 1
 
-
-    db_session.bulk_insert_mappings(table_class, objects)
-    db_session.commit()
+    try:
+        db_session.bulk_insert_mappings(table_class, objects)
+        db_session.commit()
+    except OperationalError:
+        year_month_day = r5_metrics[0].year_month_day
+        logging.error('Dumping repairing data %s' % year_month_day)
+        _dump_repairing_data(year_month_day, key_list)
+        exit(1)
 
 
 def _aggregate_by_keylist(r5_metrics, key_list, maps):
