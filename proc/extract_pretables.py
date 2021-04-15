@@ -1,7 +1,9 @@
 import logging
 import os
 
-from libs.lib_database import extract_pretable, get_dates_able_to_extract, update_date_status, get_db_session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from libs.lib_database import extract_pretable, get_dates_able_to_extract, update_date_status
 from libs.lib_status import DATE_STATUS_PRETABLE, DATE_STATUS_EXTRACTING_PRETABLE
 
 LOG_FILE_DATABASE_STRING = os.environ.get('LOG_FILE_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
@@ -12,6 +14,9 @@ PRETABLE_DAYS_N = int(os.environ.get('PRETABLE_DAYS_N', '5'))
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 DIR_PRETABLES = os.environ.get('DIR_PRETABLES', os.path.join(DIR_DATA, 'pretables'))
+
+ENGINE = create_engine(LOG_FILE_DATABASE_STRING, pool_recycle=1800)
+SESSION_FACTORY = sessionmaker(bind=ENGINE)
 
 
 def save_pretable(str_date, query_result_data):
@@ -50,7 +55,7 @@ def main():
     if not os.path.exists(DIR_PRETABLES):
         os.makedirs(DIR_PRETABLES)
 
-    dates = get_dates_able_to_extract(LOG_FILE_DATABASE_STRING, COLLECTION, PRETABLE_DAYS_N)
+    dates = get_dates_able_to_extract(SESSION_FACTORY(), COLLECTION, PRETABLE_DAYS_N)
 
     logging.info('There are %d dates to be extracted', len(dates))
 
@@ -59,10 +64,8 @@ def main():
 
         logging.info('Extracting pretable of %s' % str_date)
 
-        db_session = get_db_session(LOG_FILE_DATABASE_STRING)
-        update_date_status(db_session, COLLECTION, d, DATE_STATUS_EXTRACTING_PRETABLE)
+        update_date_status(SESSION_FACTORY(), COLLECTION, d, DATE_STATUS_EXTRACTING_PRETABLE)
         query_result_data = extract_pretable(LOG_FILE_DATABASE_STRING, d, MATOMO_ID_SITE)
         save_pretable(str_date, query_result_data)
 
-        db_session = get_db_session(LOG_FILE_DATABASE_STRING)
-        update_date_status(db_session, COLLECTION, d, DATE_STATUS_PRETABLE)
+        update_date_status(SESSION_FACTORY(), COLLECTION, d, DATE_STATUS_PRETABLE)
