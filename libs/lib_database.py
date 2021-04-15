@@ -131,19 +131,6 @@ def add_foreign_keys_to_table_matomo_log_link_action(matomo_db_uri):
         logging.warning('Chave estrangeira já existe: %s' % sql_foreign_key_idvisit)
 
 
-def get_db_session(matomo_db_uri):
-    """
-    Obtém uma sessão de conexão com base de dados do Matomo
-
-    @param matomo_db_uri: string de conexão à base do Matomo
-    @return: uma sessão de conexão com a base do Matomo
-    """
-    engine = create_engine(matomo_db_uri)
-    Base.metadata.bind = engine
-    db_session = sessionmaker(bind=engine)
-    return db_session()
-
-
 def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
     """
     Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas.
