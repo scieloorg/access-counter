@@ -176,10 +176,13 @@ class HitManager:
         if not hit.collection:
             hit.collection = default_collection
 
-        if lib_hit.is_new_url_format(hit.action_name.lower()):
-            self._set_hit_attrs_new_url(hit)
+        if hit.collection == 'pre':
+            self._set_hit_attrs_preprint_url(hit)
         else:
-            self._set_hit_attrs_classic_url(hit)
+            if lib_hit.is_new_url_format(hit.action_name.lower()):
+                self._set_hit_attrs_new_url(hit)
+            else:
+                self._set_hit_attrs_classic_url(hit)
 
     def _set_hit_attrs_new_url(self, hit):
         hit.action_params = lib_hit.get_url_params_from_action_new_url(hit.action_name)
@@ -250,6 +253,22 @@ class HitManager:
         if hit.hit_type == at.HIT_TYPE_ARTICLE:
             hit.yop = lib_hit.get_year_of_publication(hit, self.pid_to_yop)
             hit.lang = lib_hit.get_language(hit, self.pid_to_format_lang)
+
+    def _set_hit_attrs_preprint_url(self, hit):
+        hit.issn = values.GENERIC_ISSN
+        hit.pid = lib_hit.get_pid_preprint(hit)
+
+        if hit.pid:
+            hit.hit_type = lib_hit.ma.HIT_TYPE_ARTICLE
+            if hit.pid not in self.pid_to_issn:
+                self.pid_to_issn[hit.pid] = {hit.issn}
+        else:
+            hit.hit_type = lib_hit.ma.HIT_TYPE_OTHERS
+
+        hit.content_type = lib_hit.get_content_type_preprints(hit)
+        hit.format = lib_hit.get_format_preprints(hit)
+        hit.lang = lib_hit.get_language_preprints(hit)
+        hit.yop = lib_hit.get_year_of_publication_preprints(hit)
 
     def reset(self):
         """

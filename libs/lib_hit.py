@@ -596,3 +596,55 @@ def is_new_url_format(action: str):
 
     return False
 
+
+def get_content_type_preprints(hit):
+    unquoted_action = parse.unquote(hit.action_name)
+
+    for pattern in [rege.REGEX_PREPRINT_VIEW_ABSTRACT,
+                    rege.REGEX_PREPRINT_DOCUMENT_ABSTRACT,
+                    rege.REGEX_PREPRINT_VERSION_ABSTRACT]:
+        if re.search(pattern, unquoted_action):
+            return ma.HIT_CONTENT_TYPE_PREPRINT_ABSTRACT
+
+    for pattern in [rege.REGEX_PREPRINT_VIEW_PDF,
+                    rege.REGEX_PREPRINT_DOWNLOAD_PDF,
+                    rege.REGEX_PREPRINT_DOCUMENT_DOWNLOAD_PDF,
+                    rege.REGEX_PREPRINT_VERSION_DOWNLOAD_PDF]:
+        if re.search(pattern, unquoted_action):
+            return ma.HIT_CONTENT_TYPE_PREPRINT_PDF
+
+    return ma.HIT_CONTENT_OTHERS
+
+
+def get_format_preprints(hit):
+    if hit.content_type == ma.HIT_CONTENT_TYPE_PREPRINT_ABSTRACT:
+        return values.FORMAT_HTML
+    elif hit.content_type == ma.HIT_CONTENT_TYPE_PREPRINT_PDF:
+        return values.FORMAT_PDF
+    else:
+        return ''
+
+
+def get_pid_preprint(hit):
+    unquoted_action = parse.unquote(hit.action_name)
+
+    for pattern in [rege.REGEX_PREPRINT_VIEW_ABSTRACT,
+                    rege.REGEX_PREPRINT_DOCUMENT_ABSTRACT,
+                    rege.REGEX_PREPRINT_VERSION_ABSTRACT,
+                    rege.REGEX_PREPRINT_VIEW_PDF,
+                    rege.REGEX_PREPRINT_DOWNLOAD_PDF,
+                    rege.REGEX_PREPRINT_DOCUMENT_DOWNLOAD_PDF,
+                    rege.REGEX_PREPRINT_VERSION_DOWNLOAD_PDF]:
+        match = re.search(pattern, unquoted_action)
+        if match:
+            return match.group(1)
+
+
+# ToDo: Integrar com dicionário ainda a ser construído
+def get_language_preprints(hit):
+    return 'df'
+
+
+# ToDo: Integrar com dicionário ainda a ser construído
+def get_year_of_publication_preprints(hit):
+    return '2021'
