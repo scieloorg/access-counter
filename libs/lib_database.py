@@ -360,10 +360,9 @@ def extract_pretable(database_uri, date, idsite):
     return engine.execute(raw_query)
 
 
-def get_dates_able_to_extract(database_uri, collection, number_of_days):
+def get_dates_able_to_extract(db_session, collection, number_of_days):
     dates = []
 
-    db_session = get_db_session(database_uri)
     try:
         ds_results = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
                                                               DateStatus.status >= DATE_STATUS_LOADED)).order_by(DateStatus.date.desc())
