@@ -131,19 +131,6 @@ def add_foreign_keys_to_table_matomo_log_link_action(matomo_db_uri):
         logging.warning('Chave estrangeira já existe: %s' % sql_foreign_key_idvisit)
 
 
-def get_db_session(matomo_db_uri):
-    """
-    Obtém uma sessão de conexão com base de dados do Matomo
-
-    @param matomo_db_uri: string de conexão à base do Matomo
-    @return: uma sessão de conexão com a base do Matomo
-    """
-    engine = create_engine(matomo_db_uri)
-    Base.metadata.bind = engine
-    db_session = sessionmaker(bind=engine)
-    return db_session()
-
-
 def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
     """
     Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas.
@@ -369,14 +356,13 @@ def extract_pretable(database_uri, date, idsite):
 
     raw_query = 'SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, location_latitude as latitude, location_longitude as longitude, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE matomo_log_link_visit_action.idsite = {0} AND server_time >= "{1}" AND server_time < "{2}" ORDER BY ip;'.format(idsite, currente_date, next_date)
 
-    engine = create_engine(database_uri)
+    engine = create_engine(database_uri, pool_recycle=1800)
     return engine.execute(raw_query)
 
 
-def get_dates_able_to_extract(database_uri, collection, number_of_days):
+def get_dates_able_to_extract(db_session, collection, number_of_days):
     dates = []
 
-    db_session = get_db_session(database_uri)
     try:
         ds_results = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
                                                               DateStatus.status >= DATE_STATUS_LOADED)).order_by(DateStatus.date.desc())
