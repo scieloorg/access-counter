@@ -529,6 +529,7 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
 
 
 def _dump_repairing_data(year_month_day, keys):
+    logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
     repair_file_path = os.path.join(DIR_R5_METRICS_TO_REPAIR,
                                     COLLECTION + '.csv')
     with open(repair_file_path, 'a') as file:
