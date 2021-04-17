@@ -50,6 +50,7 @@ MAX_YEAR = datetime.datetime.now().year + 5
 
 ENGINE = create_engine(MATOMO_DATABASE_STRING, pool_recycle=1800)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)
+SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
 
 
 class R5Metrics:
@@ -393,17 +394,16 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
     # Obtém um dicionário de métricas agregadas pelos valores associados a chave de key_list
     aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
 
+    # Data das métricas
+    year_month_day = r5_metrics[0].year_month_day
+
     # Obtém último ID
     try:
         last_id = lib_database.get_last_id(db_session, table_class)
         next_id = 1 + last_id if last_id else 1
     except OperationalError:
-        year_month_day = r5_metrics[0].year_month_day
-        logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
-        logging.info('Sleeping 10 minutes before continue...')
-        time.sleep(600)
-        logging.info('Continuing')
+        _sleep_and_log(600)
         return False
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
@@ -459,19 +459,30 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         objects.append(row)
         next_id += 1
 
+        if len(objects) >= SESSION_BULK_LIMIT:
+            try:
+                db_session.bulk_insert_mappings(table_class, objects)
+                db_session.commit()
+                objects = []
+            except OperationalError:
+                _dump_repairing_data(year_month_day, key_list)
+                _sleep_and_log(600)
+                return False
     try:
         db_session.bulk_insert_mappings(table_class, objects)
         db_session.commit()
     except OperationalError:
-        year_month_day = r5_metrics[0].year_month_day
-        logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
-        logging.info('Sleeping 10 minutes before continue...')
-        time.sleep(600)
-        logging.info('Continuing')
+        _sleep_and_log(600)
         return False
 
     return True
+
+
+def _sleep_and_log(seconds):
+    logging.info('Sleeping %d seconds before continue...' % seconds)
+    time.sleep(seconds)
+    logging.info('Continuing')
 
 
 def _aggregate_by_keylist(r5_metrics, key_list, maps):
@@ -519,6 +530,7 @@ def _aggregate_by_keylist(r5_metrics, key_list, maps):
 
 
 def _dump_repairing_data(year_month_day, keys):
+    logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
     repair_file_path = os.path.join(DIR_R5_METRICS_TO_REPAIR,
                                     COLLECTION + '.csv')
     with open(repair_file_path, 'a') as file:
