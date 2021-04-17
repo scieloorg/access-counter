@@ -394,6 +394,9 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
     # Obtém um dicionário de métricas agregadas pelos valores associados a chave de key_list
     aggregated_metrics = _aggregate_by_keylist(r5_metrics, key_list, maps)
 
+    # Data das métricas
+    year_month_day = r5_metrics[0].year_month_day
+
     # Obtém último ID
     try:
         last_id = lib_database.get_last_id(db_session, table_class)
