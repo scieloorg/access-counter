@@ -402,12 +402,8 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         last_id = lib_database.get_last_id(db_session, table_class)
         next_id = 1 + last_id if last_id else 1
     except OperationalError:
-        year_month_day = r5_metrics[0].year_month_day
-        logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
-        logging.info('Sleeping 10 minutes before continue...')
-        time.sleep(600)
-        logging.info('Continuing')
+        _sleep_and_log(600)
         return False
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
@@ -463,16 +459,21 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         objects.append(row)
         next_id += 1
 
+        if len(objects) >= SESSION_BULK_LIMIT:
+            try:
+                db_session.bulk_insert_mappings(table_class, objects)
+                db_session.commit()
+                objects = []
+            except OperationalError:
+                _dump_repairing_data(year_month_day, key_list)
+                _sleep_and_log(600)
+                return False
     try:
         db_session.bulk_insert_mappings(table_class, objects)
         db_session.commit()
     except OperationalError:
-        year_month_day = r5_metrics[0].year_month_day
-        logging.error('It was not possible to persist metrics. Dumping repairing data %s' % year_month_day)
         _dump_repairing_data(year_month_day, key_list)
-        logging.info('Sleeping 10 minutes before continue...')
-        time.sleep(600)
-        logging.info('Continuing')
+        _sleep_and_log(600)
         return False
 
     return True
