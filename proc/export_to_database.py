@@ -478,6 +478,12 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
     return True
 
 
+def _sleep_and_log(seconds):
+    logging.info('Sleeping %d seconds before continue...' % seconds)
+    time.sleep(seconds)
+    logging.info('Continuing')
+
+
 def _aggregate_by_keylist(r5_metrics, key_list, maps):
     """
     Agrega métricas de acordo com uma lista de chaves de agregação
