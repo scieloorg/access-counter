@@ -50,6 +50,7 @@ MAX_YEAR = datetime.datetime.now().year + 5
 
 ENGINE = create_engine(MATOMO_DATABASE_STRING, pool_recycle=1800)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)
+SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
 
 
 class R5Metrics:
