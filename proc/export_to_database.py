@@ -403,7 +403,6 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
         next_id = 1 + last_id if last_id else 1
     except OperationalError:
         _dump_repairing_data(year_month_day, key_list)
-        _sleep_and_log(600)
         return False
 
     # Transforma dicionário de métricas em itens persistíveis no banco de dados
@@ -466,23 +465,15 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
                 objects = []
             except OperationalError:
                 _dump_repairing_data(year_month_day, key_list)
-                _sleep_and_log(600)
                 return False
     try:
         db_session.bulk_insert_mappings(table_class, objects)
         db_session.commit()
     except OperationalError:
         _dump_repairing_data(year_month_day, key_list)
-        _sleep_and_log(600)
         return False
 
     return True
-
-
-def _sleep_and_log(seconds):
-    logging.info('Sleeping %d seconds before continue...' % seconds)
-    time.sleep(seconds)
-    logging.info('Continuing')
 
 
 def _aggregate_by_keylist(r5_metrics, key_list, maps):
