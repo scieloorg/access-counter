@@ -5,8 +5,6 @@ import logging
 import os
 import pickle
 import re
-import sys
-sys.path.append(os.getcwd())
 
 from libs.lib_database import update_date_status, get_date_status
 from libs.lib_status import DATE_STATUS_PRETABLE, DATE_STATUS_COMPUTED

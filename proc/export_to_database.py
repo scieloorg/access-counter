@@ -5,8 +5,6 @@ import logging
 import os
 import re
 import time
-import sys
-sys.path.append(os.getcwd())
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

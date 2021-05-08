@@ -2,8 +2,6 @@ import argparse
 import logging
 import os
 import re
-import sys
-sys.path.append('')
 
 from articlemeta.client import RestfulClient, ThriftClient
 from sqlalchemy.sql import null

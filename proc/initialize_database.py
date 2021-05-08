@@ -1,8 +1,6 @@
 import argparse
 import logging
 import os
-import sys
-sys.path.append('')
 
 from libs import lib_database
 
