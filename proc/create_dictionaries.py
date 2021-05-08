@@ -39,6 +39,13 @@ def _get_opac_files(dir_dictionaries):
     return opac_files
 
 
+def _put_date(date_str, date_name, data):
+    try:
+        date_value = date_parser.parse(date_str)
+        if date_value:
+            data.update({date_name: date_value.strftime('%Y-%m-%d %H:%M:%S')})
+    except ValueError:
+        logging.warning('Data %s é inválida' % date_str)
 def load_old_dictionaries(dir_dictionaries, version):
     old_dictionaries = {
         'pid-dates': {},
