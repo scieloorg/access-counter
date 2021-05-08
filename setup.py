@@ -9,6 +9,7 @@ install_requires = [
     'chardet==3.0.4',
     'colorama==0.4.3',
     'contextlib2==0.6.0',
+    'dateutils==0.6.12',
     'distlib==0.3.0',
     'distro==1.4.0',
     'html5lib==1.0.1',
@@ -56,5 +57,6 @@ setup(
     calculate_metrics=proc.calculate_metrics:main
     export_to_database=proc.export_to_database:main
     extract_pretables=proc.extract_pretables:main
+    collect_opac_dictionary=proc.collect_opac_dictionary:main
     """
 )

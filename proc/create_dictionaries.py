@@ -1,11 +1,15 @@
 import argparse
 import datetime
+import json
 import logging
 import pickle
 import os
+import re
 
+from dateutil import parser as date_parser
 from pymongo import MongoClient, uri_parser
 from urllib.parse import urlparse
+from utils.regular_expressions import REGEX_OPAC_DICTIONARY, REGEX_YEAR
 
 
 ARTICLEMETA_DATABASE_STRING = os.environ.get('ARTICLEMETA_DATABASE_STRING', 'mongodb://username:password@host:port/database.collection')
@@ -15,6 +19,119 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
 DOMAINS = set()
 FULLTEXT_MODES = ['pdf', 'html']
+
+
+def _get_opac_files(dir_dictionaries):
+    json_files = [f for f in os.listdir(dir_dictionaries) if f.endswith('.json')]
+
+    opac_files = {}
+    for jf in json_files:
+        jf_match = re.match(REGEX_OPAC_DICTIONARY, jf)
+
+        if jf_match:
+            jf_collection = jf_match.group(1)
+
+            if jf_collection not in opac_files:
+                opac_files[jf_collection] = []
+
+            opac_files[jf_collection].append(os.path.join(dir_dictionaries, jf))
+
+    return opac_files
+
+
+def _put_date(date_str, date_name, data):
+    try:
+        date_value = date_parser.parse(date_str)
+        if date_value:
+            data.update({date_name: date_value.strftime('%Y-%m-%d %H:%M:%S')})
+    except ValueError:
+        logging.warning('Data %s é inválida' % date_str)
+
+
+def _extract_year(date_str):
+    try:
+        return date_parser.parse(date_str).strftime('%Y')
+
+    except date_parser.ParserError:
+        matches = {''}
+
+        for m in re.findall(REGEX_YEAR, date_str):
+            matches.add(m)
+
+        return max(matches)
+
+    except ValueError:
+        return ''
+
+
+def load_opac_dictionary(dir_dictionaries):
+    opac_files = _get_opac_files(dir_dictionaries)
+    opac_dict = {}
+
+    for collection, files in opac_files.items():
+        if collection not in opac_dict:
+            opac_dict[collection] = {}
+
+        for f in files:
+            with open(f) as fin:
+                fj = json.load(fin)
+
+                pid_to_values = fj.get('documents', {})
+
+                for pid, values in pid_to_values.items():
+                    if pid not in opac_dict[collection]:
+                        opac_dict[collection][pid] = values
+                    else:
+                        existing_created_date = date_parser.parse(opac_dict[collection][pid]['create'])
+                        new_created_date = date_parser.parse(values['create'])
+
+                        if new_created_date > existing_created_date:
+                            opac_dict[collection][pid] = values
+
+    return opac_dict
+
+
+def add_opac_dict_to_dates_dict(opac_dict, dates_dict):
+    for collection, pids in opac_dict.items():
+        if collection not in dates_dict:
+            dates_dict[collection] = {}
+
+        for pid, values in pids.items():
+            if pid not in dates_dict[collection]:
+                dates_dict[collection][pid] = {}
+
+            publication_date = values.get('publication_date')
+            create_date = values.get('create')
+            update_date = values.get('update')
+
+            if publication_date:
+                dates_dict[collection][pid]['publication_date'] = publication_date
+                year = _extract_year(publication_date)
+
+                if year:
+                    dates_dict[collection][pid].update({'publication_year': year})
+
+            _put_date(create_date, 'created_at', dates_dict[collection][pid])
+            _put_date(update_date, 'updated_at', dates_dict[collection][pid])
+
+
+def add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang_dict):
+    for collection, pids in opac_dict.items():
+        if collection not in pid_format_lang_dict:
+            pid_format_lang_dict[collection] = {}
+
+        counter = 0
+        for pid, values in pids.items():
+            counter += 1
+            logging.info(str(counter))
+
+            if pid not in pid_format_lang_dict[collection]:
+                pid_format_lang_dict[collection][pid] = {}
+
+            default_lang = values.get('default_language', '')
+
+            if default_lang:
+                pid_format_lang_dict[collection][pid].update({'default': default_lang})
 
 
 def load_old_dictionaries(dir_dictionaries, version):
@@ -369,6 +486,15 @@ def main():
                     pid_format_lang[collection][pid]['html'].add(lang)
 
     fix_issn_acronym_errors(issn_acronym)
+
+    logging.info('Carregando dados de OPAC...')
+    opac_dict = load_opac_dictionary(DIR_DICTIONARIES)
+
+    logging.info('Atualizando dicionário de datas...')
+    add_opac_dict_to_dates_dict(opac_dict, pid_dates)
+
+    logging.info('Atualizando dicionário de idiomas...')
+    add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang)
 
     logging.info('Gravando dicionários...')
     for d in [(pid_issns, 'pid-issn'),
