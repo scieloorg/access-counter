@@ -113,6 +113,27 @@ def add_opac_dict_to_dates_dict(opac_dict, dates_dict):
 
             _put_date(create_date, 'created_at', dates_dict[collection][pid])
             _put_date(update_date, 'updated_at', dates_dict[collection][pid])
+
+
+def add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang_dict):
+    for collection, pids in opac_dict.items():
+        if collection not in pid_format_lang_dict:
+            pid_format_lang_dict[collection] = {}
+
+        counter = 0
+        for pid, values in pids.items():
+            counter += 1
+            logging.info(str(counter))
+
+            if pid not in pid_format_lang_dict[collection]:
+                pid_format_lang_dict[collection][pid] = {}
+
+            default_lang = values.get('default_language', '')
+
+            if default_lang:
+                pid_format_lang_dict[collection][pid].update({'default': default_lang})
+
+
 def load_old_dictionaries(dir_dictionaries, version):
     old_dictionaries = {
         'pid-dates': {},
