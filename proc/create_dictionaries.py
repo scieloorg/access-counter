@@ -487,6 +487,15 @@ def main():
 
     fix_issn_acronym_errors(issn_acronym)
 
+    logging.info('Carregando dados de OPAC...')
+    opac_dict = load_opac_dictionary(DIR_DICTIONARIES)
+
+    logging.info('Atualizando dicionário de datas...')
+    add_opac_dict_to_dates_dict(opac_dict, pid_dates)
+
+    logging.info('Atualizando dicionário de idiomas...')
+    add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang)
+
     logging.info('Gravando dicionários...')
     for d in [(pid_issns, 'pid-issn'),
               (pid_format_lang, 'pid-format-lang'),
