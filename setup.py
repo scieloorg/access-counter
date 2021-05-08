@@ -56,5 +56,6 @@ setup(
     calculate_metrics=proc.calculate_metrics:main
     export_to_database=proc.export_to_database:main
     extract_pretables=proc.extract_pretables:main
+    collect_opac_dictionary=proc.collect_opac_dictionary:main
     """
 )
