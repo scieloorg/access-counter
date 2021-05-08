@@ -46,6 +46,23 @@ def _put_date(date_str, date_name, data):
             data.update({date_name: date_value.strftime('%Y-%m-%d %H:%M:%S')})
     except ValueError:
         logging.warning('Data %s é inválida' % date_str)
+
+
+def _extract_year(date_str):
+    try:
+        return date_parser.parse(date_str).strftime('%Y')
+
+    except date_parser.ParserError:
+        matches = {''}
+
+        for m in re.findall(REGEX_YEAR, date_str):
+            matches.add(m)
+
+        return max(matches)
+
+    except ValueError:
+        return ''
+
 def load_old_dictionaries(dir_dictionaries, version):
     old_dictionaries = {
         'pid-dates': {},
