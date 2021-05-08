@@ -63,6 +63,33 @@ def _extract_year(date_str):
     except ValueError:
         return ''
 
+
+def load_opac_dictionary(dir_dictionaries):
+    opac_files = _get_opac_files(dir_dictionaries)
+    opac_dict = {}
+
+    for collection, files in opac_files.items():
+        if collection not in opac_dict:
+            opac_dict[collection] = {}
+
+        for f in files:
+            with open(f) as fin:
+                fj = json.load(fin)
+
+                pid_to_values = fj.get('documents', {})
+
+                for pid, values in pid_to_values.items():
+                    if pid not in opac_dict[collection]:
+                        opac_dict[collection][pid] = values
+                    else:
+                        existing_created_date = date_parser.parse(opac_dict[collection][pid]['create'])
+                        new_created_date = date_parser.parse(values['create'])
+
+                        if new_created_date > existing_created_date:
+                            opac_dict[collection][pid] = values
+
+    return opac_dict
+
 def load_old_dictionaries(dir_dictionaries, version):
     old_dictionaries = {
         'pid-dates': {},
