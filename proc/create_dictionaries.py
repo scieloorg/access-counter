@@ -1,11 +1,15 @@
 import argparse
 import datetime
+import json
 import logging
 import pickle
 import os
+import re
 
+from dateutil import parser as date_parser
 from pymongo import MongoClient, uri_parser
 from urllib.parse import urlparse
+from utils.regular_expressions import REGEX_OPAC_DICTIONARY, REGEX_YEAR
 
 
 ARTICLEMETA_DATABASE_STRING = os.environ.get('ARTICLEMETA_DATABASE_STRING', 'mongodb://username:password@host:port/database.collection')
