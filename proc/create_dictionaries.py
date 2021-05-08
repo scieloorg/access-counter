@@ -21,6 +21,24 @@ DOMAINS = set()
 FULLTEXT_MODES = ['pdf', 'html']
 
 
+def _get_opac_files(dir_dictionaries):
+    json_files = [f for f in os.listdir(dir_dictionaries) if f.endswith('.json')]
+
+    opac_files = {}
+    for jf in json_files:
+        jf_match = re.match(REGEX_OPAC_DICTIONARY, jf)
+
+        if jf_match:
+            jf_collection = jf_match.group(1)
+
+            if jf_collection not in opac_files:
+                opac_files[jf_collection] = []
+
+            opac_files[jf_collection].append(os.path.join(dir_dictionaries, jf))
+
+    return opac_files
+
+
 def load_old_dictionaries(dir_dictionaries, version):
     old_dictionaries = {
         'pid-dates': {},
