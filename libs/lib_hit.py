@@ -721,3 +721,23 @@ def get_content_type_ssp_url(hit):
 
     return ma.HIT_CONTENT_OTHERS
 
+
+def get_url_params_from_action_ssp_url(action: str):
+    action_params = {'pid': '',
+                     'acronym': '',
+                     'format': '',
+                     'lang': '',
+                     'resource_ssm_path': ''}
+
+    action_evaluated = action
+    if not action_evaluated.startswith('http'):
+        action_evaluated = ''.join(['http://', action_evaluated])
+
+    action_parsed = parse.urlparse(action_evaluated)
+    if 'resource_ssm_path' in action_evaluated:
+        get_url_params_from_ssp_resource_path(action_params, action_parsed.query)
+    else:
+        get_url_params_from_ssp_path(action_params, action_parsed.path)
+
+    return action_params
+
