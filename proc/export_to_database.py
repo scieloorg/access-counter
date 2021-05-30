@@ -76,16 +76,18 @@ class R5Metrics:
         if self.longitude in {'NULL', ''} or not self.longitude:
             return False
 
-        # Aceita métrica cujo pid é formado por dígitos e a coleção é Preprints
-        if self.collection == 'pre' and self.pid.isdigit():
-            return True
+        # Ignora métrica cujo PID é mal-formado e que seja diferente das coleções Preprints e Saúde Pública
+        if self.collection not in {'pre', 'ssp'}:
+            if '-' in self.pid:
+                if not re.match(REGEX_ARTICLE_PID, self.pid):
+                    return False
+            else:
+                if len(self.pid) != 23:
+                    return False
 
-        # Ignora métrica cujo PID é mal-formado
-        if '-' in self.pid:
-            if not re.match(REGEX_ARTICLE_PID, self.pid):
-                return False
-        else:
-            if len(self.pid) != 23:
+        # Ignora métrica cujo PID é vazio e que ou seja da coleção Preprints ou seja da coleção Saúde Pública
+        if self.collection in {'pre', 'ssp'}:
+            if not self.pid:
                 return False
 
         # Ignora métricas cujo artigo possui ano de publicação inválido
