@@ -794,3 +794,10 @@ def get_ssp_pid(action_params):
 def get_language_ssp(pid: str, pid2format2lang: dict):
     return pid2format2lang.get('spa', {}).get(pid, '')
 
+
+# ToDo: Integrar com dicionário ainda a ser construído
+def get_year_of_publication_ssp_pid(pid: str):
+    match = re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_YEAR, pid)
+    if match:
+        return match.group(1)
+    return ''
