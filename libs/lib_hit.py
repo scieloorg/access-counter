@@ -741,3 +741,27 @@ def get_url_params_from_action_ssp_url(action: str):
 
     return action_params
 
+
+def get_url_params_from_ssp_path(action_params, ssp_path):
+    for k, v in {values.FORMAT_HTML: rege.REGEX_SSP_JOURNAL_ARTICLE_HTML_DETAILS,
+                 values.FORMAT_PDF: rege.REGEX_SSP_JOURNAL_ARTICLE_PDF_DETAILS}.items():
+        match = re.search(v, ssp_path)
+
+        if match:
+            action_params['format'] = k
+            action_params['acronym'] = match.group(1)
+            action_params['year_vol_issue'] = match.group(2)
+            action_params['pages'] = match.group(3)
+            action_params['lang'] = match.group(4)
+
+            return
+
+    path_match_assets = re.match(rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS_DETAILS, ssp_path)
+    if path_match_assets:
+        action_params['acronym'] = path_match_assets.group(1)
+        action_params['year_vol_issue'] = path_match_assets.group(2)
+        action_params['file'] = path_match_assets.group(3)
+
+        if ssp_path.endswith('.pdf'):
+            action_params['format'] = values.FORMAT_PDF
+
