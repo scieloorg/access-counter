@@ -45,6 +45,25 @@ REGEX_NEW_SCL_JOURNALS_THEMATIC = r'.*/journals/thematic'
 REGEX_NEW_SCL_RAW = r'.*/article/ssm/content/raw/'
 REGEX_NEW_SCL_RAW_DETAIL = r'.*/documentstore/([\w|-]*)/(\w*)/([\w|\.]*)' # grupo 1 = ISSN, grupo 2 = código ds, grupo 3 = insumo
 
+# Detectam URLs associadas à versão nova do site SciELO Public Health
+REGEX_SSP_JOURNAL_ARTICLE_HTML = r'.*/article/(\w*)/(.*)'
+REGEX_SSP_JOURNAL_ARTICLE_HTML_DETAILS =r'.*/article/(\w*)/?([\d|\w|\.|\-]*)/?([\d|\w|\-]*)/?(\w*|)'
+REGEX_SSP_JOURNAL_ARTICLE_PDF = r'.*/pdf/(\w*)/(.*)'
+REGEX_SSP_JOURNAL_ARTICLE_PDF_DETAILS = r'.*/pdf/(\w*)/([\d|\w|\.|\-]*)/?([\d|\w|\-]*)/?(\w*|)'
+REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS = r'.*/media/assets/(\w*)/(.*)'
+REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS_DETAILS = r'.*/media/assets/(\w*)/?([\d|\w|\.|\-]*)/?([\d|\w|\-|\.|\_]*)'
+REGEX_SSP_JOURNAL = r'.*/j/(\w*)/'
+REGEX_SSP_JOURNAL_FEED = r'.*/journal/(\w*)/feed'
+REGEX_SSP_JOURNAL_GRID = r'.*/j/(\w*)/grid'
+REGEX_SSP_JOURNAL_ABOUT = r'.*/journal/(\w*)/about'
+REGEX_SSP_JOURNAL_ISSUE = r'.*/j/(\w*)/i/([\d|\w|.]*)'
+REGEX_SSP_JOURNAL_FEED_ISSUE = r'.*/feed/(\w*)/([\d|\w|.]*)'
+REGEX_SSP_JOURNALS_ALPHABETIC = r'.*/journals/alpha'
+REGEX_SSP_JOURNALS_THEMATIC = r'.*/journals/thematic'
+REGEX_SSP_PLATFORM = r'scielosp\.org'
+REGEX_SSP_PLATFORM_ABOUT = r'.*/about'
+REGEX_SSP_JOURNAL_ARTICLE_YEAR = r':(\d{4})\.(.*):(.*)'
+
 # Detectam URLs associadas à coleção Preprints
 REGEX_PREPRINT_VIEW_ABSTRACT = r'preprint/view/(\d+)$'
 REGEX_PREPRINT_DOCUMENT_ABSTRACT = r'documents/article/view/(\d+)$'
