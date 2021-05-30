@@ -178,6 +178,8 @@ class HitManager:
 
         if hit.collection == 'pre':
             self._set_hit_attrs_preprint_url(hit)
+        elif hit.collection == 'ssp':
+            self._set_hit_attrs_ssp_url(hit)
         else:
             if lib_hit.is_new_url_format(hit.action_name.lower()):
                 self._set_hit_attrs_new_url(hit)
@@ -269,6 +271,31 @@ class HitManager:
         hit.format = lib_hit.get_format_preprints(hit)
         hit.lang = lib_hit.get_language_preprints(hit)
         hit.yop = lib_hit.get_year_of_publication_preprints(hit)
+
+    def _set_hit_attrs_ssp_url(self, hit):
+        hit.action_params = lib_hit.get_url_params_from_action_ssp_url(hit.action_name)
+
+        hit.acronym = hit.action_params['acronym'].lower()
+        hit.format = hit.action_params['format'].lower()
+        hit.lang = hit.action_params['lang'].lower()
+        hit.content_type = lib_hit.get_content_type_ssp_url(hit)
+        hit.hit_type = lib_hit.get_hit_type_ssp(hit.action_name.lower())
+
+        if hit.hit_type == at.HIT_TYPE_ARTICLE:
+            hit.pid = lib_hit.get_ssp_pid(hit.action_params)
+            hit.issn = self.acronym_to_issn.get('spa', {}).get(hit.acronym, [''])[0].upper()
+
+            if hit.pid not in self.pid_to_issn:
+                if hit.issn:
+                    self.pid_to_issn[hit.pid] = {hit.issn}
+            else:
+                self.pid_to_issn[hit.pid].add(hit.issn)
+                if len(self.pid_to_issn[hit.pid]) > 2:
+                    logging.warning('PID %s está associado a mais de dois ISSNs: %s' %(hit.pid, self.pid_to_issn[hit.pid]))
+
+            hit.yop = lib_hit.get_year_of_publication_ssp_pid(hit.pid)
+            if not hit.lang:
+                hit.lang = lib_hit.get_language_ssp(hit.pid, self.pid_to_format_lang)
 
     def reset(self):
         """

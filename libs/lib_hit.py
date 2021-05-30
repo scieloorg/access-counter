@@ -648,3 +648,156 @@ def get_language_preprints(hit):
 # ToDo: Integrar com dicionário ainda a ser construído
 def get_year_of_publication_preprints(hit):
     return '2021'
+
+
+def get_hit_type_ssp(action: str):
+    for pattern in [rege.REGEX_SSP_JOURNAL_ARTICLE_HTML,
+                    rege.REGEX_SSP_JOURNAL_ARTICLE_PDF,
+                    rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_ARTICLE
+
+    for pattern in [rege.REGEX_SSP_JOURNAL_ABOUT,
+                    rege.REGEX_SSP_JOURNAL_GRID,
+                    rege.REGEX_SSP_JOURNAL_FEED]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_JOURNAL
+
+    for pattern in [rege.REGEX_SSP_JOURNAL_ISSUE,
+                    rege.REGEX_SSP_JOURNAL_FEED_ISSUE]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_ISSUE
+
+    for pattern in [rege.REGEX_SSP_PLATFORM_ABOUT,
+                    rege.REGEX_SSP_JOURNALS_THEMATIC,
+                    rege.REGEX_SSP_JOURNALS_ALPHABETIC]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_PLATFORM
+
+    if re.search(rege.REGEX_SSP_PLATFORM, action):
+        return ma.HIT_TYPE_PLATFORM
+
+    return ma.HIT_TYPE_OTHERS
+
+
+def get_content_type_ssp_url(hit):
+    action_lowered = hit.action_name.lower()
+    if re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_HTML, action_lowered):
+        return ma.HIT_CONTENT_SSP_ARTICLE_HTML
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_PDF, action_lowered):
+        return ma.HIT_CONTENT_SSP_ARTICLE_PDF
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS, action_lowered):
+        if action_lowered.endswith('.pdf'):
+            return ma.HIT_CONTENT_SSP_ARTICLE_PDF
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ISSUE, action_lowered):
+        return ma.HIT_CONTENT_SSP_ISSUE
+
+    if re.search(rege.REGEX_SSP_JOURNAL_FEED_ISSUE, action_lowered):
+        return ma.HIT_CONTENT_SSP_ISSUE_RSS
+
+    if re.search(rege.REGEX_SSP_JOURNAL_FEED, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_RSS
+
+    if re.search(rege.REGEX_SSP_JOURNAL_GRID, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_ISSUES
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ABOUT, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_ABOUT
+
+    if re.search(rege.REGEX_SSP_JOURNAL, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_MAIN_PAGE
+
+    if re.search(rege.REGEX_SSP_JOURNALS_ALPHABETIC, action_lowered):
+        return ma.HIT_CONTENT_SSP_PLATFORM_LIST_JOURNALS_ALPHABETIC
+
+    if re.search(rege.REGEX_SSP_JOURNALS_THEMATIC, action_lowered):
+        return ma.HIT_CONTENT_SSP_PLATFORM_LIST_JOURNALS_THEMATIC
+
+    if re.search(rege.REGEX_SSP_PLATFORM_ABOUT, action_lowered):
+        return ma.HIT_CONTENT_SSP_PLATFORM_ABOUT
+
+    return ma.HIT_CONTENT_OTHERS
+
+
+def get_url_params_from_action_ssp_url(action: str):
+    action_params = {'pid': '',
+                     'acronym': '',
+                     'format': '',
+                     'lang': '',
+                     'resource_ssm_path': ''}
+
+    action_evaluated = action
+    if not action_evaluated.startswith('http'):
+        action_evaluated = ''.join(['http://', action_evaluated])
+
+    action_parsed = parse.urlparse(action_evaluated)
+    if 'resource_ssm_path' in action_evaluated:
+        get_url_params_from_ssp_resource_path(action_params, action_parsed.query)
+    else:
+        get_url_params_from_ssp_path(action_params, action_parsed.path)
+
+    return action_params
+
+
+def get_url_params_from_ssp_path(action_params, ssp_path):
+    for k, v in {values.FORMAT_HTML: rege.REGEX_SSP_JOURNAL_ARTICLE_HTML_DETAILS,
+                 values.FORMAT_PDF: rege.REGEX_SSP_JOURNAL_ARTICLE_PDF_DETAILS}.items():
+        match = re.search(v, ssp_path)
+
+        if match:
+            action_params['format'] = k
+            action_params['acronym'] = match.group(1)
+            action_params['year_vol_issue'] = match.group(2)
+            action_params['pages'] = match.group(3)
+            action_params['lang'] = match.group(4)
+
+            return
+
+    path_match_assets = re.match(rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS_DETAILS, ssp_path)
+    if path_match_assets:
+        action_params['acronym'] = path_match_assets.group(1)
+        action_params['year_vol_issue'] = path_match_assets.group(2)
+        action_params['file'] = path_match_assets.group(3)
+
+        if ssp_path.endswith('.pdf'):
+            action_params['format'] = values.FORMAT_PDF
+
+
+def get_url_params_from_ssp_resource_path(action_params, ssp_path_query):
+    resource_path = dict(parse.parse_qsl(ssp_path_query)).get('resource_ssm_path', '')
+    match = re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS_DETAILS, resource_path)
+    if match:
+        action_params['acronym'] = match.group(1)
+        action_params['year_vol_issue'] = match.group(2)
+        action_params['file'] = match.group(3)
+        action_params['resource_ssm_path'] = resource_path
+
+        if ssp_path_query.endswith('.pdf'):
+            action_params['format'] = values.FORMAT_PDF
+
+
+def get_ssp_pid(action_params):
+    artificial_pid = ':'.join([action_params.get('acronym', ''),
+                               action_params.get('year_vol_issue', '')])
+
+    if 'pages' in action_params:
+        return ':'.join([artificial_pid, action_params.get('pages', '')]).lower()
+
+    if 'file' in action_params:
+        return ':'.join([artificial_pid, action_params.get('file', '')]).lower()
+
+
+# ToDo: Integrar com dicionário ainda a ser construído
+def get_language_ssp(pid: str, pid2format2lang: dict):
+    return pid2format2lang.get('spa', {}).get(pid, '')
+
+
+# ToDo: Integrar com dicionário ainda a ser construído
+def get_year_of_publication_ssp_pid(pid: str):
+    match = re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_YEAR, pid)
+    if match:
+        return match.group(1)
+    return ''
