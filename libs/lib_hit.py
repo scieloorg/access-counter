@@ -648,3 +648,35 @@ def get_language_preprints(hit):
 # ToDo: Integrar com dicionário ainda a ser construído
 def get_year_of_publication_preprints(hit):
     return '2021'
+
+
+def get_hit_type_ssp(action: str):
+    for pattern in [rege.REGEX_SSP_JOURNAL_ARTICLE_HTML,
+                    rege.REGEX_SSP_JOURNAL_ARTICLE_PDF,
+                    rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_ARTICLE
+
+    for pattern in [rege.REGEX_SSP_JOURNAL_ABOUT,
+                    rege.REGEX_SSP_JOURNAL_GRID,
+                    rege.REGEX_SSP_JOURNAL_FEED]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_JOURNAL
+
+    for pattern in [rege.REGEX_SSP_JOURNAL_ISSUE,
+                    rege.REGEX_SSP_JOURNAL_FEED_ISSUE]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_ISSUE
+
+    for pattern in [rege.REGEX_SSP_PLATFORM_ABOUT,
+                    rege.REGEX_SSP_JOURNALS_THEMATIC,
+                    rege.REGEX_SSP_JOURNALS_ALPHABETIC]:
+        if re.search(pattern, action):
+            return ma.HIT_TYPE_PLATFORM
+
+    if re.search(rege.REGEX_SSP_PLATFORM, action):
+        return ma.HIT_TYPE_PLATFORM
+
+    return ma.HIT_TYPE_OTHERS
+
+
