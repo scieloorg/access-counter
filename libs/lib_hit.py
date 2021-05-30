@@ -789,3 +789,8 @@ def get_ssp_pid(action_params):
     if 'file' in action_params:
         return ':'.join([artificial_pid, action_params.get('file', '')]).lower()
 
+
+# ToDo: Integrar com dicionário ainda a ser construído
+def get_language_ssp(pid: str, pid2format2lang: dict):
+    return pid2format2lang.get('spa', {}).get(pid, '')
+
