@@ -765,3 +765,16 @@ def get_url_params_from_ssp_path(action_params, ssp_path):
         if ssp_path.endswith('.pdf'):
             action_params['format'] = values.FORMAT_PDF
 
+
+def get_url_params_from_ssp_resource_path(action_params, ssp_path_query):
+    resource_path = dict(parse.parse_qsl(ssp_path_query)).get('resource_ssm_path', '')
+    match = re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS_DETAILS, resource_path)
+    if match:
+        action_params['acronym'] = match.group(1)
+        action_params['year_vol_issue'] = match.group(2)
+        action_params['file'] = match.group(3)
+        action_params['resource_ssm_path'] = resource_path
+
+        if ssp_path_query.endswith('.pdf'):
+            action_params['format'] = values.FORMAT_PDF
+
