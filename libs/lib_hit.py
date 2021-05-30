@@ -778,3 +778,14 @@ def get_url_params_from_ssp_resource_path(action_params, ssp_path_query):
         if ssp_path_query.endswith('.pdf'):
             action_params['format'] = values.FORMAT_PDF
 
+
+def get_ssp_pid(action_params):
+    artificial_pid = ':'.join([action_params.get('acronym', ''),
+                               action_params.get('year_vol_issue', '')])
+
+    if 'pages' in action_params:
+        return ':'.join([artificial_pid, action_params.get('pages', '')]).lower()
+
+    if 'file' in action_params:
+        return ':'.join([artificial_pid, action_params.get('file', '')]).lower()
+
