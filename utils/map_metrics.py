@@ -26,7 +26,9 @@ COUNTER_ARTICLE_ITEM_INVESTIGATIONS = [ma.HIT_CONTENT_ARTICLE_FULL_TEXT,
                                        ma.HIT_CONTENT_NEW_SCL_ARTICLE_AUTHORS,
                                        ma.HIT_CONTENT_NEW_SCL_ARTICLE_TABLES_AND_FIGURES,
                                        ma.HIT_CONTENT_TYPE_PREPRINT_ABSTRACT,
-                                       ma.HIT_CONTENT_TYPE_PREPRINT_PDF]
+                                       ma.HIT_CONTENT_TYPE_PREPRINT_PDF,
+                                       ma.HIT_CONTENT_SSP_ARTICLE_HTML,
+                                       ma.HIT_CONTENT_SSP_ARTICLE_PDF]
 
 # Conteúdos válidos para métrica Request de artigos
 COUNTER_ARTICLE_ITEM_REQUESTS = [ma.HIT_CONTENT_ARTICLE_FULL_TEXT,
@@ -38,7 +40,9 @@ COUNTER_ARTICLE_ITEM_REQUESTS = [ma.HIT_CONTENT_ARTICLE_FULL_TEXT,
                                  ma.HIT_CONTENT_NEW_SCL_ARTICLE_HTML,
                                  ma.HIT_CONTENT_NEW_SCL_ARTICLE_XML,
                                  ma.HIT_CONTENT_NEW_SCL_ARTICLE_PDF,
-                                 ma.HIT_CONTENT_TYPE_PREPRINT_PDF]
+                                 ma.HIT_CONTENT_TYPE_PREPRINT_PDF,
+                                 ma.HIT_CONTENT_SSP_ARTICLE_HTML,
+                                 ma.HIT_CONTENT_SSP_ARTICLE_PDF]
 
 # Conteúdos válidos para métrica Investigation de fascículos
 COUNTER_ISSUE_ITEM_INVESTIGATIONS = [ma.HIT_CONTENT_ISSUE_TOC,
