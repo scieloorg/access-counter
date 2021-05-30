@@ -680,3 +680,44 @@ def get_hit_type_ssp(action: str):
     return ma.HIT_TYPE_OTHERS
 
 
+def get_content_type_ssp_url(hit):
+    action_lowered = hit.action_name.lower()
+    if re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_HTML, action_lowered):
+        return ma.HIT_CONTENT_SSP_ARTICLE_HTML
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_PDF, action_lowered):
+        return ma.HIT_CONTENT_SSP_ARTICLE_PDF
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ARTICLE_MEDIA_ASSETS, action_lowered):
+        if action_lowered.endswith('.pdf'):
+            return ma.HIT_CONTENT_SSP_ARTICLE_PDF
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ISSUE, action_lowered):
+        return ma.HIT_CONTENT_SSP_ISSUE
+
+    if re.search(rege.REGEX_SSP_JOURNAL_FEED_ISSUE, action_lowered):
+        return ma.HIT_CONTENT_SSP_ISSUE_RSS
+
+    if re.search(rege.REGEX_SSP_JOURNAL_FEED, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_RSS
+
+    if re.search(rege.REGEX_SSP_JOURNAL_GRID, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_ISSUES
+
+    if re.search(rege.REGEX_SSP_JOURNAL_ABOUT, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_ABOUT
+
+    if re.search(rege.REGEX_SSP_JOURNAL, action_lowered):
+        return ma.HIT_CONTENT_SSP_JOURNAL_MAIN_PAGE
+
+    if re.search(rege.REGEX_SSP_JOURNALS_ALPHABETIC, action_lowered):
+        return ma.HIT_CONTENT_SSP_PLATFORM_LIST_JOURNALS_ALPHABETIC
+
+    if re.search(rege.REGEX_SSP_JOURNALS_THEMATIC, action_lowered):
+        return ma.HIT_CONTENT_SSP_PLATFORM_LIST_JOURNALS_THEMATIC
+
+    if re.search(rege.REGEX_SSP_PLATFORM_ABOUT, action_lowered):
+        return ma.HIT_CONTENT_SSP_PLATFORM_ABOUT
+
+    return ma.HIT_CONTENT_OTHERS
+
