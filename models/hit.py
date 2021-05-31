@@ -172,9 +172,7 @@ class HitManager:
                                                          hit.server_time)
 
         # Obtém coleção ao qual o Hit pertence
-        hit.collection = lib_hit.get_collection(hit.action_name.lower())
-        if not hit.collection:
-            hit.collection = default_collection
+        hit.collection = default_collection
 
         if hit.collection == 'pre':
             self._set_hit_attrs_preprint_url(hit)

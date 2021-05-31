@@ -415,93 +415,94 @@ def get_content_type_new_url(hit):
 
 
 def get_content_type(hit):
-    scl_domain = dicts.collection_to_domain.get(hit.collection, values.DEFAULT_DOMAIN)
+    possible_domains = dicts.collection_to_domain.get(hit.collection, [])
 
-    # É domínio/scielo.php
-    if re.search(ma.ACTION_SCLBR_SCLPHP.format(scl_domain), hit.action_name):
-        # Caso possua parâmero script
-        if hit.script:
-            return dicts.script_to_hit_content.get(hit.script, ma.HIT_CONTENT_OTHERS)
+    for scl_domain in possible_domains:
+        # É domínio/scielo.php
+        if re.search(ma.ACTION_SCLBR_SCLPHP.format(scl_domain), hit.action_name):
+            # Caso possua parâmero script
+            if hit.script:
+                return dicts.script_to_hit_content.get(hit.script, ma.HIT_CONTENT_OTHERS)
 
-        # Caso não possua parâmetro script
-        if '?download' in hit.action_name:
-            return ma.HIT_CONTENT_ARTICLE_DOWNLOAD_CITATION
-        if 'script_sci_issues' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_ISSUES
-        if 'script_sci_serial' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_SERIAL
-        return ma.HIT_CONTENT_PLATFORM_MAIN_PAGE
+            # Caso não possua parâmetro script
+            if '?download' in hit.action_name:
+                return ma.HIT_CONTENT_ARTICLE_DOWNLOAD_CITATION
+            if 'script_sci_issues' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_ISSUES
+            if 'script_sci_serial' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_SERIAL
+            return ma.HIT_CONTENT_PLATFORM_MAIN_PAGE
 
-    # É domínio/article_plus.php? + pid={}
-    if re.search(ma.ACTION_SCLBR_ARTICLE_PLUS.format(scl_domain), hit.action_name):
-        return ma.HIT_CONTENT_ARTICLE_PLUS
+        # É domínio/article_plus.php? + pid={}
+        if re.search(ma.ACTION_SCLBR_ARTICLE_PLUS.format(scl_domain), hit.action_name):
+            return ma.HIT_CONTENT_ARTICLE_PLUS
 
-    # É domínio/pdf/ + arquivo.pdf
-    if re.search(ma.ACTION_SCLBR_PDF.format(scl_domain), hit.action_name):
-        return ma.HIT_CONTENT_ARTICLE_PDF
+        # É domínio/pdf/ + arquivo.pdf
+        if re.search(ma.ACTION_SCLBR_PDF.format(scl_domain), hit.action_name):
+            return ma.HIT_CONTENT_ARTICLE_PDF
 
-    # É domínio/pdf/readcube/epdf.php? + pid={}
-    if re.search(ma.ACTION_SCLBR_READCUBE_EPDF.format(scl_domain), hit.action_name):
-        return ma.HIT_CONTENT_ARTICLE_EXTERNAL_PDF
+        # É domínio/pdf/readcube/epdf.php? + pid={}
+        if re.search(ma.ACTION_SCLBR_READCUBE_EPDF.format(scl_domain), hit.action_name):
+            return ma.HIT_CONTENT_ARTICLE_EXTERNAL_PDF
 
-    # É domínio/scieloorg/php/{} + pid={}
-    if re.search(ma.ACTION_SCLBR_SCLORG_PHP.format(scl_domain), hit.action_name):
-        if 'articlexml' in hit.action_name:
-            return ma.HIT_CONTENT_ARTICLE_ARTICLE_XML
-        if 'citedscielo' in hit.action_name:
-            return ma.HIT_CONTENT_ARTICLE_CITEDSCIELO
-        if 'reference' in hit.action_name:
-            return ma.HIT_CONTENT_ARTICLE_REFERENCE_LIST
-        if 'related' in hit.action_name:
-            return ma.HIT_CONTENT_ARTICLE_RELATED
-        if 'translate' in hit.action_name:
-            return ma.HIT_CONTENT_ARTICLE_TRANSLATE
+        # É domínio/scieloorg/php/{} + pid={}
+        if re.search(ma.ACTION_SCLBR_SCLORG_PHP.format(scl_domain), hit.action_name):
+            if 'articlexml' in hit.action_name:
+                return ma.HIT_CONTENT_ARTICLE_ARTICLE_XML
+            if 'citedscielo' in hit.action_name:
+                return ma.HIT_CONTENT_ARTICLE_CITEDSCIELO
+            if 'reference' in hit.action_name:
+                return ma.HIT_CONTENT_ARTICLE_REFERENCE_LIST
+            if 'related' in hit.action_name:
+                return ma.HIT_CONTENT_ARTICLE_RELATED
+            if 'translate' in hit.action_name:
+                return ma.HIT_CONTENT_ARTICLE_TRANSLATE
 
-    # É domínio/rss? + pid={}
-    if re.search(ma.ACTION_SCLBR_RSS.format(scl_domain), hit.action_name):
-        if re.search(rege.REGEX_ISSUE_PID, hit.pid):
-            return ma.HIT_CONTENT_ISSUE_RSS
-        if re.search(rege.REGEX_JOURNAL_PID, hit.pid):
-            return ma.HIT_CONTENT_JOURNAL_RSS
+        # É domínio/rss? + pid={}
+        if re.search(ma.ACTION_SCLBR_RSS.format(scl_domain), hit.action_name):
+            if re.search(rege.REGEX_ISSUE_PID, hit.pid):
+                return ma.HIT_CONTENT_ISSUE_RSS
+            if re.search(rege.REGEX_JOURNAL_PID, hit.pid):
+                return ma.HIT_CONTENT_JOURNAL_RSS
 
-    # É domínio/revistas/ + página ou arquivo
-    if re.search(ma.ACTION_SCLBR_REVISTAS.format(scl_domain), hit.action_name):
-        if 'aboutj.htm' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_ABOUT
-        if 'edboard.htm' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_EDITORIAL
-        if 'instruc.htm' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_INSTRUCTIONS
-        if 'subscrp.htm' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_SUBSCRIPTION
-        return ma.HIT_CONTENT_JOURNAL_REVISTAS
+        # É domínio/revistas/ + página ou arquivo
+        if re.search(ma.ACTION_SCLBR_REVISTAS.format(scl_domain), hit.action_name):
+            if 'aboutj.htm' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_ABOUT
+            if 'edboard.htm' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_EDITORIAL
+            if 'instruc.htm' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_INSTRUCTIONS
+            if 'subscrp.htm' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_SUBSCRIPTION
+            return ma.HIT_CONTENT_JOURNAL_REVISTAS
 
-    # É domínio/google_metrics/get_h5_m5.php? + issn={}
-    if re.search(ma.ACTION_SCLBR_GOOGLE_METRICS_H5_M5.format(scl_domain), hit.action_name):
-        return ma.HIT_CONTENT_JOURNAL_GOOGLE_METRICS
+        # É domínio/google_metrics/get_h5_m5.php? + issn={}
+        if re.search(ma.ACTION_SCLBR_GOOGLE_METRICS_H5_M5.format(scl_domain), hit.action_name):
+            return ma.HIT_CONTENT_JOURNAL_GOOGLE_METRICS
 
-    # É domínio/img/{fbpe ou revistas} + acrônimo
-    if re.search(ma.ACTION_SCLBR_IMG.format(scl_domain), hit.action_name):
-        if 'fbpe' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_IMG_FBPE
-        if 'revistas' in hit.action_name:
-            return ma.HIT_CONTENT_JOURNAL_IMG_REVISTAS
+        # É domínio/img/{fbpe ou revistas} + acrônimo
+        if re.search(ma.ACTION_SCLBR_IMG.format(scl_domain), hit.action_name):
+            if 'fbpe' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_IMG_FBPE
+            if 'revistas' in hit.action_name:
+                return ma.HIT_CONTENT_JOURNAL_IMG_REVISTAS
 
-    # É domínio/statjournal.php? + issn={}
-    if re.search(ma.ACTION_SCLBR_STATJOURNAL.format(scl_domain), hit.action_name):
-        return ma.HIT_CONTENT_JOURNAL_STAT
+        # É domínio/statjournal.php? + issn={}
+        if re.search(ma.ACTION_SCLBR_STATJOURNAL.format(scl_domain), hit.action_name):
+            return ma.HIT_CONTENT_JOURNAL_STAT
 
-    # É domínio/avaliacao
-    if re.search(ma.ACTION_SCLBR_AVALIACAO.format(scl_domain), hit.action_name):
-        return ma.HIT_CONTENT_PLATFORM_EVALUATION
+        # É domínio/avaliacao
+        if re.search(ma.ACTION_SCLBR_AVALIACAO.format(scl_domain), hit.action_name):
+            return ma.HIT_CONTENT_PLATFORM_EVALUATION
 
-    # É domínio/equipe
-    if re.search(ma.ACTION_SCLBR_EQUIPE.format(scl_domain), hit.action_name):
-        return ma.HIT_CONTENT_PLATFORM_TEAM
+        # É domínio/equipe
+        if re.search(ma.ACTION_SCLBR_EQUIPE.format(scl_domain), hit.action_name):
+            return ma.HIT_CONTENT_PLATFORM_TEAM
 
-    # É domínio (scielo.br, scielo.org.ar, ...)
-    if re.search(scl_domain, hit.action_name):
-        return ma.HIT_CONTENT_PLATFORM_HOME
+        # É domínio (scielo.br, scielo.org.ar, ...)
+        if re.search(scl_domain, hit.action_name):
+            return ma.HIT_CONTENT_PLATFORM_HOME
 
     return ma.HIT_CONTENT_OTHERS
 
@@ -563,22 +564,6 @@ def get_format(hit):
         hit_format = values.DEFAULT_FORMAT
 
     return hit_format
-
-
-def get_collection(action: str):
-    """
-    Obtém a coleção associada ao Hit (acesso)
-
-    @param: um Hit
-    @return: a coleção associada ao Hit
-    """
-    if not action.startswith('http'):
-        action = ''.join(['http://', action])
-
-    url_parsed = parse.urlparse(action)
-    if url_parsed and url_parsed.hostname:
-        return dicts.domain_to_collection.get(url_parsed.hostname.replace('www.', ''), '')
-    return ''
 
 
 def is_new_url_format(action: str):
