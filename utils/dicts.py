@@ -18,33 +18,6 @@ script_to_hit_content = {
     'sci_subject': ma.HIT_CONTENT_PLATFORM_LIST_JOURNALS_SUBJECT,
 }
 
-# Mapeia domínio ao acrônimo da respectiva coleção
-domain_to_collection = {
-    'scielo.org.ar': 'arg',
-    'scielo.org.bo': 'bol',
-    'scielo.cl': 'chl',
-    'scielo.sa.cr': 'cri',
-    'scielo.org.co': 'col',
-    'scielo.sld.cu': 'cub',
-    'scielo.senescyt.gob.ec': 'ecu',
-    'scielo.isciii.es': 'esp',
-    'scielo.org.mx': 'mex',
-    'new.scielo.br': 'nbr',
-    'scielo.org.pe': 'per',
-    'scielo.mec.pt': 'prt',
-    'scielo.iics.una.py': 'pry',
-    'pepsic.bvsalud.org': 'psi',
-    'preprints.scielo.org': 'pre',
-    'revenf.bvs.br': 'rve',
-    'scielo.br': 'scl',
-    'scielosp.org': 'ssp',
-    'socialsciences.scielo.org': 'sss',
-    'scielo.org.za': 'sza',
-    'scielo.edu.uy': 'ury',
-    'scielo.org.ve': 'ven',
-    'westindies.scielo.org': 'wid'
-}
-
 # Mapeia acrônimo de coleção ao domínio
 collection_to_domain = {
     'arg': 'scielo.org.ar',
