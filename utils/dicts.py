@@ -57,7 +57,7 @@ collection_to_default_language = {
     'mex': 'es',
     'nbr': 'pt',
     'per': 'es',
-    'pre': 'nd',
+    'pre': 'und',
     'prt': 'es',
     'pry': 'es',
     'psi': 'pt',
