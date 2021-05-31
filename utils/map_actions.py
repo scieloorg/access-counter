@@ -34,7 +34,7 @@ ACTION_SCLBR_STATJOURNAL = SCL_DOMAIN + '/statjournal.php?'
 ACTION_SCLBR_WXIS = SCL_DOMAIN + '/cgi-bin/wxis.exe'
 
 # URLs em formato novo passíveis de rastreamento
-ACTION_NEW_SCLBR = 'new.scielo.br'
+ACTION_NEW_SCLBR = '{0}'
 ACTION_NEW_SCLBR_EQUIPE = ACTION_NEW_SCLBR + '/about/equipe_scielo'
 ACTION_NEW_SCLBR_PERIODICO = ACTION_NEW_SCLBR + '/j/{}'
 ACTION_NEW_SCLBR_PERIODICO_ARTIGO = ACTION_NEW_SCLBR_PERIODICO + '/a/{}'
