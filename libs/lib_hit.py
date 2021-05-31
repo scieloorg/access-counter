@@ -566,22 +566,6 @@ def get_format(hit):
     return hit_format
 
 
-def get_collection(action: str):
-    """
-    Obtém a coleção associada ao Hit (acesso)
-
-    @param: um Hit
-    @return: a coleção associada ao Hit
-    """
-    if not action.startswith('http'):
-        action = ''.join(['http://', action])
-
-    url_parsed = parse.urlparse(action)
-    if url_parsed and url_parsed.hostname:
-        return dicts.domain_to_collection.get(url_parsed.hostname.replace('www.', ''), '')
-    return ''
-
-
 def is_new_url_format(action: str):
     for pattern in [rege.REGEX_NEW_SCL_JOURNAL_ARTICLE_ABSTRACT,
                     rege.REGEX_NEW_SCL_JOURNAL_ARTICLE,
