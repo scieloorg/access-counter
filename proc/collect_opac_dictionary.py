@@ -13,11 +13,11 @@ OPAC_ENDPOINT = os.environ.get('OPAC_ENDPOINT', 'https://new.scielo.br/api/v1/co
 OPAC_DICTIONARY_PREFIX = os.environ.get('OPAC_DICTIONARY_PREFIX', 'opac-counter-dict-')
 
 
-def collect(date: str):
+def collect(date: str, page=1):
     try:
         until_date = datetime.datetime.strptime(date, '%Y-%m-%d')
 
-        response = requests.get(url=OPAC_ENDPOINT, params={'end_date': until_date.strftime('%Y-%m-%d')}, verify=False)
+        response = requests.get(url=OPAC_ENDPOINT, params={'end_date': until_date.strftime('%Y-%m-%d'), 'page': page}, verify=False)
         if response.status_code == 200:
             return response.json()
 
