@@ -511,6 +511,10 @@ def get_content_type(hit):
     return ma.HIT_CONTENT_OTHERS
 
 
+def get_language_new_url(hit, pid2format2lang: dict):
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', '')
+
+
 def get_language(hit, pid2format2lang: dict):
     """
     Obtém o idioma do recurso acessado com base em dicionário de PIDs, formato e idiomas
