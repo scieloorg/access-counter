@@ -46,9 +46,14 @@ def main():
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
 
-    logging.info('Obtendo dados do OPAC para date=%s' % params.date)
-    data = collect(params.date)
-
-    logging.info('Armazenando...')
-    filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '.json'])
+    logging.info('Obtendo dados do OPAC para date=%s e página=%d' % (params.date, 1))
+    filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '-p', '1', '.json'])
+    data = collect(params.date, page=1)
     save(data, filename)
+
+    pages = int(data.get('pages', '1'))
+    for i in range(2, pages + 1):
+        logging.info('Obtendo dados do OPAC para date=%s e página=%d de %d' % (params.date, i, pages))
+        filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '-p', str(i), '.json'])
+        data_i = collect(params.date, page=i)
+        save(data_i, filename)
