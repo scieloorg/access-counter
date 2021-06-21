@@ -216,9 +216,9 @@ class HitManager:
                 if len(self.pid_to_issn[hit.pid]) > 2:
                     logging.warning('PID %s está associado a mais de dois ISSNs: %s' %(hit.pid, self.pid_to_issn[hit.pid]))
 
-            # ToDo: atualizar os dicionários de ano de publicação e idiomas oficiais suportados
-            hit.yop = lib_hit.get_year_of_publication(hit, self.pid_to_yop)
-            hit.lang = lib_hit.get_language(hit, self.pid_to_format_lang)
+            hit.yop = lib_hit.get_year_of_publication_new_url(hit, self.pid_to_yop)
+            if not hit.lang:
+                hit.lang = lib_hit.get_language_new_url(hit, self.pid_to_format_lang)
 
     def _set_hit_attrs_classic_url(self, hit):
         hit.action_name = hit.action_name.lower()
