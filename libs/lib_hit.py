@@ -248,6 +248,10 @@ def _get_acronym_and_pid_from_action_new_url(action: str):
     return '', ''
 
 
+def get_year_of_publication_new_url(hit, pid2yop: dict):
+    return pid2yop.get(hit.collection, {}).get(hit.pid, {}).get('publication_year', '')
+
+
 def get_year_of_publication(hit, pid2yop: dict):
     """
     Obtém o ano de publicação (yop) associado ao PID.
