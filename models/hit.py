@@ -202,7 +202,7 @@ class HitManager:
         hit.hit_type = lib_hit.get_hit_type_new_url(hit.action_name.lower())
 
         if hit.hit_type == at.HIT_TYPE_ARTICLE:
-            # ToDo: ao atualizar dicionários, esse tratamento não será mais necessário
+            # Dicionário de acrônimos não contém coleção nbr - os dados são idênticos ao da coleção scl
             collection_to_check = 'scl' if hit.collection == 'nbr' else hit.collection
 
             if 'issn' not in hit.__dict__.keys() or not hit.issn:
