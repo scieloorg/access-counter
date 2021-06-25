@@ -76,3 +76,7 @@ REGEX_PREPRINT_VERSION_DOWNLOAD_PDF = r'preprint/download/(\d+)/version/(\d+)/(\
 # Detecta coleção e data de dicionário OPAC
 REGEX_OPAC_DICTIONARY = r'opac-counter-dict-(\w{3})-\d{4}-\d{2}-\d{2}-p\d*.json'
 REGEX_YEAR = r'1\d{3}|20\d{2}'
+
+# Detecta dicionário Preprint
+REGEX_PREPRINT_DICTIONARY = r'pre-counter-dict-(\d{4}-\d{2}-\d{2}).json'
+REGEX_PREPRINT_PID_PREFIX = r'oai:ops\.preprints\.scielo\.org:preprint\/(\d*)'

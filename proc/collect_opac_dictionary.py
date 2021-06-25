@@ -9,7 +9,7 @@ import requests
 COLLECTION = os.environ.get('COLLECTION', 'scl')
 DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
 DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
-OPAC_ENDPOINT = os.environ.get('OPAC_ENDPOINT', 'https://new.scielo.br/api/v1/counter_dict')
+OPAC_ENDPOINT = os.environ.get('OPAC_ENDPOINT', 'https://scielo.br/api/v1/counter_dict')
 OPAC_DICTIONARY_PREFIX = os.environ.get('OPAC_DICTIONARY_PREFIX', 'opac-counter-dict-')
 
 

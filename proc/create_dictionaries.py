@@ -9,7 +9,7 @@ import re
 from dateutil import parser as date_parser
 from pymongo import MongoClient, uri_parser
 from urllib.parse import urlparse
-from utils.regular_expressions import REGEX_OPAC_DICTIONARY, REGEX_YEAR
+from utils.regular_expressions import REGEX_OPAC_DICTIONARY, REGEX_PREPRINT_DICTIONARY, REGEX_YEAR
 
 
 ARTICLEMETA_DATABASE_STRING = os.environ.get('ARTICLEMETA_DATABASE_STRING', 'mongodb://username:password@host:port/database.collection')
@@ -21,22 +21,28 @@ DOMAINS = set()
 FULLTEXT_MODES = ['pdf', 'html']
 
 
-def _get_opac_files(dir_dictionaries):
+def _get_json_files(dir_dictionaries):
     json_files = [f for f in os.listdir(dir_dictionaries) if f.endswith('.json')]
 
     opac_files = {}
-    for jf in json_files:
-        jf_match = re.match(REGEX_OPAC_DICTIONARY, jf)
+    preprint_files = []
 
-        if jf_match:
-            jf_collection = jf_match.group(1)
+    for jf in json_files:
+        jf_match_opac = re.match(REGEX_OPAC_DICTIONARY, jf)
+
+        if jf_match_opac:
+            jf_collection = jf_match_opac.group(1)
 
             if jf_collection not in opac_files:
                 opac_files[jf_collection] = []
 
             opac_files[jf_collection].append(os.path.join(dir_dictionaries, jf))
 
-    return opac_files
+        jf_match_preprint = re.match(REGEX_PREPRINT_DICTIONARY, jf)
+        if jf_match_preprint:
+            preprint_files.append(os.path.join(dir_dictionaries, jf))
+
+    return opac_files, preprint_files
 
 
 def _put_date(date_str, date_name, data):
@@ -64,9 +70,10 @@ def _extract_year(date_str):
         return ''
 
 
-def load_opac_dictionary(dir_dictionaries):
-    opac_files = _get_opac_files(dir_dictionaries)
+def load_other_dictionaries(dir_dictionaries):
+    opac_files, preprint_files = _get_json_files(dir_dictionaries)
     opac_dict = {}
+    preprint_dict = {'pre': {}}
 
     for collection, files in opac_files.items():
         if collection not in opac_dict:
@@ -88,21 +95,27 @@ def load_opac_dictionary(dir_dictionaries):
                         if new_created_date > existing_created_date:
                             opac_dict[collection][pid] = values
 
-    return opac_dict
+    for file in preprint_files:
+        with open(file) as fin:
+            preprint_metadata = json.load(fin)
+
+            for pid, values in preprint_metadata.items():
+                if pid not in preprint_dict['pre']:
+                    preprint_dict['pre'][pid] = values
+
+    return opac_dict, preprint_dict
 
 
-def add_opac_dict_to_dates_dict(opac_dict, dates_dict):
-    for collection, pids in opac_dict.items():
+def add_info_to_dates_dict(data, dates_dict):
+    for collection, pids in data.items():
         if collection not in dates_dict:
             dates_dict[collection] = {}
 
-        for pid, values in pids.items():
+        for pid, values in data[collection].items():
             if pid not in dates_dict[collection]:
                 dates_dict[collection][pid] = {}
 
             publication_date = values.get('publication_date')
-            create_date = values.get('create')
-            update_date = values.get('update')
 
             if publication_date:
                 dates_dict[collection][pid]['publication_date'] = publication_date
@@ -111,12 +124,13 @@ def add_opac_dict_to_dates_dict(opac_dict, dates_dict):
                 if year:
                     dates_dict[collection][pid].update({'publication_year': year})
 
-            _put_date(create_date, 'created_at', dates_dict[collection][pid])
-            _put_date(update_date, 'updated_at', dates_dict[collection][pid])
+            if collection != 'pre':
+                _put_date(values.get('create'), 'created_at', dates_dict[collection][pid])
+                _put_date(values.get('update'), 'updated_at', dates_dict[collection][pid])
 
 
-def add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang_dict):
-    for collection, pids in opac_dict.items():
+def add_info_to_pid_format_lang(data, pid_format_lang_dict):
+    for collection, pids in data.items():
         if collection not in pid_format_lang_dict:
             pid_format_lang_dict[collection] = {}
 
@@ -483,14 +497,16 @@ def main():
 
     fix_issn_acronym_errors(issn_acronym)
 
-    logging.info('Carregando dados de OPAC...')
-    opac_dict = load_opac_dictionary(DIR_DICTIONARIES)
+    logging.info('Carregando dados de OPAC e de Preprints...')
+    opac_dict, preprint_dict = load_other_dictionaries(DIR_DICTIONARIES)
 
     logging.info('Atualizando dicionário de datas...')
-    add_opac_dict_to_dates_dict(opac_dict, pid_dates)
+    add_info_to_dates_dict(opac_dict, pid_dates)
+    add_info_to_dates_dict(preprint_dict, pid_dates)
 
     logging.info('Atualizando dicionário de idiomas...')
-    add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang)
+    add_info_to_pid_format_lang(opac_dict, pid_format_lang)
+    add_info_to_pid_format_lang(preprint_dict, pid_format_lang)
 
     logging.info('Gravando dicionários...')
     for d in [(pid_issns, 'pid-issn'),
