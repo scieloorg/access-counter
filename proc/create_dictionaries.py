@@ -120,11 +120,7 @@ def add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang_dict):
         if collection not in pid_format_lang_dict:
             pid_format_lang_dict[collection] = {}
 
-        counter = 0
         for pid, values in pids.items():
-            counter += 1
-            logging.info(str(counter))
-
             if pid not in pid_format_lang_dict[collection]:
                 pid_format_lang_dict[collection][pid] = {}
 

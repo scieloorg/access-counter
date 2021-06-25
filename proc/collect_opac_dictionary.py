@@ -13,11 +13,11 @@ OPAC_ENDPOINT = os.environ.get('OPAC_ENDPOINT', 'https://new.scielo.br/api/v1/co
 OPAC_DICTIONARY_PREFIX = os.environ.get('OPAC_DICTIONARY_PREFIX', 'opac-counter-dict-')
 
 
-def collect(date: str):
+def collect(date: str, page=1):
     try:
         until_date = datetime.datetime.strptime(date, '%Y-%m-%d')
 
-        response = requests.get(url=OPAC_ENDPOINT, params={'end_date': until_date.strftime('%Y-%m-%d')}, verify=False)
+        response = requests.get(url=OPAC_ENDPOINT, params={'end_date': until_date.strftime('%Y-%m-%d'), 'page': page}, verify=False)
         if response.status_code == 200:
             return response.json()
 
@@ -46,9 +46,14 @@ def main():
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
 
-    logging.info('Obtendo dados do OPAC para date=%s' % params.date)
-    data = collect(params.date)
-
-    logging.info('Armazenando...')
-    filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '.json'])
+    logging.info('Obtendo dados do OPAC para date=%s e página=%d' % (params.date, 1))
+    filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '-p', '1', '.json'])
+    data = collect(params.date, page=1)
     save(data, filename)
+
+    pages = int(data.get('pages', '1'))
+    for i in range(2, pages + 1):
+        logging.info('Obtendo dados do OPAC para date=%s e página=%d de %d' % (params.date, i, pages))
+        filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '-p', str(i), '.json'])
+        data_i = collect(params.date, page=i)
+        save(data_i, filename)
