@@ -12,7 +12,7 @@ COPY --from=build /deps/* /deps/
 COPY requirements.txt .
 
 RUN apk add --no-cache --virtual .build-deps gcc g++ \
-    && apk add --no-cache mariadb-dev \
+    && apk add --no-cache mariadb-dev libxslt-dev \
     && pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
     && pip install --no-index --find-links=file:///deps -U scielo-usage-counter \
