@@ -103,18 +103,19 @@ def load_other_dictionaries(dir_dictionaries):
                 if pid not in preprint_dict['pre']:
                     preprint_dict['pre'][pid] = values
 
-def add_opac_dict_to_dates_dict(opac_dict, dates_dict):
-    for collection, pids in opac_dict.items():
+    return opac_dict, preprint_dict
+
+
+def add_info_to_dates_dict(data, dates_dict):
+    for collection, pids in data.items():
         if collection not in dates_dict:
             dates_dict[collection] = {}
 
-        for pid, values in pids.items():
+        for pid, values in data[collection].items():
             if pid not in dates_dict[collection]:
                 dates_dict[collection][pid] = {}
 
             publication_date = values.get('publication_date')
-            create_date = values.get('create')
-            update_date = values.get('update')
 
             if publication_date:
                 dates_dict[collection][pid]['publication_date'] = publication_date
@@ -123,8 +124,9 @@ def add_opac_dict_to_dates_dict(opac_dict, dates_dict):
                 if year:
                     dates_dict[collection][pid].update({'publication_year': year})
 
-            _put_date(create_date, 'created_at', dates_dict[collection][pid])
-            _put_date(update_date, 'updated_at', dates_dict[collection][pid])
+            if collection != 'pre':
+                _put_date(values.get('create'), 'created_at', dates_dict[collection][pid])
+                _put_date(values.get('update'), 'updated_at', dates_dict[collection][pid])
 
 
 def add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang_dict):
