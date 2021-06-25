@@ -129,8 +129,8 @@ def add_info_to_dates_dict(data, dates_dict):
                 _put_date(values.get('update'), 'updated_at', dates_dict[collection][pid])
 
 
-def add_opac_dict_to_pid_format_lang(opac_dict, pid_format_lang_dict):
-    for collection, pids in opac_dict.items():
+def add_info_to_pid_format_lang(data, pid_format_lang_dict):
+    for collection, pids in data.items():
         if collection not in pid_format_lang_dict:
             pid_format_lang_dict[collection] = {}
 
