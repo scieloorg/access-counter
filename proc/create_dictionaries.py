@@ -70,9 +70,10 @@ def _extract_year(date_str):
         return ''
 
 
-def load_opac_dictionary(dir_dictionaries):
-    opac_files = _get_opac_files(dir_dictionaries)
+def load_other_dictionaries(dir_dictionaries):
+    opac_files, preprint_files = _get_json_files(dir_dictionaries)
     opac_dict = {}
+    preprint_dict = {'pre': {}}
 
     for collection, files in opac_files.items():
         if collection not in opac_dict:
@@ -94,8 +95,13 @@ def load_opac_dictionary(dir_dictionaries):
                         if new_created_date > existing_created_date:
                             opac_dict[collection][pid] = values
 
-    return opac_dict
+    for file in preprint_files:
+        with open(file) as fin:
+            preprint_metadata = json.load(fin)
 
+            for pid, values in preprint_metadata.items():
+                if pid not in preprint_dict['pre']:
+                    preprint_dict['pre'][pid] = values
 
 def add_opac_dict_to_dates_dict(opac_dict, dates_dict):
     for collection, pids in opac_dict.items():
