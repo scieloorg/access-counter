@@ -2,7 +2,9 @@ import argparse
 import json
 import logging
 import os
+import re
 
+from utils.regular_expressions import REGEX_PREPRINT_PID_PREFIX
 from sickle import Sickle
 
 
@@ -14,14 +16,10 @@ PREPRINT_DICTIONARY_PREFIX = os.environ.get('PREPRINT_DICTIONARY_PREFIX', 'pre-c
 
 
 def parse(record):
-    if len(record.metadata.get('date')) > 0:
-        print(record.header.identifier)
-
-    if len(record.metadata.get('language')) > 0:
-        print(record.header.identifier)
+    preprint_pid = re.match(REGEX_PREPRINT_PID_PREFIX, record.header.identifier).group(1)
 
     return {
-        record.header.identifier: {
+        preprint_pid: {
             'publication_date': record.metadata.get('date').pop(),
             'default_language': record.metadata.get('language').pop()
         }
