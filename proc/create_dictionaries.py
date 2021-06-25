@@ -21,22 +21,28 @@ DOMAINS = set()
 FULLTEXT_MODES = ['pdf', 'html']
 
 
-def _get_opac_files(dir_dictionaries):
+def _get_json_files(dir_dictionaries):
     json_files = [f for f in os.listdir(dir_dictionaries) if f.endswith('.json')]
 
     opac_files = {}
-    for jf in json_files:
-        jf_match = re.match(REGEX_OPAC_DICTIONARY, jf)
+    preprint_files = []
 
-        if jf_match:
-            jf_collection = jf_match.group(1)
+    for jf in json_files:
+        jf_match_opac = re.match(REGEX_OPAC_DICTIONARY, jf)
+
+        if jf_match_opac:
+            jf_collection = jf_match_opac.group(1)
 
             if jf_collection not in opac_files:
                 opac_files[jf_collection] = []
 
             opac_files[jf_collection].append(os.path.join(dir_dictionaries, jf))
 
-    return opac_files
+        jf_match_preprint = re.match(REGEX_PREPRINT_DICTIONARY, jf)
+        if jf_match_preprint:
+            preprint_files.append(os.path.join(dir_dictionaries, jf))
+
+    return opac_files, preprint_files
 
 
 def _put_date(date_str, date_name, data):
