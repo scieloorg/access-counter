@@ -70,6 +70,16 @@ def _extract_year(date_str):
         return ''
 
 
+def normalized_language(language):
+    if language == 'por':
+        return 'pt'
+    if language == 'eng':
+        return 'en'
+    if language == 'spa':
+        return 'es'
+    return language
+
+
 def load_other_dictionaries(dir_dictionaries):
     opac_files, preprint_files = _get_json_files(dir_dictionaries)
     opac_dict = {}
@@ -141,7 +151,8 @@ def add_info_to_pid_format_lang(data, pid_format_lang_dict):
             default_lang = values.get('default_language', '')
 
             if default_lang:
-                pid_format_lang_dict[collection][pid].update({'default': default_lang})
+                norm_default_lang = normalize_language(default_lang)
+                pid_format_lang_dict[collection][pid].update({'default': norm_default_lang})
 
 
 def load_old_dictionaries(dir_dictionaries, version):

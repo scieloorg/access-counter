@@ -267,8 +267,8 @@ class HitManager:
 
         hit.content_type = lib_hit.get_content_type_preprints(hit)
         hit.format = lib_hit.get_format_preprints(hit)
-        hit.lang = lib_hit.get_language_preprints(hit)
-        hit.yop = lib_hit.get_year_of_publication_preprints(hit)
+        hit.lang = lib_hit.get_language_preprints(hit, self.pid_to_format_lang)
+        hit.yop = lib_hit.get_year_of_publication_preprints(hit, self.pid_to_yop)
 
     def _set_hit_attrs_ssp_url(self, hit):
         hit.action_params = lib_hit.get_url_params_from_action_ssp_url(hit.action_name)
