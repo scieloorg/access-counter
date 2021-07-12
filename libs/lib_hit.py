@@ -633,14 +633,12 @@ def get_pid_preprint(hit):
             return match.group(1)
 
 
-# ToDo: Integrar com dicionário ainda a ser construído
-def get_language_preprints(hit):
-    return 'df'
+def get_language_preprints(hit, pid2format2lang: dict):
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', '')
 
 
-# ToDo: Integrar com dicionário ainda a ser construído
-def get_year_of_publication_preprints(hit):
-    return '2021'
+def get_year_of_publication_preprints(hit, pid2yop: dict):
+    return pid2yop.get(hit.collection, {}).get(hit.pid, {}).get('publication_year', '')
 
 
 def get_hit_type_ssp(action: str):
