@@ -70,7 +70,7 @@ def _extract_year(date_str):
         return ''
 
 
-def normalized_language(language):
+def normalize_language(language):
     if language == 'por':
         return 'pt'
     if language == 'eng':
