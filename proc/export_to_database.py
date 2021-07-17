@@ -389,6 +389,10 @@ def persist_metrics(r5_metrics, db_session, maps, key_list, table_class, collect
     :param table_class: Classe que representa a tabela a ser persistida
     :param collection: acrônimo da coleção
     """
+    # Retorna Trua caso não existam dados a serem gravados
+    if len(r5_metrics) == 0:
+        return True
+
     objects = []
 
     # Obtém um dicionário de métricas agregadas pelos valores associados a chave de key_list
