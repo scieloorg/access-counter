@@ -5,6 +5,7 @@ from urllib import parse
 from utils import values, dicts
 from utils import map_actions as ma
 from utils import regular_expressions as rege
+from values import LANGUAGE_UNDEFINED
 
 
 def article_pid_to_issue_code(pid: str):
@@ -512,7 +513,7 @@ def get_content_type(hit):
 
 
 def get_language_new_url(hit, pid2format2lang: dict):
-    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', '')
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
 
 
 def get_language(hit, pid2format2lang: dict):
@@ -523,34 +524,15 @@ def get_language(hit, pid2format2lang: dict):
     @param pid2format2lang: um dicionário que mapeia PID aos seus respectivos formatos e idiomas
     @return: o idioma associado ao Hit
     """
-    # Idioma padrão originário do dicionário
-    pid_langs = pid2format2lang.get(hit.collection, {}).get(hit.pid)
-    if not pid_langs:
-        logging.debug('PID não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
-                                                                                                        hit.format,
-                                                                                                        hit.action_name))
+    if hit.pid not in pid2format2lang.get(hit.collection, {}):
+        logging.debug('PID não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid, hit.format, hit.action_name))
+        return LANGUAGE_UNDEFINED
 
-    default_lang = pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default')
-    if not default_lang:
-        logging.debug('Idioma padrão não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid,
-                                                                                                                  hit.format,
-                                                                                                                  hit.action_name))
-        default_lang = dicts.collection_to_default_language[hit.collection]
-
-    # Se idioma já está definido, verifica se é válido
-    if hit.lang:
-        # Idiomas possíveis
-        format_possible_langs = pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get(hit.format, set())
-
-        # Se idioma obtido da URL não é válido, atribui idioma padrão
-        if hit.lang not in format_possible_langs:
-            language = default_lang
-        else:
-            language = hit.lang
+    if hit.lang in pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get(hit.format, set()):
+        return hit.lang
     else:
-        language = default_lang
-
-    return language
+        logging.debug('Idioma não consta em lista de idiomas associáveis ao PID e formato (PID: %s, FMT: %s, Lang: %s)' % (hit.pid, hit.format, hit.lang))
+        return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
 
 
 def get_format(hit):
@@ -634,7 +616,7 @@ def get_pid_preprint(hit):
 
 
 def get_language_preprints(hit, pid2format2lang: dict):
-    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', '')
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
 
 
 def get_year_of_publication_preprints(hit, pid2yop: dict):
@@ -783,7 +765,7 @@ def get_ssp_pid(action_params):
 
 # ToDo: Integrar com dicionário ainda a ser construído
 def get_language_ssp(pid: str, pid2format2lang: dict):
-    return pid2format2lang.get('spa', {}).get(pid, '')
+    return pid2format2lang.get('spa', {}).get(pid, LANGUAGE_UNDEFINED)
 
 
 # ToDo: Integrar com dicionário ainda a ser construído
