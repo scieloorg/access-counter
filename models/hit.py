@@ -223,7 +223,7 @@ class HitManager:
                     logging.warning('PID %s está associado a mais de dois ISSNs: %s' %(hit.pid, self.pid_to_issn[hit.pid]))
 
             hit.yop = lib_hit.get_year_of_publication_new_url(hit, self.pid_to_yop)
-            if not hit.lang:
+            if not hit.lang or not hit.has_valid_language():
                 hit.lang = lib_hit.get_language_new_url(hit, self.pid_to_format_lang)
 
     def _set_hit_attrs_classic_url(self, hit):
@@ -298,7 +298,7 @@ class HitManager:
                     logging.warning('PID %s está associado a mais de dois ISSNs: %s' %(hit.pid, self.pid_to_issn[hit.pid]))
 
             hit.yop = lib_hit.get_year_of_publication_ssp_pid(hit.pid)
-            if not hit.lang:
+            if not hit.lang or not hit.has_valid_language():
                 hit.lang = lib_hit.get_language_ssp(hit.pid, self.pid_to_format_lang)
 
     def reset(self):
