@@ -88,6 +88,12 @@ class Hit:
 
         return True
 
+    def has_valid_language(self):
+        if len(self.lang) == 2 or len(self.lang) == 3:
+            if self.lang.isalpha():
+                return True
+        return False
+
 
 class HitManager:
     """
