@@ -635,7 +635,7 @@ def get_pid_preprint(hit):
 
 
 def get_language_preprints(hit, pid2format2lang: dict):
-    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', '')
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
 
 
 def get_year_of_publication_preprints(hit, pid2yop: dict):
