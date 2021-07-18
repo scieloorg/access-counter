@@ -5,7 +5,6 @@ from urllib import parse
 from utils import values, dicts
 from utils import map_actions as ma
 from utils import regular_expressions as rege
-from values import LANGUAGE_UNDEFINED
 
 
 def article_pid_to_issue_code(pid: str):
@@ -513,7 +512,7 @@ def get_content_type(hit):
 
 
 def get_language_new_url(hit, pid2format2lang: dict):
-    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', values.LANGUAGE_UNDEFINED)
 
 
 def get_language(hit, pid2format2lang: dict):
@@ -526,13 +525,13 @@ def get_language(hit, pid2format2lang: dict):
     """
     if hit.pid not in pid2format2lang.get(hit.collection, {}):
         logging.debug('PID não encontrado em PID-Formato-Idiomas (PID: %s, FMT: %s, ActionName: %s)' % (hit.pid, hit.format, hit.action_name))
-        return LANGUAGE_UNDEFINED
+        return values.LANGUAGE_UNDEFINED
 
     if hit.lang in pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get(hit.format, set()):
         return hit.lang
     else:
         logging.debug('Idioma não consta em lista de idiomas associáveis ao PID e formato (PID: %s, FMT: %s, Lang: %s)' % (hit.pid, hit.format, hit.lang))
-        return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
+        return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', values.LANGUAGE_UNDEFINED)
 
 
 def get_format(hit):
@@ -616,7 +615,7 @@ def get_pid_preprint(hit):
 
 
 def get_language_preprints(hit, pid2format2lang: dict):
-    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', values.LANGUAGE_UNDEFINED)
 
 
 def get_year_of_publication_preprints(hit, pid2yop: dict):
@@ -765,7 +764,7 @@ def get_ssp_pid(action_params):
 
 # ToDo: Integrar com dicionário ainda a ser construído
 def get_language_ssp(pid: str, pid2format2lang: dict):
-    return pid2format2lang.get('spa', {}).get(pid, LANGUAGE_UNDEFINED)
+    return pid2format2lang.get('spa', {}).get(pid, values.LANGUAGE_UNDEFINED)
 
 
 # ToDo: Integrar com dicionário ainda a ser construído
