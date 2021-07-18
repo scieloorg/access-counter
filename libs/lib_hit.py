@@ -784,7 +784,7 @@ def get_ssp_pid(action_params):
 
 # ToDo: Integrar com dicionário ainda a ser construído
 def get_language_ssp(pid: str, pid2format2lang: dict):
-    return pid2format2lang.get('spa', {}).get(pid, '')
+    return pid2format2lang.get('spa', {}).get(pid, LANGUAGE_UNDEFINED)
 
 
 # ToDo: Integrar com dicionário ainda a ser construído
