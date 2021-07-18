@@ -5,6 +5,7 @@ from urllib import parse
 from utils import values, dicts
 from utils import map_actions as ma
 from utils import regular_expressions as rege
+from values import LANGUAGE_UNDEFINED
 
 
 def article_pid_to_issue_code(pid: str):
@@ -512,7 +513,7 @@ def get_content_type(hit):
 
 
 def get_language_new_url(hit, pid2format2lang: dict):
-    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', '')
+    return pid2format2lang.get(hit.collection, {}).get(hit.pid, {}).get('default', LANGUAGE_UNDEFINED)
 
 
 def get_language(hit, pid2format2lang: dict):
