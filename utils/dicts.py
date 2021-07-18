@@ -45,32 +45,6 @@ collection_to_domain = {
     'wid': ['westindies.scielo.org']
 }
 
-collection_to_default_language = {
-    'arg': 'es',
-    'bol': 'es',
-    'chl': 'es',
-    'cri': 'es',
-    'col': 'es',
-    'cub': 'es',
-    'ecu': 'es',
-    'esp': 'es',
-    'mex': 'es',
-    'nbr': 'pt',
-    'per': 'es',
-    'pre': 'und',
-    'prt': 'es',
-    'pry': 'es',
-    'psi': 'pt',
-    'rve': 'pt',
-    'scl': 'pt',
-    'ssp': 'pt',
-    'sss': 'es',
-    'sza': 'en',
-    'ury': 'es',
-    'ven': 'es',
-    'wid': 'en'
-}
-
 # Mapeia acrônimo do idioma ao respectivo código numérico usado na base de dados
 language_to_code = {
     'pt': 1,
