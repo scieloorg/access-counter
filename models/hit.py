@@ -34,6 +34,9 @@ class Hit:
         # URL da ação
         self.action_name = kargs.get('actionName', '')
 
+        # Um boleano que indica se o Hit é válido
+        self.valid = True
+
     def _is_from_local_network(self):
         if not self.latitude or self.latitude.lower() in {'', 'null'}:
             return True
@@ -87,8 +90,8 @@ class Hit:
             return False
 
         # Verifica se Hit foi invalidado
-        if self.invalid:
-            logging.warning('Hit (%s) possui formato inválido: %s' % (self.action_name, self.format))
+        if not self.valid:
+            logging.warning('Hit (%s) é inválido' % self.action_name)
             return False
 
         return True
@@ -215,11 +218,11 @@ class HitManager:
             hit.pid = hit.action_params['pid']
 
         if not hit.has_valid_format():
-            hit.invalid = True
+            hit.valid = False
             return
 
         if hit.pid not in self.pid_to_format_lang.get(hit.collection, {}):
-            hit.invalid = True
+            hit.valid = False
             return
 
         hit.content_type = lib_hit.get_content_type_new_url(hit)
