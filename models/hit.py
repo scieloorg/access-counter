@@ -94,6 +94,11 @@ class Hit:
                 return True
         return False
 
+    def has_valid_format(self):
+        if self.format in values.VALID_FORMATS:
+            return True
+        return False
+
 
 class HitManager:
     """
