@@ -86,12 +86,22 @@ class Hit:
             logging.debug('Hit ignorado. PID não está definido (HitType: %s, ActionName: %s' % (self.hit_type, self.action_name))
             return False
 
+        # Verifica se Hit foi invalidado
+        if self.invalid:
+            logging.warning('Hit (%s) possui formato inválido: %s' % (self.action_name, self.format))
+            return False
+
         return True
 
     def has_valid_language(self):
         if len(self.lang) == 2 or len(self.lang) == 3:
             if self.lang.isalpha():
                 return True
+        return False
+
+    def has_valid_format(self):
+        if self.format in values.VALID_FORMATS:
+            return True
         return False
 
 
@@ -203,6 +213,10 @@ class HitManager:
             hit.issn = hit.action_params['issn'].upper()
             hit.format = hit.action_params['format'].lower()
             hit.pid = hit.action_params['pid']
+
+        if not hit.has_valid_format():
+            hit.invalid = True
+            return
 
         hit.content_type = lib_hit.get_content_type_new_url(hit)
         hit.hit_type = lib_hit.get_hit_type_new_url(hit.action_name.lower())

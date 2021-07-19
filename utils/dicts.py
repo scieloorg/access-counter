@@ -58,7 +58,8 @@ language_to_code = {
 # Mapeia acrônimo do formato do conteúdo ao respectivo código numérico na base de dados
 format_to_code = {
     'html': 1,
-    'pdf': 2
+    'pdf': 2,
+    'xml': 5
 }
 
 # Mapeia acrônimo da coleção ao respectivo código numérico na base de dados
