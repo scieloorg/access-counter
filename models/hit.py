@@ -218,6 +218,10 @@ class HitManager:
             hit.invalid = True
             return
 
+        if hit.pid not in self.pid_to_format_lang.get(hit.collection, {}):
+            hit.invalid = True
+            return
+
         hit.content_type = lib_hit.get_content_type_new_url(hit)
         hit.hit_type = lib_hit.get_hit_type_new_url(hit.action_name.lower())
 
@@ -234,7 +238,7 @@ class HitManager:
             else:
                 self.pid_to_issn[hit.pid].add(hit.issn)
                 if len(self.pid_to_issn[hit.pid]) > 2:
-                    logging.warning('PID %s está associado a mais de dois ISSNs: %s' %(hit.pid, self.pid_to_issn[hit.pid]))
+                    logging.warning('PID %s está associado a mais de dois ISSNs: %s' % (hit.pid, self.pid_to_issn[hit.pid]))
 
             hit.yop = lib_hit.get_year_of_publication_new_url(hit, self.pid_to_yop)
             if not hit.lang or not hit.has_valid_language():
