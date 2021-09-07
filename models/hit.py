@@ -222,11 +222,9 @@ class HitManager:
 
         if not hit.has_valid_format():
             hit.valid = False
-            return
 
         if hit.pid not in self.pid_to_format_lang.get(hit.collection, {}):
             hit.valid = False
-            return
 
         hit.content_type = lib_hit.get_content_type_new_url(hit)
         hit.hit_type = lib_hit.get_hit_type_new_url(hit.action_name.lower())
