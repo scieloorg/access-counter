@@ -128,7 +128,7 @@ class HitManager:
         # Flag para incluir na contagem outros tipos de Hit (Issue, Journal, Platform)
         self.flag_include_other_hit_types = flag_include_other_hit_types
 
-        # Utilizada para analisar corretude de lista de Hits e de Métricas
+        # Salve dados de métricas diretamente no banco de dados
         self.persist_on_database = persist_on_database
 
         # Salva dados de Hit no disco
