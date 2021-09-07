@@ -489,7 +489,8 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection, file_p
         export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection, pid_to_issn=hit_manager.pid_to_issn)
 
     logging.info('Salvando hits em disco...')
-    export_article_hits_to_csv(hit_manager.hits['article'], file_prefix, hit_manager.pid_to_issn)
+    if hit_manager.persist_hits_o_disk:
+        export_article_hits_to_csv(hit_manager.hits['article'], file_prefix, hit_manager.pid_to_issn)
 
     logging.info('Salvando métricas em disco...')
     export_article_metrics_to_csv(cs.metrics['article'], file_prefix, hit_manager.pid_to_issn)
@@ -538,6 +539,14 @@ def main():
         action='store_true',
         default=False,
         help='Também persiste resultados em banco de dados'
+    )
+
+    parser.add_argument(
+        '--persist_hits_on_disk',
+        dest='persist_hits_on_disk',
+        action='store_true',
+        default=False,
+        help='Grava Hits em disco'
     )
 
     parser.add_argument(
@@ -599,6 +608,7 @@ def main():
                              pid_to_format_lang=maps['pid-format-lang'],
                              pid_to_yop=maps['pid-dates'],
                              persist_on_database=params.persist_on_database,
+                             persist_hits_on_disk=params.persist_hits_on_disk,
                              flag_include_other_hit_types=params.include_other_hit_types)
 
     if params.use_pretables:
