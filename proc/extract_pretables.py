@@ -43,8 +43,10 @@ def save_pretable(str_date, query_result_data):
 
                 line = '\t'.join([timestamp, browser_name, browser_version, ip, latitude, longitude, action_name])
                 f.write(line + '\n')
-    except IOError:
-        pass
+    except IOError as e:
+        logging.error(e)
+    except Exception as e:
+        logging.error(e)
 
 
 def main():
@@ -65,7 +67,12 @@ def main():
         logging.info('Extracting pretable of %s' % str_date)
 
         update_date_status(SESSION_FACTORY(), COLLECTION, d, DATE_STATUS_EXTRACTING_PRETABLE)
-        query_result_data = extract_pretable(LOG_FILE_DATABASE_STRING, d, MATOMO_ID_SITE)
+
+        try:
+            query_result_data = extract_pretable(LOG_FILE_DATABASE_STRING, d, MATOMO_ID_SITE)
+        except Exception as e:
+            logging.error(e)
+
         save_pretable(str_date, query_result_data)
 
         update_date_status(SESSION_FACTORY(), COLLECTION, d, DATE_STATUS_PRETABLE)
