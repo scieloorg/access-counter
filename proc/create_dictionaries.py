@@ -148,7 +148,7 @@ def add_info_to_pid_format_lang(data, pid_format_lang_dict):
             if pid not in pid_format_lang_dict[collection]:
                 pid_format_lang_dict[collection][pid] = {}
 
-            default_lang = values.get('default_language', '')
+            default_lang = values.get('default_language', '').lower()
 
             if default_lang:
                 norm_default_lang = normalize_language(default_lang)
