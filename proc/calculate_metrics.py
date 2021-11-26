@@ -419,7 +419,6 @@ def run(data, hit_manager: HitManager, db_session, collection, result_file_prefi
     Para cada IP, são obtidos os registros a ele relacionados, de tabela pré-extraída da base de dados Matomo
 
     @param data: arquivo de pré-tabela ou result query
-    @param mode: modo de execução (via pretables ou database)
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
@@ -438,11 +437,8 @@ def run(data, hit_manager: HitManager, db_session, collection, result_file_prefi
         line_counter += 1
         ip_counter += 1
 
-        if mode == 'pretable':
-            current_ip = d.get('ip', '')
-        else:
-            current_ip = inet_ntoa(d.visit.location_ip)
-
+        current_ip = d.get('ip', '')
+        
         if line_counter == 1:
             past_ip = current_ip
 
@@ -484,13 +480,8 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection, file_p
     cs = CounterStat()
     cs.calculate_metrics(hit_manager.hits)
 
-    if hit_manager.persist_on_database:
-        logging.info('Salvando métricas na base de dados...')
-        export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection, pid_to_issn=hit_manager.pid_to_issn)
-
     logging.info('Salvando hits em disco...')
-    if hit_manager.persist_hits_o_disk:
-        export_article_hits_to_csv(hit_manager.hits['article'], file_prefix, hit_manager.pid_to_issn)
+    export_article_hits_to_csv(hit_manager.hits['article'], file_prefix, hit_manager.pid_to_issn)
 
     logging.info('Salvando métricas em disco...')
     export_article_metrics_to_csv(cs.metrics['article'], file_prefix, hit_manager.pid_to_issn)
@@ -517,54 +508,11 @@ def main():
     )
 
     parser.add_argument(
-        '-o', '--include_other_hit_types',
-        dest='include_other_hit_types',
-        action='store_true',
-        default=False,
-        help='Inclui na contagem Hits dos tipos HIT_TYPE_ISSUE, HIT_TYPE_JOURNAL e HIT_TYPE_PLATFORM'
-    )
-
-    parser.add_argument(
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
         default=LOGGING_LEVEL,
         help='Nivel de log'
-    )
-
-    parser.add_argument(
-        '-d',
-        '--persist_on_database',
-        dest='persist_on_database',
-        action='store_true',
-        default=False,
-        help='Também persiste resultados em banco de dados'
-    )
-
-    parser.add_argument(
-        '--persist_hits_on_disk',
-        dest='persist_hits_on_disk',
-        action='store_true',
-        default=False,
-        help='Grava Hits em disco'
-    )
-
-    parser.add_argument(
-        '--use_pretables',
-        dest='use_pretables',
-        default=False,
-        action='store_true',
-        help='Carrega dados a partir de uma pasta (DIR_PRETABLES) com arquivos de pré-tabela '
-             'previamente extraído(s) do Matomo'
-    )
-
-    parser.add_argument(
-        '--period',
-        dest='period',
-        default='',
-        help='Período da qual os dados serão extraídos do Matomo. Caso esteja no formato YYYY-MM-DD,YYYY-MM-DD, '
-             'o período entre a primeira e segunda datas será considerado. Caso esteja no formato YYYY-MM-DD, '
-             'apenas os dados do dia indicado serão extraídos'
     )
 
     parser.add_argument(
