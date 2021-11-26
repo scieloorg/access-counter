@@ -31,11 +31,19 @@ class Hit:
         # Versão do navegador utilizado
         self.browser_version = kargs.get('browserVersion', '').lower()
 
+        # Domínio acessado
+        self.domain = kargs.get('domain', '')
+        
         # URL da ação
         self.action_name = kargs.get('actionName', '')
 
+        self._set_domain_to_action_name(self.domain, self.action_name)
+
         # Um boleano que indica se o Hit é válido
         self.valid = True
+
+    def _set_domain_to_action_name(self, domain, action_name):
+        self.action_name = urljoin(domain, action_name)
 
     def _is_from_local_network(self):
         if not self.latitude or self.latitude.lower() in {'', 'null'}:
@@ -151,7 +159,7 @@ class HitManager:
                     new_dict[col][v].append(k)
         return new_dict
 
-    def create_hit(self, row, mode, default_collection):
+    def create_hit(self, row, default_collection, domain):
         """
         Cria objeto Hit
 
@@ -168,6 +176,7 @@ class HitManager:
                    'latitude': row.visit.location_latitude,
                    'longitude': row.visit.location_longitude}
 
+        row.update({'domain': domain})
         new_hit = Hit(**row)
 
         if new_hit.is_valid_hit():

@@ -412,7 +412,7 @@ def _export_others(metrics, db_session, collection):
         pass
 
 
-def run(data, mode, hit_manager: HitManager, db_session, collection, result_file_prefix):
+def run(data, hit_manager: HitManager, db_session, collection, result_file_prefix, domain):
     """
     Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
     Por questões de limitação de memória, o método trabalha por IP.
@@ -458,7 +458,7 @@ def run(data, mode, hit_manager: HitManager, db_session, collection, result_file
 
             past_ip = current_ip
 
-        hit = hit_manager.create_hit(d, mode, collection)
+        hit = hit_manager.create_hit(d, collection, domain)
 
         if hit:
             hit_manager.add_hit(hit)
@@ -572,6 +572,12 @@ def main():
         dest='dict_date',
         required=True,
         help='Data, no formato YYYY-MM-DD, da versão dos dicionários a serem utilizados'
+    )
+
+    parser.add_argument(
+        '--domain',
+        required=True,
+        help='Domínio do arquivo de log',
     )
 
     params = parser.parse_args()
