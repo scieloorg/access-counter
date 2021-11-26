@@ -10,8 +10,6 @@ from libs.lib_database import update_date_status, get_date_status
 from libs.lib_status import DATE_STATUS_PRETABLE, DATE_STATUS_COMPUTED
 from models.counter import CounterStat
 from models.hit import HitManager
-from socket import inet_ntoa
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from time import time
@@ -356,73 +354,39 @@ def main():
     computing_time_delta = datetime.timedelta(days=COMPUTING_TIMEDELTA)
     max_day_available_for_computing = datetime.datetime.strptime(params.dict_date, '%Y-%m-%d') - computing_time_delta
 
-    hit_manager = HitManager(path_pdf_to_pid=maps['pdf-pid'],
-                             issn_to_acronym=maps['issn-acronym'],
-                             pid_to_format_lang=maps['pid-format-lang'],
-                             pid_to_yop=maps['pid-dates'],
-                             persist_on_database=params.persist_on_database,
-                             persist_hits_on_disk=params.persist_hits_on_disk,
-                             flag_include_other_hit_types=params.include_other_hit_types)
+    hit_manager = HitManager(
+        path_pdf_to_pid=maps['pdf-pid'],
+        issn_to_acronym=maps['issn-acronym'],
+        pid_to_format_lang=maps['pid-format-lang'],
+        pid_to_yop=maps['pid-dates'],
+    )
 
-    if params.use_pretables:
-        logging.info('Iniciado em modo pré-tabelas')
+    pretables = get_pretables(SESSION_FACTORY(), max_day_available_for_computing)
 
-        pretables = get_pretables(SESSION_FACTORY(), max_day_available_for_computing)
+    logging.info('Há %d pré-tabela(s) para ser(em) computada(s)' % len(pretables))
 
-        logging.info('Há %d pré-tabela(s) para ser(em) computada(s)' % len(pretables))
+    for pt in pretables:
+        time_start = time()
 
-        for pt in pretables:
-            time_start = time()
+        logging.info('Extraindo dados do arquivo {}...'.format(pt))
+        hit_manager.reset()
 
-            logging.info('Extraindo dados do arquivo {}...'.format(pt))
-            hit_manager.reset()
+        pretable_date_value = get_date_from_file_path(pt)
 
-            pretable_date_value = get_date_from_file_path(pt)
-
-            with open(pt, errors='ignore') as data:
-                csv_data = csv.DictReader(data, delimiter='\t')
-                run(data=csv_data,
-                    mode='pretable',
-                    hit_manager=hit_manager,
-                    db_session=SESSION_FACTORY(),
-                    collection=params.collection,
-                    result_file_prefix=pretable_date_value)
-
-            logging.info('Atualizando tabela control_date_status para %s' % pretable_date_value)
-            update_date_status(SESSION_FACTORY(),
-                               COLLECTION,
-                               pretable_date_value,
-                               DATE_STATUS_COMPUTED)
-
-            time_end = time()
-            logging.info('Durou %.2f segundos' % (time_end - time_start))
-
-    if params.period:
-        logging.info('Iniciado em modo de banco de dados')
-        dates = get_dates(date=params.period)
-
-        for date in dates:
-            time_start = time()
-
-            logging.info('Extraindo dados para data {}...'.format(date.strftime('%Y-%m-%d')))
-            hit_manager.reset()
-
-            db_data = lib_database.get_matomo_logs_for_date(db_session=SESSION_FACTORY(),
-                                                            idsite=params.idsite,
-                                                            date=date)
-
-            run(data=db_data,
-                mode='database',
+        with open(pt, errors='ignore') as data:
+            csv_data = csv.DictReader(data, delimiter='\t')
+            run(data=csv_data,
                 hit_manager=hit_manager,
                 db_session=SESSION_FACTORY(),
                 collection=params.collection,
-                result_file_prefix=date.strftime('%Y%m%d'))
+                result_file_prefix=pretable_date_value,
+                domain=params.domain)
 
-            logging.info('Atualizando tabela control_date_status para %s' % date.strftime('%Y%m%d'))
-            update_date_status(SESSION_FACTORY(),
-                               COLLECTION,
-                               date.strftime('%Y%m%d'),
-                               DATE_STATUS_COMPUTED)
+        logging.info('Atualizando tabela control_date_status para %s' % pretable_date_value)
+        update_date_status(SESSION_FACTORY(),
+                            COLLECTION,
+                            pretable_date_value,
+                            DATE_STATUS_COMPUTED)
 
-            time_end = time()
-            logging.info('Durou %.2f segundos' % (time_end - time_start))
+        time_end = time()
+        logging.info('Durou %.2f segundos' % (time_end - time_start))
