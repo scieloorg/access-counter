@@ -1,10 +1,10 @@
 import logging
 
 from datetime import datetime
-from socket import inet_ntoa
 from utils import map_actions as at
 from utils import values
 from libs import lib_hit, lib_counter
+from urllib.parse import urljoin
 
 
 class Hit:
@@ -158,14 +158,6 @@ class HitManager:
         @param default_collection: coleção
         @return: um objeto Hit
         """
-        if mode == 'database':
-            row = {'serverTime': row.server_time,
-                   'browserName': row.visit.config_browser_name,
-                   'browserVersion': row.visit.config_browser_version,
-                   'ip': inet_ntoa(row.visit.location_ip),
-                   'latitude': row.visit.location_latitude,
-                   'longitude': row.visit.location_longitude}
-
         row.update({'domain': domain})
         new_hit = Hit(**row)
 
