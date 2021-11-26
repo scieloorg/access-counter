@@ -14,51 +14,74 @@ __Acessar ambiente virtual__
 source .venv/bin/activate
 ```
 
-__Instalar dependências__
+__Instalar dependências e pacotes__
 ```bash
 apt install libmysqlclient-dev
 pip install -r requirements.txt
+python setup.py install
 ```
 
 
 ## Como usar
 
-__Criar tabelas__
+__Criar banco de dados e tabelas__
 
-```python
-python create_tables.py -u {STRING DE CONEXÃO COM MATOMO-DB} --fix_matomo_db
+```sql
+create database matomo
+```
+
+```bash
+initialize_database -u STRING_CONNECTION
 ```
 
 
 __Popular tabela de periódicos__
 
-```python
-python populate_journals.py -u {STRING DE CONEXÃO COM MATOMO-DB}
+```bash
+populate_journals -u STRING_CONNECTION
 ```
 
 
-__Coletar dados do Matomo e gerar métricas COUNTER__
+__Calcular métricas COUNTER__
 
-_Por meio de arquivos de log pré-processados_
+É preciso setar as variáveis de ambiente listadas ao final deste README.md
 
-```python
-python main.py --dict_pdf {DICIONÁRIO PDF-PID} --dict_acronym {DICIONÁRIO ISSN-ACRÔNIMO --dict_language {DICIONÁRIO PID-FORMATO-IDIOMA} -u {STRING DE CONEXÃO COM MATOMO-DB} --dir_pretables {DIRETÓRIO PRÉ-TABELAS MATOMO} --idsite {ID DO SITE}
+```bash
+calculate_metrics \
+    -c COLLECTION_ACRONYM \
+    -u mysql://user:pass@host:port/database \
+    --dict_date YYYY-MM-DD \
+    --use_pretables
 ```
 
-_Por meio de acesso direto ao banco de dados do Matomo_
+__Exportar dados para tabelas SUSHI__
 
-```python
-python main.py --dict_pdf {DICIONÁRIO PDF-PID} --dict_acronym {DICIONÁRIO ISSN-ACRÔNIMO --dict_language {DICIONÁRIO PID-FORMATO-IDIOMA} -u {STRING DE CONEXÃO COM MATOMO-DB} --period {PERIÓDO} --idsite {ID DO SITE}
+É preciso setar as variáveis de ambiente listadas ao final deste README.md
+
+```bash
+export_to_database \
+    -c COLLECTION_ACRONYM \
+    -u mysql://user:pass@host:port/database \
+    --auto
 ```
 
-
-## Insumos utilizados
-
-__Dicionário PDF-PID__
- 
-__Dicionário ISSN-ACRÔNIMO__
-
-__Dicionário PID-FORMAT-IDIOMA__
-
-__Diretório PRÉ-TABELAS MATOMO__
-
+## Variáveis de ambiente
+- COLLECTION
+- MATOMO_ID_SITE
+- ARTICLEMETA_DATABASE_STRINGorg:27017/articlemeta.articles?authSource
+- LOG_FILE_DATABASE_STRING
+- MATOMO_DATABASE_STRING
+- DIR_DATA
+- DIR_PRETABLES
+- DIR_SUMMARY
+- DIR_R5_HITS
+- DIR_R5_METRICS
+- LOGGING_LEVEL
+- MATOMO_API_TOKEN
+- MATOMO_DB_IP_COUNTER_LIMIT
+- MATOMO_FIX_DATABASE_COLUMNS
+- MATOMO_URL
+- MIN_YEAR
+- PRETABLE_DAYS_N
+- COMPUTING_DAYS_N
+- COMPUTING_TIMEDELTA
