@@ -10,22 +10,10 @@ from libs.lib_database import update_date_status, get_date_status
 from libs.lib_status import DATE_STATUS_PRETABLE, DATE_STATUS_COMPUTED
 from models.counter import CounterStat
 from models.hit import HitManager
-from socket import inet_ntoa
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from time import time
-from utils import dicts
-from libs import lib_hit, lib_database
-from models.declarative import (
-    Article,
-    ArticleMetric,
-    Localization,
-    ArticleFormat,
-    ArticleLanguage,
-    Journal,
-    JournalCollection,
-)
+from libs import lib_hit
 
 
 MATOMO_DATABASE_STRING = os.environ.get('MATOMO_DATABASE_STRING', 'mysql://user:pass@localhost:3306/matomo')
@@ -221,205 +209,13 @@ def export_article_metrics_to_csv(metrics: dict, file_prefix: str, pid_to_issn: 
                 f.write('|'.join([str(i) for i in line_data]) + '\n')
 
 
-def export_metrics_to_matomo(metrics: dict, db_session, collection: str, pid_to_issn):
-    """
-    Exporta métricas para banco de dados
-
-    @param metrics: conjunto de métricas COUNTER
-    @param db_session: sessão com banco de dados
-    @param collection: acrônimo de coleção
-    """
-    for group in metrics.keys():
-        if group == 'article':
-            _export_article(metrics[group], db_session, collection, pid_to_issn)
-
-        elif group == 'issue':
-            _export_issue(metrics[group], db_session, collection)
-
-        elif group == 'journal':
-            _export_journal(metrics[group], db_session, collection)
-
-        elif group == 'platform':
-            _export_platform(metrics[group], db_session, collection)
-
-        elif group == 'others':
-            _export_others(metrics[group], db_session, collection)
-
-
-def _export_article(metrics, db_session, collection, pid_to_issn):
-    for key, article_data in metrics.items():
-        pid, data_format, lang, latitude, longitude, yop = key
-
-        article_format_id = dicts.format_to_code.get(data_format, -1)
-
-        # Caso formato de artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_format
-        if article_format_id == -1:
-            # Procura formato de artigo na base dados
-            try:
-                existing_article_format = lib_database.get_article_format(db_session=db_session, format_name=data_format)
-                article_format_id = existing_article_format.id
-            # Cria formato caso não exista na base de dados
-            except NoResultFound:
-                new_article_format = ArticleFormat()
-                new_article_format.format = data_format
-
-                db_session.add(new_article_format)
-                db_session.flush()
-
-                article_format_id = new_article_format.id
-
-                logging.debug('Adicionado formato (ID: %s, NAME: %s)' % (new_article_format.id,
-                                                                         new_article_format.format))
-
-        article_language_id = dicts.language_to_code.get(lang, -1)
-
-        # Caso idioma de artigo não esteja no dicionário padrão, tenta obter dado da tabela counter_article_language
-        if article_language_id == -1:
-            # Procura idioma na base de dados
-            try:
-                existing_article_language = lib_database.get_article_language(db_session=db_session,
-                                                                              language_name=lang)
-                article_language_id = existing_article_language.id
-            # Cria um novo idioma na base de dados, caso não exista
-            except NoResultFound:
-                new_article_language = ArticleLanguage()
-                new_article_language.language = lang
-
-                db_session.add(new_article_language)
-                db_session.flush()
-
-                article_language_id = new_article_language.id
-
-                logging.debug('Adicionado idioma (ID: %s, NAME: %s)' % (new_article_language.id,
-                                                                        new_article_language.language))
-
-        issn = lib_hit.article_pid_to_journal_issn(pid, pid_to_issn)
-
-        for ymd in article_data:
-            # Procura periódico na base de dados
-            try:
-                existing_journal = lib_database.get_journal(db_session=db_session, issn=issn)
-            # Cria um novo periódico caso não exista na base de dados
-            except NoResultFound:
-                new_journal = Journal()
-                new_journal.pid_issn = issn
-                new_journal.print_issn = ''
-                new_journal.online_issn = ''
-
-                db_session.add(new_journal)
-                db_session.flush()
-
-                existing_journal = new_journal
-
-                new_journal_collection = JournalCollection()
-                new_journal_collection.idjournal_jc = existing_journal.id
-                new_journal_collection.collection = COLLECTION
-                new_journal_collection.title = ''
-
-                db_session.add(new_journal_collection)
-                db_session.flush()
-
-                logging.debug('Adicionado periódico (ISSN: %s)' % new_journal.pid_issn)
-
-            # Procura artigo na base de dados
-            try:
-                existing_article = lib_database.get_article(db_session=db_session,
-                                                            pid=pid,
-                                                            collection=collection)
-            # Cria um novo artigo caso artigo não exista na base de dados
-            except NoResultFound:
-                new_article = Article()
-                new_article.collection = collection
-                new_article.idjournal_a = existing_journal.id
-                new_article.pid = pid
-                new_article.yop = yop
-
-                db_session.add(new_article)
-                db_session.flush()
-                existing_article = new_article
-
-            # Procura origem do acesso (latitude e longitude) na base de dados
-            try:
-                existing_localization = lib_database.get_localization(db_session=db_session,
-                                                                      latitude=latitude,
-                                                                      longitude=longitude)
-            # Cria uma nova localização
-            except NoResultFound:
-                new_localization = Localization()
-                new_localization.latitude = latitude
-                new_localization.longitude = longitude
-
-                db_session.add(new_localization)
-                db_session.flush()
-
-                existing_localization = new_localization
-
-            # Procura métrica na base de dados para atualizá-la
-            try:
-                existing_article_metric = lib_database.get_article_metric(db_session=db_session,
-                                                                          year_month_day=ymd,
-                                                                          article_id=existing_article.id,
-                                                                          article_format_id=article_format_id,
-                                                                          article_language_id=article_language_id,
-                                                                          localization_id=existing_localization.id)
-
-                update_metrics(existing_article_metric, article_data[ymd])
-                logging.debug('Atualizada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, LOC_ID: %s, YMD: %s)' % (existing_article_metric.idarticle,
-                                                                                                                 existing_article_metric.idformat,
-                                                                                                                 existing_article_metric.idlanguage,
-                                                                                                                 existing_article_metric.idlocalization,
-                                                                                                                 existing_article_metric.year_month_day))
-            # Cria um novo registro de métrica, caso não exista na base de dados
-            except NoResultFound:
-                new_metric_article = ArticleMetric()
-                new_metric_article.idarticle = existing_article.id
-                new_metric_article.idformat = article_format_id
-                new_metric_article.idlanguage = article_language_id
-                new_metric_article.idlocalization = existing_localization.id
-                new_metric_article.year_month_day = ymd
-
-                update_metrics(new_metric_article, article_data[ymd])
-                db_session.add(new_metric_article)
-                logging.debug('Adicionada métrica (ART_ID: %s, FMT_ID: %s, LANG_ID: %s, LOC_ID: %s, YMD: %s)' % (new_metric_article.idarticle,
-                                                                                                                 new_metric_article.idformat,
-                                                                                                                 new_metric_article.idlanguage,
-                                                                                                                 new_metric_article.idlocalization,
-                                                                                                                 new_metric_article.year_month_day))
-    db_session.commit()
-
-
-def _export_issue(metrics, db_session, collection):
-    for key, issue_data in metrics.items():
-        # ToDo
-        pass
-
-
-def _export_journal(metrics, db_session, collection):
-    for key, journal_data in metrics.items():
-        # ToDo
-        pass
-
-
-def _export_platform(metrics, db_session, collection):
-    for key, platform_data in metrics.items():
-        # ToDo
-        pass
-
-
-def _export_others(metrics, db_session, collection):
-    for key, others_data in metrics.items():
-        # ToDo
-        pass
-
-
-def run(data, mode, hit_manager: HitManager, db_session, collection, result_file_prefix):
+def run(data, hit_manager: HitManager, db_session, collection, result_file_prefix, domain):
     """
     Cria objetos Hit e chama rotinas COUNTER a cada 50 mil (valor definido em BUCKET_LIMIT) iterações.
     Por questões de limitação de memória, o método trabalha por IP.
     Para cada IP, são obtidos os registros a ele relacionados, de tabela pré-extraída da base de dados Matomo
 
     @param data: arquivo de pré-tabela ou result query
-    @param mode: modo de execução (via pretables ou database)
     @param hit_manager: gerenciador de objetos Hit
     @param db_session: sessão com banco de dados
     @param collection: acrônimo de coleção
@@ -438,11 +234,8 @@ def run(data, mode, hit_manager: HitManager, db_session, collection, result_file
         line_counter += 1
         ip_counter += 1
 
-        if mode == 'pretable':
-            current_ip = d.get('ip', '')
-        else:
-            current_ip = inet_ntoa(d.visit.location_ip)
-
+        current_ip = d.get('ip', '')
+        
         if line_counter == 1:
             past_ip = current_ip
 
@@ -458,7 +251,7 @@ def run(data, mode, hit_manager: HitManager, db_session, collection, result_file
 
             past_ip = current_ip
 
-        hit = hit_manager.create_hit(d, mode, collection)
+        hit = hit_manager.create_hit(d, collection, domain)
 
         if hit:
             hit_manager.add_hit(hit)
@@ -484,13 +277,8 @@ def run_counter_routines(hit_manager: HitManager, db_session, collection, file_p
     cs = CounterStat()
     cs.calculate_metrics(hit_manager.hits)
 
-    if hit_manager.persist_on_database:
-        logging.info('Salvando métricas na base de dados...')
-        export_metrics_to_matomo(metrics=cs.metrics, db_session=db_session, collection=collection, pid_to_issn=hit_manager.pid_to_issn)
-
     logging.info('Salvando hits em disco...')
-    if hit_manager.persist_hits_o_disk:
-        export_article_hits_to_csv(hit_manager.hits['article'], file_prefix, hit_manager.pid_to_issn)
+    export_article_hits_to_csv(hit_manager.hits['article'], file_prefix, hit_manager.pid_to_issn)
 
     logging.info('Salvando métricas em disco...')
     export_article_metrics_to_csv(cs.metrics['article'], file_prefix, hit_manager.pid_to_issn)
@@ -517,14 +305,6 @@ def main():
     )
 
     parser.add_argument(
-        '-o', '--include_other_hit_types',
-        dest='include_other_hit_types',
-        action='store_true',
-        default=False,
-        help='Inclui na contagem Hits dos tipos HIT_TYPE_ISSUE, HIT_TYPE_JOURNAL e HIT_TYPE_PLATFORM'
-    )
-
-    parser.add_argument(
         '--logging_level',
         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET'],
         dest='logging_level',
@@ -533,45 +313,16 @@ def main():
     )
 
     parser.add_argument(
-        '-d',
-        '--persist_on_database',
-        dest='persist_on_database',
-        action='store_true',
-        default=False,
-        help='Também persiste resultados em banco de dados'
-    )
-
-    parser.add_argument(
-        '--persist_hits_on_disk',
-        dest='persist_hits_on_disk',
-        action='store_true',
-        default=False,
-        help='Grava Hits em disco'
-    )
-
-    parser.add_argument(
-        '--use_pretables',
-        dest='use_pretables',
-        default=False,
-        action='store_true',
-        help='Carrega dados a partir de uma pasta (DIR_PRETABLES) com arquivos de pré-tabela '
-             'previamente extraído(s) do Matomo'
-    )
-
-    parser.add_argument(
-        '--period',
-        dest='period',
-        default='',
-        help='Período da qual os dados serão extraídos do Matomo. Caso esteja no formato YYYY-MM-DD,YYYY-MM-DD, '
-             'o período entre a primeira e segunda datas será considerado. Caso esteja no formato YYYY-MM-DD, '
-             'apenas os dados do dia indicado serão extraídos'
-    )
-
-    parser.add_argument(
         '--v', '--dict_date',
         dest='dict_date',
         required=True,
         help='Data, no formato YYYY-MM-DD, da versão dos dicionários a serem utilizados'
+    )
+
+    parser.add_argument(
+        '--domain',
+        required=True,
+        help='Domínio do arquivo de log',
     )
 
     params = parser.parse_args()
@@ -603,73 +354,39 @@ def main():
     computing_time_delta = datetime.timedelta(days=COMPUTING_TIMEDELTA)
     max_day_available_for_computing = datetime.datetime.strptime(params.dict_date, '%Y-%m-%d') - computing_time_delta
 
-    hit_manager = HitManager(path_pdf_to_pid=maps['pdf-pid'],
-                             issn_to_acronym=maps['issn-acronym'],
-                             pid_to_format_lang=maps['pid-format-lang'],
-                             pid_to_yop=maps['pid-dates'],
-                             persist_on_database=params.persist_on_database,
-                             persist_hits_on_disk=params.persist_hits_on_disk,
-                             flag_include_other_hit_types=params.include_other_hit_types)
+    hit_manager = HitManager(
+        path_pdf_to_pid=maps['pdf-pid'],
+        issn_to_acronym=maps['issn-acronym'],
+        pid_to_format_lang=maps['pid-format-lang'],
+        pid_to_yop=maps['pid-dates'],
+    )
 
-    if params.use_pretables:
-        logging.info('Iniciado em modo pré-tabelas')
+    pretables = get_pretables(SESSION_FACTORY(), max_day_available_for_computing)
 
-        pretables = get_pretables(SESSION_FACTORY(), max_day_available_for_computing)
+    logging.info('Há %d pré-tabela(s) para ser(em) computada(s)' % len(pretables))
 
-        logging.info('Há %d pré-tabela(s) para ser(em) computada(s)' % len(pretables))
+    for pt in pretables:
+        time_start = time()
 
-        for pt in pretables:
-            time_start = time()
+        logging.info('Extraindo dados do arquivo {}...'.format(pt))
+        hit_manager.reset()
 
-            logging.info('Extraindo dados do arquivo {}...'.format(pt))
-            hit_manager.reset()
+        pretable_date_value = get_date_from_file_path(pt)
 
-            pretable_date_value = get_date_from_file_path(pt)
-
-            with open(pt, errors='ignore') as data:
-                csv_data = csv.DictReader(data, delimiter='\t')
-                run(data=csv_data,
-                    mode='pretable',
-                    hit_manager=hit_manager,
-                    db_session=SESSION_FACTORY(),
-                    collection=params.collection,
-                    result_file_prefix=pretable_date_value)
-
-            logging.info('Atualizando tabela control_date_status para %s' % pretable_date_value)
-            update_date_status(SESSION_FACTORY(),
-                               COLLECTION,
-                               pretable_date_value,
-                               DATE_STATUS_COMPUTED)
-
-            time_end = time()
-            logging.info('Durou %.2f segundos' % (time_end - time_start))
-
-    if params.period:
-        logging.info('Iniciado em modo de banco de dados')
-        dates = get_dates(date=params.period)
-
-        for date in dates:
-            time_start = time()
-
-            logging.info('Extraindo dados para data {}...'.format(date.strftime('%Y-%m-%d')))
-            hit_manager.reset()
-
-            db_data = lib_database.get_matomo_logs_for_date(db_session=SESSION_FACTORY(),
-                                                            idsite=params.idsite,
-                                                            date=date)
-
-            run(data=db_data,
-                mode='database',
+        with open(pt, errors='ignore') as data:
+            csv_data = csv.DictReader(data, delimiter='\t')
+            run(data=csv_data,
                 hit_manager=hit_manager,
                 db_session=SESSION_FACTORY(),
                 collection=params.collection,
-                result_file_prefix=date.strftime('%Y%m%d'))
+                result_file_prefix=pretable_date_value,
+                domain=params.domain)
 
-            logging.info('Atualizando tabela control_date_status para %s' % date.strftime('%Y%m%d'))
-            update_date_status(SESSION_FACTORY(),
-                               COLLECTION,
-                               date.strftime('%Y%m%d'),
-                               DATE_STATUS_COMPUTED)
+        logging.info('Atualizando tabela control_date_status para %s' % pretable_date_value)
+        update_date_status(SESSION_FACTORY(),
+                            COLLECTION,
+                            pretable_date_value,
+                            DATE_STATUS_COMPUTED)
 
-            time_end = time()
-            logging.info('Durou %.2f segundos' % (time_end - time_start))
+        time_end = time()
+        logging.info('Durou %.2f segundos' % (time_end - time_start))

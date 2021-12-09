@@ -1,10 +1,10 @@
 import logging
 
 from datetime import datetime
-from socket import inet_ntoa
 from utils import map_actions as at
 from utils import values
 from libs import lib_hit, lib_counter
+from urllib.parse import urljoin
 
 
 class Hit:
@@ -31,11 +31,19 @@ class Hit:
         # Versão do navegador utilizado
         self.browser_version = kargs.get('browserVersion', '').lower()
 
+        # Domínio acessado
+        self.domain = kargs.get('domain', '')
+        
         # URL da ação
         self.action_name = kargs.get('actionName', '')
 
+        self._set_domain_to_action_name(self.domain, self.action_name)
+
         # Um boleano que indica se o Hit é válido
         self.valid = True
+
+    def _set_domain_to_action_name(self, domain, action_name):
+        self.action_name = urljoin(domain, action_name)
 
     def _is_from_local_network(self):
         if not self.latitude or self.latitude.lower() in {'', 'null'}:
@@ -62,11 +70,10 @@ class Hit:
 
         return True
 
-    def is_trackable_hit(self, flag_include_other_hit_types=False):
-        # Ignora Hits não artigo (a depender de flag_include_other_hit_types)
-        if not flag_include_other_hit_types:
-            if self.hit_type != at.HIT_TYPE_ARTICLE:
-                return False
+    def is_trackable_hit(self):
+        # Ignora Hits não artigo
+        if self.hit_type != at.HIT_TYPE_ARTICLE:
+            return False
 
         # Verifica se Hit possui conteúdo indefinido
         if self.content_type == at.HIT_CONTENT_OTHERS:
@@ -112,7 +119,7 @@ class HitManager:
     """
     Classe que gerencia objetos Hit
     """
-    def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang, pid_to_yop, persist_on_database, persist_hits_on_disk, flag_include_other_hit_types=False):
+    def __init__(self, path_pdf_to_pid, issn_to_acronym, pid_to_format_lang, pid_to_yop):
         self.hits = {'article': {}, 'issue': {}, 'journal': {}, 'platform': {}, 'others': {}}
 
         # Dicionários para tratamento de PID
@@ -124,15 +131,6 @@ class HitManager:
 
         # Gera um dicionário reverso de acrônimos
         self.acronym_to_issn = self._generate_acronym_to_issn()
-
-        # Flag para incluir na contagem outros tipos de Hit (Issue, Journal, Platform)
-        self.flag_include_other_hit_types = flag_include_other_hit_types
-
-        # Salve dados de métricas diretamente no banco de dados
-        self.persist_on_database = persist_on_database
-
-        # Salva dados de Hit no disco
-        self.persist_hits_o_disk = persist_hits_on_disk
 
     def _generate_acronym_to_issn(self):
         """
@@ -151,7 +149,7 @@ class HitManager:
                     new_dict[col][v].append(k)
         return new_dict
 
-    def create_hit(self, row, mode, default_collection):
+    def create_hit(self, row, default_collection, domain):
         """
         Cria objeto Hit
 
@@ -160,14 +158,7 @@ class HitManager:
         @param default_collection: coleção
         @return: um objeto Hit
         """
-        if mode == 'database':
-            row = {'serverTime': row.server_time,
-                   'browserName': row.visit.config_browser_name,
-                   'browserVersion': row.visit.config_browser_version,
-                   'ip': inet_ntoa(row.visit.location_ip),
-                   'latitude': row.visit.location_latitude,
-                   'longitude': row.visit.location_longitude}
-
+        row.update({'domain': domain})
         new_hit = Hit(**row)
 
         if new_hit.is_valid_hit():
@@ -175,7 +166,7 @@ class HitManager:
             self.set_hit_attrs(new_hit, default_collection)
 
             # Caso Hit seja rastreável (associável a um Periódico, Fascículo ou Artigo)
-            if new_hit.is_trackable_hit(self.flag_include_other_hit_types):
+            if new_hit.is_trackable_hit():
                 return new_hit
 
         # Caso Hit seja ou inválido ou não rastreável

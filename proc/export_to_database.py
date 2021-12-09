@@ -57,8 +57,8 @@ class R5Metrics:
         self.pid = kargs['pid']
         self.format_name = kargs['format_name']
         self.language_name = kargs['language_name'] if kargs['language_name'] else 'und'
-        self.latitude = Decimal(kargs['latitude']) if kargs['latitude'] != 'NULL' else kargs['latitude']
-        self.longitude = Decimal(kargs['longitude']) if kargs['longitude'] != 'NULL' else kargs['longitude']
+        self.latitude = round(Decimal(kargs['latitude']), 3) if kargs['latitude'] != 'NULL' else kargs['latitude']
+        self.longitude = round(Decimal(kargs['longitude']), 3) if kargs['longitude'] != 'NULL' else kargs['longitude']
         self.year_of_publication = int(kargs['year_of_publication']) if kargs['year_of_publication'].isdigit() else kargs['year_of_publication']
         self.issn = kargs['issn']
         self.year_month_day = kargs['year_month_day']
