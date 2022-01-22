@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from libs.lib_status import DATE_STATUS_LOADED
+from libs import lib_status
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.exc import OperationalError, IntegrityError
 from sqlalchemy.sql import func
@@ -10,9 +10,6 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from models.declarative import (
     Base,
-    LogLinkVisitAction,
-    LogAction,
-    LogVisit,
     Journal,
     Article,
     ArticleMetric,
@@ -20,7 +17,8 @@ from models.declarative import (
     ArticleFormat,
     Localization,
     JournalCollection,
-    DateStatus
+    DateStatus,
+    AggrStatus,
 )
 
 
