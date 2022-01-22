@@ -1,5 +1,5 @@
-from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DateTime, DECIMAL
-from sqlalchemy.dialects.mysql import BIGINT, BINARY, BOOLEAN, INTEGER, TINYINT, VARBINARY, VARCHAR
+from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DECIMAL
+from sqlalchemy.dialects.mysql import  BOOLEAN, INTEGER, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -22,6 +22,16 @@ class DateStatus(Base):
     status_sushi_article_metric = Column(BOOLEAN, default=False)
     status_sushi_journal_metric = Column(BOOLEAN, default=False)
     status_sushi_journal_yop_metric = Column(BOOLEAN, default=False)
+
+
+class AggrStatus(Base):
+    __tablename__ = 'aggr_status'
+    __table_args__ = (UniqueConstraint('collection', 'year_month_day', name='uni_collection_year_month_day'), )
+    collection = Column(VARCHAR(3), nullable=False, primary_key=True)
+    year_month_day = Column(Date, nullable=False, primary_key=True)
+
+    status_aggr_article_language_year_month_metric = Column(BOOLEAN, default=False)
+    status_aggr_journal_language_year_month_metric = Column(BOOLEAN, default=False)
 
 
 class Journal(Base):
@@ -186,54 +196,35 @@ class SushiArticleMetric(Base):
     unique_item_investigations = Column(Integer, nullable=False)
 
 
-class LogAction(Base):
-    __tablename__ = 'matomo_log_action'
+class AggrArticleLanguageYearMonthMetric(Base):
+    __tablename__ = 'aggr_article_language_year_month_metric'
+    __table_args__ = (UniqueConstraint('year_month', 'idarticle_aalymm', 'idlanguage_aalymm', name='uni_art_lan_aalymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'idarticle_aalymm'),)
 
-    __table_args__ = (Index('index_type_hash',
-                            'type',
-                            'hash'),)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    idaction = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    name = Column(VARCHAR(4096))
-    hash = Column(INTEGER(unsigned=True), nullable=False)
-    type = Column(TINYINT(unsigned=True))
-    url_prefix = Column(TINYINT(2))
+    idarticle_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle_aalymm'))
+    idlanguage_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_aalymm'))
+    year_month = Column(VARCHAR(7), nullable=False)
 
-
-class LogVisit(Base):
-    __tablename__ = 'matomo_log_visit'
-
-    __table_args__ = (Index('index_idsite_idvisitor',
-                            'idsite',
-                            'idvisitor'),)
-
-    idvisit = Column(BIGINT(10, unsigned=True), primary_key=True, autoincrement=True)
-    idsite = Column(INTEGER(10, unsigned=True))
-    idvisitor = Column(BINARY(8), nullable=False)
-    config_browser_name = Column(VARCHAR(10))
-    config_browser_version = Column(VARCHAR(20))
-    location_ip = Column(VARBINARY(16), nullable=False)
-    location_latitude = Column(DECIMAL(9, 6))
-    location_longitude = Column(DECIMAL(9, 6))
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)
 
 
-class LogLinkVisitAction(Base):
-    __tablename__ = 'matomo_log_link_visit_action'
+class AggrJournalLanguageYearMonthMetric(Base):
+    __tablename__ = 'aggr_journal_language_year_month_metric'
+    __table_args__ = (UniqueConstraint('year_month', 'idjournal_ajlymm', 'idlanguage_ajlymm', name='uni_jou_lan_ajlymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'idjournal_ajlymm'),)
 
-    __table_args__ = (Index('index_idsite_servertime',
-                            'idsite',
-                            'server_time'),)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    __table_args__ += (Index('index_idvisit',
-                             'idvisit'),)
+    idjournal_ajlymm = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_ajlymm'))
+    idlanguage_ajlymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_ajlymm'))
+    year_month = Column(VARCHAR(7), nullable=False)
 
-    idlink_va = Column(BIGINT(10, unsigned=True), primary_key=True, autoincrement=True)
-    idsite = Column(INTEGER(unsigned=True), nullable=False)
-    idvisitor = Column(BINARY(8), nullable=False)
-    server_time = Column(DateTime, nullable=False)
-
-    idaction_url = Column(INTEGER(unsigned=True), ForeignKey('matomo_log_action.idaction', name='idaction_url'))
-    action = relationship(LogAction)
-
-    idvisit = Column(BIGINT(10, unsigned=True), ForeignKey('matomo_log_visit.idvisit', name='idvisit'))
-    visit = relationship(LogVisit)
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)

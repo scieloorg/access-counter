@@ -27,7 +27,7 @@ install_requires = [
 
 setup(
     name="scielo-usage-counter",
-    version='0.3',
+    version='0.4',
     description="The SciELO COUNTER Tools",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
@@ -47,5 +47,6 @@ setup(
     extract_pretables=proc.extract_pretables:main
     collect_opac_dictionary=proc.collect_opac_dictionary:main
     collect_preprint_dictionary=proc.collect_preprint_dictionary:main
+    aggregate=proc.aggregate:main
     """
 )

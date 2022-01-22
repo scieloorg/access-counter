@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from libs.lib_status import DATE_STATUS_LOADED
+from libs import lib_status
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.exc import OperationalError, IntegrityError
 from sqlalchemy.sql import func
@@ -10,9 +10,6 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from models.declarative import (
     Base,
-    LogLinkVisitAction,
-    LogAction,
-    LogVisit,
     Journal,
     Article,
     ArticleMetric,
@@ -20,7 +17,8 @@ from models.declarative import (
     ArticleFormat,
     Localization,
     JournalCollection,
-    DateStatus
+    DateStatus,
+    AggrStatus,
 )
 
 
@@ -61,95 +59,6 @@ def _add_basic_article_formats(db_session):
         db_session.commit()
     except IntegrityError as ie:
         logging.warning('Formato já existe: %s' % ie)
-
-
-def create_index_ip_on_table_matomo_log_visit(matomo_db_uri):
-    """
-    Cria índice index_ip para facilitar recuperação de dados baseado em endereço IP, no Matomo
-
-    @param matomo_db_uri: string de conexão à base do Matomo
-    """
-    engine = create_engine(matomo_db_uri)
-
-    sql_create_index_location_ip = 'CREATE INDEX index_location_ip ON matomo_log_visit (location_ip);'
-    try:
-        engine.execute(sql_create_index_location_ip)
-    except OperationalError:
-        logging.warning('Índice já existe: %s' % sql_create_index_location_ip)
-
-
-def fix_fields_interactions(matomo_db_uri):
-    """
-    Altera campos visit_total_interactions (matamo_log_visit) e interaction_possition (matomo_log_link_visit_action)
-    para MEDIUMINT(5)
-
-    @param matomo_db_uri: string de conexão à base do Matomo
-    """
-    engine = create_engine(matomo_db_uri)
-
-    sql_alter_column_visit_total_interactions = 'ALTER TABLE matomo_log_visit ' \
-                                                'CHANGE visit_total_interactions visit_total_interactions ' \
-                                                'MEDIUMINT(5) UNSIGNED NULL DEFAULT 0;'
-    try:
-        engine.execute(sql_alter_column_visit_total_interactions)
-    except OperationalError:
-        logging.warning('Não foi possível executar: %s' % sql_alter_column_visit_total_interactions)
-
-    sql_alter_column_interaction_position = 'ALTER TABLE matomo_log_link_visit_action ' \
-                                            'CHANGE interaction_position interaction_position ' \
-                                            'MEDIUMINT(5) UNSIGNED NULL DEFAULT NULL;'
-    try:
-        engine.execute(sql_alter_column_interaction_position)
-    except OperationalError:
-        logging.warning('Não foi possível executar: %s' % sql_alter_column_interaction_position)
-
-
-def add_foreign_keys_to_table_matomo_log_link_action(matomo_db_uri):
-    """
-    Adiciona chaves estrangeiras na tabela matomo_log_link_action já existente do Matomo
-     
-    @param matomo_db_uri: string de conexão à base do Matomo 
-    """
-    engine = create_engine(matomo_db_uri)
-
-    sql_foreign_key_idaction = 'ALTER TABLE matomo_log_link_visit_action ' \
-                               'ADD CONSTRAINT idaction_url ' \
-                               'FOREIGN KEY(idaction_url) ' \
-                               'REFERENCES matomo_log_action (idaction);'
-    try:
-        engine.execute(sql_foreign_key_idaction)
-    except OperationalError:
-        logging.warning('Chave estrangeira já existe: %s' % sql_foreign_key_idaction)
-
-    sql_foreign_key_idvisit = 'ALTER TABLE matomo_log_link_visit_action ' \
-                              'ADD CONSTRAINT idvisit ' \
-                              'FOREIGN KEY(idvisit) ' \
-                              'REFERENCES matomo_log_visit (idvisit);'
-    try:
-        engine.execute(sql_foreign_key_idvisit)
-    except OperationalError:
-        logging.warning('Chave estrangeira já existe: %s' % sql_foreign_key_idvisit)
-
-
-def get_matomo_logs_for_date(db_session, idsite: int, date: datetime.datetime):
-    """
-    Obtém resultados das tabelas originais de log do Matomo para posterior extração de métricas.
-    Ordena os resultados por IP
-
-    @param db_session: um objeto Session SQLAlchemy com a base de dados do Matomo
-    @param idsite: um inteiro que representa o identificador do site do qual as informações serão extraídas
-    @param date: data a ser utilizada como filtro para obtenção dos dados
-    @return: resultados em forma de Query
-    """
-    return db_session \
-        .query(LogLinkVisitAction) \
-        .filter(and_(LogLinkVisitAction.server_time >= date,
-                     LogLinkVisitAction.server_time < date + datetime.timedelta(days=1),
-                     LogLinkVisitAction.idsite == idsite)
-                ) \
-        .join(LogAction, LogAction.idaction == LogLinkVisitAction.idaction_url) \
-        .join(LogVisit, LogVisit.idvisit == LogLinkVisitAction.idvisit) \
-        .order_by('location_ip')
 
 
 def get_journal_from_issns(db_session, issns):
@@ -358,13 +267,143 @@ def update_date_status(db_session, collection, date, status):
         logging.error('Error while trying to update date status')
 
 
-def extract_pretable(database_uri, date, idsite):
-    currente_date = date
-    next_date = date + datetime.timedelta(days=1)
+def get_aggr_status_for_table(db_session, collection, date, table_name):
+    try:
+        date_status = get_date_status(db_session, collection, date)
 
-    raw_query = 'SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, location_latitude as latitude, location_longitude as longitude, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE matomo_log_link_visit_action.idsite = {0} AND server_time >= "{1}" AND server_time < "{2}" ORDER BY ip;'.format(idsite, currente_date, next_date)
+        if date_status == lib_status.DATE_STATUS_COMPLETED:
+            try:
+                object_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection, AggrStatus.year_month_day == date)).one()
+                return getattr(object_aggr_status, table_name)
 
-    engine = create_engine(database_uri, pool_recycle=1800)
+            except NoResultFound as e:
+                obj_aggr_status = AggrStatus()
+                obj_aggr_status.collection = collection
+                obj_aggr_status.year_month_day = date
+
+                db_session.add(obj_aggr_status)
+                db_session.commit()
+                db_session.flush()
+
+                return lib_status.AGGR_STATUS_QUEUE
+
+        else:
+            ...
+
+    except OperationalError as e:
+        return e
+
+
+def update_aggr_status_for_table(db_session, collection, date, status, table_name):
+    try:
+        existing_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection,
+                                                                        AggrStatus.year_month_day == date)).one()
+
+        setattr(existing_aggr_status, table_name, status)
+
+        db_session.commit()
+        db_session.flush()
+    except NoResultFound:
+        pass
+    except OperationalError:
+        logging.error('Error while trying to update aggr status')
+
+
+def extract_aggregated_data_for_article_language_year_month(database_uri, collection, date):
+    raw_query = '''
+    INSERT INTO
+        aggr_article_language_year_month_metric (
+            collection,
+            article_id,
+            language_id,
+            `year_month`,
+            total_item_requests,
+            total_item_investigations,
+            unique_item_requests,
+            unique_item_investigations
+        )
+        SELECT
+            ca.collection,
+            cam.idarticle,
+            cam.idlanguage,
+            substr(cam.year_month_day, 1, 7) AS ym,
+            sum(cam.total_item_requests) AS tir,
+            sum(cam.total_item_investigations) AS tii,
+            sum(cam.unique_item_requests) AS uir,
+            sum(cam.unique_item_investigations) AS uii
+        FROM
+            counter_article_metric cam
+        LEFT JOIN
+            counter_article ca ON ca.id = cam.idarticle
+        LEFT JOIN
+            counter_journal cj ON cj.id = ca.idjournal_a
+        LEFT JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+        WHERE
+            year_month_day = '{0}' AND
+            cjc.collection = '{1}'
+        GROUP BY
+            ca.collection,
+            cam.idarticle,
+            cam.idlanguage,
+            ym
+    ON DUPLICATE KEY UPDATE
+        total_item_requests = total_item_requests + VALUES(total_item_requests),
+        total_item_investigations = total_item_investigations + VALUES(total_item_investigations),
+        unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
+        unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
+    ;
+    '''.format(date, collection)
+    engine = create_engine(database_uri)
+    return engine.execute(raw_query)
+
+
+def extract_aggregated_data_for_journal_language_year_month(database_uri, collection, date):
+    raw_query = '''
+    INSERT INTO
+        aggr_journal_language_year_month_metric (
+            collection,
+            journal_id,
+            language_id,
+            `year_month`,
+            total_item_requests,
+            total_item_investigations,
+            unique_item_requests,
+            unique_item_investigations
+        )
+        SELECT
+            cjc.collection,
+            cj.id,
+            cam.idlanguage,
+            substr(cam.year_month_day, 1, 7) AS ym,
+            sum(cam.total_item_requests) AS tir,
+            sum(cam.total_item_investigations) AS tii,
+            sum(cam.unique_item_requests) AS uir,
+            sum(cam.unique_item_investigations) AS uii
+        FROM
+            counter_article_metric cam
+        LEFT JOIN
+            counter_article ca ON ca.id = cam.idarticle
+        LEFT JOIN
+            counter_journal cj ON cj.id = ca.idjournal_a
+        LEFT JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+        WHERE
+            year_month_day = '{0}' AND
+            cjc.collection = '{1}'
+        GROUP BY
+            cjc.collection,
+            cj.id,
+            cam.idlanguage,
+            ym
+    ON DUPLICATE KEY UPDATE
+        total_item_requests = total_item_requests + VALUES(total_item_requests),
+        total_item_investigations = total_item_investigations + VALUES(total_item_investigations),
+        unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
+        unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
+    ;
+    '''.format(date, collection)
+    engine = create_engine(database_uri)
     return engine.execute(raw_query)
 
 
@@ -373,7 +412,7 @@ def get_dates_able_to_extract(db_session, collection, number_of_days):
 
     try:
         ds_results = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
-                                                              DateStatus.status >= DATE_STATUS_LOADED)).order_by(DateStatus.date.desc())
+                                                              DateStatus.status >= lib_status.DATE_STATUS_LOADED)).order_by(DateStatus.date.desc())
 
         date_to_status = {}
         for r in ds_results:
@@ -391,7 +430,7 @@ def get_dates_able_to_extract(db_session, collection, number_of_days):
                     is_valid_for_extracting = False
                     break
 
-            if status == DATE_STATUS_LOADED and is_valid_for_extracting:
+            if status == lib_status.DATE_STATUS_LOADED and is_valid_for_extracting:
                 dates.append(date)
                 days_counter += 1
 
