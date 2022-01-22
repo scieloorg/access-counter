@@ -295,7 +295,20 @@ def get_aggr_status_for_table(db_session, collection, date, table_name):
 
     raw_query = 'SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, location_latitude as latitude, location_longitude as longitude, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE matomo_log_link_visit_action.idsite = {0} AND server_time >= "{1}" AND server_time < "{2}" ORDER BY ip;'.format(idsite, currente_date, next_date)
 
-    engine = create_engine(database_uri, pool_recycle=1800)
+def update_aggr_status_for_table(db_session, collection, date, status, table_name):
+    try:
+        existing_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection,
+                                                                        AggrStatus.year_month_day == date)).one()
+
+        setattr(existing_aggr_status, table_name, status)
+
+        db_session.commit()
+        db_session.flush()
+    except NoResultFound:
+        pass
+    except OperationalError:
+        logging.error('Error while trying to update aggr status')
+
     return engine.execute(raw_query)
 
 
