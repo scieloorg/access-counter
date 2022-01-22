@@ -103,4 +103,3 @@ def main():
                 break
             else:
                 logging.info('Data %s da coleção %s já foi agregada para tabela %s' % (params.collection, date, table_name))
-

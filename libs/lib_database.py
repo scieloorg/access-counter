@@ -412,7 +412,7 @@ def get_dates_able_to_extract(db_session, collection, number_of_days):
 
     try:
         ds_results = db_session.query(DateStatus).filter(and_(DateStatus.collection == collection,
-                                                              DateStatus.status >= DATE_STATUS_LOADED)).order_by(DateStatus.date.desc())
+                                                              DateStatus.status >= lib_status.DATE_STATUS_LOADED)).order_by(DateStatus.date.desc())
 
         date_to_status = {}
         for r in ds_results:
@@ -430,7 +430,7 @@ def get_dates_able_to_extract(db_session, collection, number_of_days):
                     is_valid_for_extracting = False
                     break
 
-            if status == DATE_STATUS_LOADED and is_valid_for_extracting:
+            if status == lib_status.DATE_STATUS_LOADED and is_valid_for_extracting:
                 dates.append(date)
                 days_counter += 1
 
