@@ -356,6 +356,54 @@ def extract_aggregated_data_for_article_language_year_month(database_uri, collec
     '''.format(date, collection)
     engine = create_engine(database_uri)
     return engine.execute(raw_query)
+
+
+def extract_aggregated_data_for_journal_language_year_month(database_uri, collection, date):
+    raw_query = '''
+    INSERT INTO
+        aggr_journal_language_year_month_metric (
+            collection,
+            journal_id,
+            language_id,
+            `year_month`,
+            total_item_requests,
+            total_item_investigations,
+            unique_item_requests,
+            unique_item_investigations
+        )
+        SELECT
+            cjc.collection,
+            cj.id,
+            cam.idlanguage,
+            substr(cam.year_month_day, 1, 7) AS ym,
+            sum(cam.total_item_requests) AS tir,
+            sum(cam.total_item_investigations) AS tii,
+            sum(cam.unique_item_requests) AS uir,
+            sum(cam.unique_item_investigations) AS uii
+        FROM
+            counter_article_metric cam
+        LEFT JOIN
+            counter_article ca ON ca.id = cam.idarticle
+        LEFT JOIN
+            counter_journal cj ON cj.id = ca.idjournal_a
+        LEFT JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+        WHERE
+            year_month_day = '{0}' AND
+            cjc.collection = '{1}'
+        GROUP BY
+            cjc.collection,
+            cj.id,
+            cam.idlanguage,
+            ym
+    ON DUPLICATE KEY UPDATE
+        total_item_requests = total_item_requests + VALUES(total_item_requests),
+        total_item_investigations = total_item_investigations + VALUES(total_item_investigations),
+        unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
+        unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
+    ;
+    '''.format(date, collection)
+    engine = create_engine(database_uri)
     return engine.execute(raw_query)
 
 
