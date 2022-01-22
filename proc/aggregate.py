@@ -79,27 +79,32 @@ def main():
     for date in dates:
         for table_name in tables:
             status_column_name = 'status_' + table_name
-            current_date_aggr_status_table = lib_database.get_aggr_status_for_table(SESSION_FACTORY(), params.collection, date, status_column_name)
 
-            if current_date_aggr_status_table == lib_status.AGGR_STATUS_QUEUE:
-                logging.info('Adicionando métricas agregadas para tabela %s e data (%s)...' % (table_name, date))
+            try:
+                current_date_aggr_status_table = lib_database.get_aggr_status(SESSION_FACTORY(), params.collection, date, status_column_name)
 
-                time_start = time.time()
+                if current_date_aggr_status_table == lib_status.AGGR_STATUS_QUEUE:
+                    logging.info('Adicionando métricas agregadas para tabela %s e data (%s)...' % (table_name, date))
 
-                if table_name == 'aggr_article_language_year_month_metric':
-                    status = lib_database.extract_aggregated_data_for_article_language_year_month(STR_CONNECTION, params.collection, date)
-                elif table_name == 'aggr_journal_language_year_month_metric':
-                    status = lib_database.extract_aggregated_data_for_journal_language_year_month(STR_CONNECTION, params.collection, date)
+                    time_start = time.time()
+
+                    if table_name == 'aggr_article_language_year_month_metric':
+                        status = lib_database.extract_aggregated_data_for_article_language_year_month(STR_CONNECTION, params.collection, date)
+                    elif table_name == 'aggr_journal_language_year_month_metric':
+                        status = lib_database.extract_aggregated_data_for_journal_language_year_month(STR_CONNECTION, params.collection, date)
+                    else:
+                        status = None
+
+                    if status is not None and status._generate_rows:
+                        lib_database.update_aggr_status_for_table(SESSION_FACTORY(), params.collection, date, lib_status.AGGR_STATUS_DONE, status_column_name)
+
+                    logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
+
+                elif current_date_aggr_status_table is None:
+                    logging.info('Data %s da coleção %s não está pronta para agregação' % (params.collection, date))
+                    break
                 else:
-                    status = None
+                    logging.info('Data %s da coleção %s já foi agregada para tabela %s' % (params.collection, date, table_name))
 
-                if status is not None and status._generate_rows:
-                    lib_database.update_aggr_status_for_table(SESSION_FACTORY(), params.collection, date, lib_status.AGGR_STATUS_DONE, status_column_name)
-
-                logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
-
-            elif current_date_aggr_status_table is None:
-                logging.info('Data %s da coleção %s não está pronta para agregação' % (params.collection, date))
-                break
-            else:
-                logging.info('Data %s da coleção %s já foi agregada para tabela %s' % (params.collection, date, table_name))
+            except Exception as e:
+                logging.error(e)
