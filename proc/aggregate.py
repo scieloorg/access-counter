@@ -19,3 +19,21 @@ SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
 TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_language_year_month,aggr_journal_language_year_month')
 
 
+def _extrac_dates_from_period(period: str):
+    dates = []
+
+    try:
+        start, end = period.split(',')
+
+        start_date = datetime.strptime(start, '%Y-%m-%d')
+        end_date = datetime.strptime(end, '%Y-%m-%d')
+
+        current_date = start_date
+        while current_date <= end_date:
+            dates.append(current_date)
+            current_date = current_date + timedelta(days=1)
+
+        return [d.strftime('%Y-%m-%d') for d in dates]
+
+    except:
+        return []
