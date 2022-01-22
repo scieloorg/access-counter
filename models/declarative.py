@@ -1,5 +1,5 @@
-from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DateTime, DECIMAL
-from sqlalchemy.dialects.mysql import BIGINT, BINARY, BOOLEAN, INTEGER, TINYINT, VARBINARY, VARCHAR
+from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DECIMAL
+from sqlalchemy.dialects.mysql import  BOOLEAN, INTEGER, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -22,6 +22,16 @@ class DateStatus(Base):
     status_sushi_article_metric = Column(BOOLEAN, default=False)
     status_sushi_journal_metric = Column(BOOLEAN, default=False)
     status_sushi_journal_yop_metric = Column(BOOLEAN, default=False)
+
+
+class AggrStatus(Base):
+    __tablename__ = 'aggr_status'
+    __table_args__ = (UniqueConstraint('collection', 'year_month_day', name='uni_collection_year_month_day'), )
+    collection = Column(VARCHAR(3), nullable=False, primary_key=True)
+    year_month_day = Column(Date, nullable=False, primary_key=True)
+
+    status_aggr_article_language_year_month_metric = Column(BOOLEAN, default=False)
+    status_aggr_journal_language_year_month_metric = Column(BOOLEAN, default=False)
 
 
 class Journal(Base):
