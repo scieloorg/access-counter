@@ -293,7 +293,6 @@ def get_aggr_status_for_table(db_session, collection, date, table_name):
     except OperationalError as e:
         return e
 
-    raw_query = 'SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, location_latitude as latitude, location_longitude as longitude, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE matomo_log_link_visit_action.idsite = {0} AND server_time >= "{1}" AND server_time < "{2}" ORDER BY ip;'.format(idsite, currente_date, next_date)
 
 def update_aggr_status_for_table(db_session, collection, date, status, table_name):
     try:
@@ -309,6 +308,54 @@ def update_aggr_status_for_table(db_session, collection, date, status, table_nam
     except OperationalError:
         logging.error('Error while trying to update aggr status')
 
+
+def extract_aggregated_data_for_article_language_year_month(database_uri, collection, date):
+    raw_query = '''
+    INSERT INTO
+        aggr_article_language_year_month_metric (
+            collection,
+            article_id,
+            language_id,
+            `year_month`,
+            total_item_requests,
+            total_item_investigations,
+            unique_item_requests,
+            unique_item_investigations
+        )
+        SELECT
+            ca.collection,
+            cam.idarticle,
+            cam.idlanguage,
+            substr(cam.year_month_day, 1, 7) AS ym,
+            sum(cam.total_item_requests) AS tir,
+            sum(cam.total_item_investigations) AS tii,
+            sum(cam.unique_item_requests) AS uir,
+            sum(cam.unique_item_investigations) AS uii
+        FROM
+            counter_article_metric cam
+        LEFT JOIN
+            counter_article ca ON ca.id = cam.idarticle
+        LEFT JOIN
+            counter_journal cj ON cj.id = ca.idjournal_a
+        LEFT JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+        WHERE
+            year_month_day = '{0}' AND
+            cjc.collection = '{1}'
+        GROUP BY
+            ca.collection,
+            cam.idarticle,
+            cam.idlanguage,
+            ym
+    ON DUPLICATE KEY UPDATE
+        total_item_requests = total_item_requests + VALUES(total_item_requests),
+        total_item_investigations = total_item_investigations + VALUES(total_item_investigations),
+        unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
+        unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
+    ;
+    '''.format(date, collection)
+    engine = create_engine(database_uri)
+    return engine.execute(raw_query)
     return engine.execute(raw_query)
 
 
