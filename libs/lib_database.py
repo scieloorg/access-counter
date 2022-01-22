@@ -291,7 +291,7 @@ def get_aggr_status_for_table(db_session, collection, date, table_name):
             ...
 
     except OperationalError as e:
-        return e
+        raise e
 
 
 def update_aggr_status_for_table(db_session, collection, date, status, table_name):
