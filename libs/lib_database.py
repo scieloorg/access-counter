@@ -267,9 +267,31 @@ def update_date_status(db_session, collection, date, status):
         logging.error('Error while trying to update date status')
 
 
-def extract_pretable(database_uri, date, idsite):
-    currente_date = date
-    next_date = date + datetime.timedelta(days=1)
+def get_aggr_status_for_table(db_session, collection, date, table_name):
+    try:
+        date_status = get_date_status(db_session, collection, date)
+
+        if date_status == lib_status.DATE_STATUS_COMPLETED:
+            try:
+                object_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection, AggrStatus.year_month_day == date)).one()
+                return getattr(object_aggr_status, table_name)
+
+            except NoResultFound as e:
+                obj_aggr_status = AggrStatus()
+                obj_aggr_status.collection = collection
+                obj_aggr_status.year_month_day = date
+
+                db_session.add(obj_aggr_status)
+                db_session.commit()
+                db_session.flush()
+
+                return lib_status.AGGR_STATUS_QUEUE
+
+        else:
+            ...
+
+    except OperationalError as e:
+        return e
 
     raw_query = 'SELECT server_time as serverTime, config_browser_name as browserName, config_browser_version as browserVersion, inet_ntoa(conv(hex(location_ip), 16, 10)) as ip, location_latitude as latitude, location_longitude as longitude, name as actionName from matomo_log_link_visit_action LEFT JOIN matomo_log_visit on matomo_log_visit.idvisit = matomo_log_link_visit_action.idvisit LEFT JOIN matomo_log_action on matomo_log_action.idaction = matomo_log_link_visit_action.idaction_url WHERE matomo_log_link_visit_action.idsite = {0} AND server_time >= "{1}" AND server_time < "{2}" ORDER BY ip;'.format(idsite, currente_date, next_date)
 
