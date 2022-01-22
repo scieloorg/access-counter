@@ -37,3 +37,7 @@ def _extrac_dates_from_period(period: str):
 
     except:
         return []
+
+
+def _extract_tables_to_update(tables: str):
+    return [t.strip() for t in tables.split(',')]
