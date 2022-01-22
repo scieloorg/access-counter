@@ -4,7 +4,7 @@ Gera relatórios em formato COUNTER R5.
 
 
 ## Como instalar
-__Criar ambiente virtual para python 3.6+__ 
+__Criar ambiente virtual para python 3.6+__
 ```bash
 virtualenv -p python3.6 .venv
 ```
@@ -64,6 +64,21 @@ export_to_database \
     -u mysql://user:pass@host:port/database \
     --auto
 ```
+
+__Agregar tabelas__
+```bash
+usage: aggregate [-h] [-c COLLECTION] [-p PERIOD] [-t {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric}]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c COLLECTION, --collection COLLECTION
+                        Acrônimo de coleção
+  -p PERIOD, --period PERIOD
+                        Período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)
+  -t {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric}, --tables {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric}
+                        Tabelas a serem povoadas
+```
+
 
 ## Variáveis de ambiente
 - COLLECTION
