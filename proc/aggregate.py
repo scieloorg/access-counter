@@ -72,3 +72,6 @@ def main():
     logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
+
+    dates = _extrac_dates_from_period(params.period)
+    tables = _extract_tables_to_update(params.tables)
