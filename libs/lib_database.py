@@ -267,14 +267,14 @@ def update_date_status(db_session, collection, date, status):
         logging.error('Error while trying to update date status')
 
 
-def get_aggr_status_for_table(db_session, collection, date, table_name):
+def get_aggr_status(db_session, collection, date, status_column_name):
     try:
         date_status = get_date_status(db_session, collection, date)
 
         if date_status == lib_status.DATE_STATUS_COMPLETED:
             try:
                 object_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection, AggrStatus.year_month_day == date)).one()
-                return getattr(object_aggr_status, table_name)
+                return getattr(object_aggr_status, status_column_name)
 
             except NoResultFound as e:
                 obj_aggr_status = AggrStatus()
