@@ -196,39 +196,21 @@ class SushiArticleMetric(Base):
     unique_item_investigations = Column(Integer, nullable=False)
 
 
-class LogAction(Base):
-    __tablename__ = 'matomo_log_action'
+class AggrArticleLanguageYearMonthMetric(Base):
+    __tablename__ = 'aggr_article_language_year_month_metric'
+    __table_args__ = (UniqueConstraint('year_month', 'idarticle_aalymm', 'idlanguage_aalymm', name='uni_art_lan_aalymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'idarticle_aalymm'),)
 
-    __table_args__ = (Index('index_type_hash',
-                            'type',
-                            'hash'),)
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    idaction = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
-    name = Column(VARCHAR(4096))
-    hash = Column(INTEGER(unsigned=True), nullable=False)
-    type = Column(TINYINT(unsigned=True))
-    url_prefix = Column(TINYINT(2))
+    idarticle_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle_aalymm'))
+    idlanguage_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_aalymm'))
+    year_month = Column(VARCHAR(7), nullable=False)
 
-
-class LogVisit(Base):
-    __tablename__ = 'matomo_log_visit'
-
-    __table_args__ = (Index('index_idsite_idvisitor',
-                            'idsite',
-                            'idvisitor'),)
-
-    idvisit = Column(BIGINT(10, unsigned=True), primary_key=True, autoincrement=True)
-    idsite = Column(INTEGER(10, unsigned=True))
-    idvisitor = Column(BINARY(8), nullable=False)
-    config_browser_name = Column(VARCHAR(10))
-    config_browser_version = Column(VARCHAR(20))
-    location_ip = Column(VARBINARY(16), nullable=False)
-    location_latitude = Column(DECIMAL(9, 6))
-    location_longitude = Column(DECIMAL(9, 6))
-
-
-class LogLinkVisitAction(Base):
-    __tablename__ = 'matomo_log_link_visit_action'
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)
 
     __table_args__ = (Index('index_idsite_servertime',
                             'idsite',
