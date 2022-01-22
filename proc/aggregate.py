@@ -41,3 +41,34 @@ def _extrac_dates_from_period(period: str):
 
 def _extract_tables_to_update(tables: str):
     return [t.strip() for t in tables.split(',')]
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '-c',
+        '--collection',
+        default=COLLECTION,
+        help='Acrônimo de coleção'
+    )
+
+    parser.add_argument(
+        '-p',
+        '--period',
+        help='Período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)'
+    )
+
+    parser.add_argument(
+        '-t',
+        '--tables',
+        choices=['aggr_article_language_year_month_metric', 'aggr_journal_language_year_month_metric'],
+        default='aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric',
+        help='Tabelas a serem povoadas'
+    )
+
+    params = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO,
+                        format='[%(asctime)s] %(levelname)s %(message)s',
+                        datefmt='%d/%b/%Y %H:%M:%S')
