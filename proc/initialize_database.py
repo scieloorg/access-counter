@@ -5,7 +5,7 @@ import os
 from libs import lib_database
 
 
-STR_CONNNECTION = os.environ.get('STR_CONNNECTION', 'mysql://user:pass@localhost:3306/matomo')
+STR_CONNECTION = os.environ.get('STR_CONNECTION', 'mysql://user:pass@localhost:3306/matomo')
 LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 
 
@@ -15,7 +15,7 @@ def main():
 
     parser.add_argument(
         '-u', '--str_connection',
-        default=STR_CONNNECTION,
+        default=STR_CONNECTION,
         help='String de conexão com banco de dados (mysql://username:password@host:port/database)'
     )
 
