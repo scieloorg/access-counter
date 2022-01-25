@@ -273,13 +273,13 @@ def get_aggr_status(db_session, collection, date, status_column_name):
 
         if date_status == lib_status.DATE_STATUS_COMPLETED:
             try:
-                object_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection, AggrStatus.year_month_day == date)).one()
+                object_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection, AggrStatus.date == date)).one()
                 return getattr(object_aggr_status, status_column_name)
 
             except NoResultFound as e:
                 obj_aggr_status = AggrStatus()
                 obj_aggr_status.collection = collection
-                obj_aggr_status.year_month_day = date
+                obj_aggr_status.date = date
 
                 db_session.add(obj_aggr_status)
                 db_session.commit()
@@ -297,7 +297,7 @@ def get_aggr_status(db_session, collection, date, status_column_name):
 def update_aggr_status_for_table(db_session, collection, date, status, table_name):
     try:
         existing_aggr_status = db_session.query(AggrStatus).filter(and_(AggrStatus.collection == collection,
-                                                                        AggrStatus.year_month_day == date)).one()
+                                                                        AggrStatus.date == date)).one()
 
         setattr(existing_aggr_status, table_name, status)
 
