@@ -1,12 +1,11 @@
 import argparse
-from genericpath import exists
 import logging
 import os
 import time
 
 from datetime import datetime, timedelta
 from libs import lib_database, lib_status
-from sqlalchemy import create_engine, table
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
@@ -16,7 +15,7 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 ENGINE = create_engine(STR_CONNECTION, pool_recycle=1800)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)
 SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
-TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_language_year_month,aggr_journal_language_year_month')
+TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric')
 
 
 def _extrac_dates_from_period(period: str):
@@ -35,7 +34,8 @@ def _extrac_dates_from_period(period: str):
 
         return [d.strftime('%Y-%m-%d') for d in dates]
 
-    except:
+    except Exception as e:
+        logging.error(e)
         return []
 
 
@@ -63,8 +63,8 @@ def main():
         '-t',
         '--tables',
         choices=['aggr_article_language_year_month_metric', 'aggr_journal_language_year_month_metric'],
-        default='aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric',
-        help='Tabelas a serem povoadas'
+        default=TABLES_TO_UPDATE,
+        help='Tabelas a serem preenchidas'
     )
 
     params = parser.parse_args()
@@ -74,7 +74,10 @@ def main():
                         datefmt='%d/%b/%Y %H:%M:%S')
 
     dates = _extrac_dates_from_period(params.period)
+    logging.info('Há %d datas...' % len(dates))
+
     tables = _extract_tables_to_update(params.tables)
+    logging.info('Há %d tabelas de agregação' % len(tables))
 
     for date in dates:
         for table_name in tables:
@@ -90,8 +93,10 @@ def main():
 
                     if table_name == 'aggr_article_language_year_month_metric':
                         status = lib_database.extract_aggregated_data_for_article_language_year_month(STR_CONNECTION, params.collection, date)
+
                     elif table_name == 'aggr_journal_language_year_month_metric':
                         status = lib_database.extract_aggregated_data_for_journal_language_year_month(STR_CONNECTION, params.collection, date)
+
                     else:
                         status = None
 
@@ -101,10 +106,11 @@ def main():
                     logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
 
                 elif current_date_aggr_status_table is None:
-                    logging.info('Data %s da coleção %s não está pronta para agregação' % (params.collection, date))
+                    logging.info('Data %s da coleção %s não está pronta para agregação' % (date, params.collection))
                     break
+
                 else:
-                    logging.info('Data %s da coleção %s já foi agregada para tabela %s' % (params.collection, date, table_name))
+                    logging.info('Data %s da coleção %s já foi agregada para tabela %s' % (date, params.collection, table_name))
 
             except Exception as e:
                 logging.error(e)
