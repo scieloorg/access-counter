@@ -1,12 +1,11 @@
 import argparse
-from genericpath import exists
 import logging
 import os
 import time
 
 from datetime import datetime, timedelta
 from libs import lib_database, lib_status
-from sqlalchemy import create_engine, table
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
