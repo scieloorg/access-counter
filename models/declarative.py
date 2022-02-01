@@ -1,5 +1,5 @@
 from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DECIMAL
-from sqlalchemy.dialects.mysql import  BOOLEAN, INTEGER, VARCHAR
+from sqlalchemy.dialects.mysql import BIGINT,  BOOLEAN, DATE, DATETIME, INTEGER, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
