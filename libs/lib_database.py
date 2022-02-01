@@ -443,6 +443,48 @@ def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collect
     engine = create_engine(database_uri)
 
     return engine.execute(raw_query)
+
+
+def update_aggr_journal_geolocation(db_session, data):
+    for k, v in data.items():
+        collection, journal_id, year_month, country_code = k
+        tir, tii, uir, uii = v
+
+        try:
+            aggr_jou_geo = db_session.query(AggrJournalGeolocationYearMonthMetric).filter(and_(
+                AggrJournalGeolocationYearMonthMetric.collection == collection,
+                AggrJournalGeolocationYearMonthMetric.journal_id == journal_id,
+                AggrJournalGeolocationYearMonthMetric.year_month == year_month,
+                AggrJournalGeolocationYearMonthMetric.country_code == country_code)
+            ).one()
+        
+            aggr_jou_geo.total_item_requests += tir
+            aggr_jou_geo.total_item_investigations += tii
+            aggr_jou_geo.unique_item_requests += uir
+            aggr_jou_geo.unique_item_investigations += uii
+
+        except NoResultFound:
+            aggr_jou_geo = AggrJournalGeolocationYearMonthMetric()
+            aggr_jou_geo.collection =  collection
+            aggr_jou_geo.journal_id = journal_id
+            aggr_jou_geo.year_month = year_month
+            aggr_jou_geo.country_code = country_code
+            aggr_jou_geo.total_item_investigations = tii
+            aggr_jou_geo.total_item_requests = tir
+            aggr_jou_geo.unique_item_investigations = uii
+            aggr_jou_geo.unique_item_requests = uir
+            
+            db_session.add(aggr_jou_geo)
+        
+        except OperationalError as e:
+            logging.error(e)
+
+    db_session.commit()
+    db_session.flush()
+
+    return True
+
+
 def get_dates_able_to_extract(db_session, collection, number_of_days):
     dates = []
 
