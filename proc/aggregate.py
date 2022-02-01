@@ -94,7 +94,7 @@ def main():
     parser.add_argument(
         '-t',
         '--tables',
-        choices=['aggr_article_language_year_month_metric', 'aggr_journal_language_year_month_metric'],
+        choices=['aggr_article_language_year_month_metric', 'aggr_journal_language_year_month_metric', 'aggr_journal_geolocation_year_month_metric'],
         default=TABLES_TO_UPDATE,
         help='Tabelas a serem preenchidas'
     )
@@ -129,10 +129,15 @@ def main():
                     elif table_name == 'aggr_journal_language_year_month_metric':
                         status = lib_database.extract_aggregated_data_for_journal_language_year_month(STR_CONNECTION, params.collection, date)
 
+                    elif table_name == 'aggr_journal_geolocation_year_month_metric':
+                        semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_year_month(STR_CONNECTION, params.collection, date)
+                        aggr_data = _translate_geolocation_to_country(semi_aggr_data)
+                        status = lib_database.update_aggr_journal_geolocation(SESSION_FACTORY(), aggr_data)
+
                     else:
                         status = None
 
-                    if status is not None and status._generate_rows:
+                    if _is_status_true(status):
                         lib_database.update_aggr_status_for_table(SESSION_FACTORY(), params.collection, date, lib_status.AGGR_STATUS_DONE, status_column_name)
 
                     logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
