@@ -198,13 +198,14 @@ class SushiArticleMetric(Base):
 
 class AggrArticleLanguageYearMonthMetric(Base):
     __tablename__ = 'aggr_article_language_year_month_metric'
-    __table_args__ = (UniqueConstraint('year_month', 'idarticle_aalymm', 'idlanguage_aalymm', name='uni_art_lan_aalymm'),)
-    __table_args__ += (Index('idx_ym_id', 'year_month', 'idarticle_aalymm'),)
+    __table_args__ = (UniqueConstraint('year_month', 'article_id', 'language_id', name='uni_art_lan_aalymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'article_id'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    idarticle_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle_aalymm'))
-    idlanguage_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_aalymm'))
+    collection = Column(VARCHAR(3), nullable=False, primary_key=True)
+    article_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle_aalymm'))
+    language_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_aalymm'))
     year_month = Column(VARCHAR(7), nullable=False)
 
     total_item_requests = Column(Integer, nullable=False)
