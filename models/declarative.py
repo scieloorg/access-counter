@@ -32,6 +32,7 @@ class AggrStatus(Base):
 
     status_aggr_article_language_year_month_metric = Column(BOOLEAN, default=False)
     status_aggr_journal_language_year_month_metric = Column(BOOLEAN, default=False)
+    status_aggr_journal_geolocation_year_month_metric = Column(BOOLEAN, default=False)
 
 
 class Journal(Base):
