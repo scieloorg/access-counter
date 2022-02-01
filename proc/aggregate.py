@@ -64,6 +64,17 @@ def _translate_geolocation_to_country(data):
             translated_data[key][3] += d.uii
 
     return translated_data
+
+
+def _is_status_true(status):
+    if isinstance(status, bool):
+        return status
+
+    if isinstance(status, LegacyCursorResult):
+        if status._generate_rows:
+            return True
+
+
 def main():
     parser = argparse.ArgumentParser()
 
