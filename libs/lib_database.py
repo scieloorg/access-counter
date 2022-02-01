@@ -19,6 +19,7 @@ from models.declarative import (
     JournalCollection,
     DateStatus,
     AggrStatus,
+    AggrJournalGeolocationYearMonthMetric,
 )
 
 
@@ -405,6 +406,83 @@ def extract_aggregated_data_for_journal_language_year_month(database_uri, collec
     '''.format(date, collection)
     engine = create_engine(database_uri)
     return engine.execute(raw_query)
+
+
+def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collection, date):
+    raw_query = '''
+    SELECT
+        cjc.collection,
+        cj.id,
+        cl.latitude,
+        cl.longitude,
+        substr(cam.year_month_day, 1, 7) AS ym,
+        sum(cam.total_item_requests) AS tir,
+        sum(cam.total_item_investigations) AS tii,
+        sum(cam.unique_item_requests) AS uir,
+        sum(cam.unique_item_investigations) AS uii
+    FROM
+        counter_article_metric cam
+    LEFT JOIN
+        counter_article ca ON ca.id = cam.idarticle
+    LEFT JOIN
+        counter_journal cj ON cj.id = ca.idjournal_a
+    LEFT JOIN
+        counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+    LEFT JOIN
+        counter_localization cl ON cam.idlocalization = cl.id 
+    WHERE
+        year_month_day = '{0}' AND
+        cjc.collection = '{1}'
+    GROUP BY
+        cjc.collection,
+        cj.id,
+        cl.id,
+        ym
+    ;
+    '''.format(date, collection)
+    engine = create_engine(database_uri)
+
+    return engine.execute(raw_query)
+
+
+def update_aggr_journal_geolocation(db_session, data):
+    for k, v in data.items():
+        collection, journal_id, year_month, country_code = k
+        tir, tii, uir, uii = v
+
+        try:
+            aggr_jou_geo = db_session.query(AggrJournalGeolocationYearMonthMetric).filter(and_(
+                AggrJournalGeolocationYearMonthMetric.collection == collection,
+                AggrJournalGeolocationYearMonthMetric.journal_id == journal_id,
+                AggrJournalGeolocationYearMonthMetric.year_month == year_month,
+                AggrJournalGeolocationYearMonthMetric.country_code == country_code)
+            ).one()
+        
+            aggr_jou_geo.total_item_requests += tir
+            aggr_jou_geo.total_item_investigations += tii
+            aggr_jou_geo.unique_item_requests += uir
+            aggr_jou_geo.unique_item_investigations += uii
+
+        except NoResultFound:
+            aggr_jou_geo = AggrJournalGeolocationYearMonthMetric()
+            aggr_jou_geo.collection =  collection
+            aggr_jou_geo.journal_id = journal_id
+            aggr_jou_geo.year_month = year_month
+            aggr_jou_geo.country_code = country_code
+            aggr_jou_geo.total_item_investigations = tii
+            aggr_jou_geo.total_item_requests = tir
+            aggr_jou_geo.unique_item_investigations = uii
+            aggr_jou_geo.unique_item_requests = uir
+            
+            db_session.add(aggr_jou_geo)
+        
+        except OperationalError as e:
+            logging.error(e)
+
+    db_session.commit()
+    db_session.flush()
+
+    return True
 
 
 def get_dates_able_to_extract(db_session, collection, number_of_days):

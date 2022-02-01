@@ -2,11 +2,13 @@ import argparse
 import logging
 import os
 import time
+import reverse_geocode
 
 from datetime import datetime, timedelta
 from libs import lib_database, lib_status
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine.cursor import LegacyCursorResult
 
 
 STR_CONNECTION = os.environ.get('STR_CONNECTION', 'mysql://user:pass@localhost:3306/matomo')
@@ -15,7 +17,7 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 ENGINE = create_engine(STR_CONNECTION, pool_recycle=1800)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)
 SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
-TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric')
+TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric')
 
 
 def _extrac_dates_from_period(period: str):
@@ -43,6 +45,36 @@ def _extract_tables_to_update(tables: str):
     return [t.strip() for t in tables.split(',')]
 
 
+def _translate_geolocation_to_country(data):
+    translated_data = {}
+
+    for d in data:
+        geo_reversed = reverse_geocode.search([[d.latitude, d.longitude]])
+        if geo_reversed:
+            country_code = geo_reversed.pop().get('country_code', '')
+
+            key = (d.collection, d.id, d.ym, country_code)
+
+            if key not in translated_data:
+                translated_data[key] = [0, 0, 0, 0]
+
+            translated_data[key][0] += d.tir
+            translated_data[key][1] += d.tii
+            translated_data[key][2] += d.uir
+            translated_data[key][3] += d.uii
+
+    return translated_data
+
+
+def _is_status_true(status):
+    if isinstance(status, bool):
+        return status
+
+    if isinstance(status, LegacyCursorResult):
+        if status._generate_rows:
+            return True
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -62,7 +94,7 @@ def main():
     parser.add_argument(
         '-t',
         '--tables',
-        choices=['aggr_article_language_year_month_metric', 'aggr_journal_language_year_month_metric'],
+        choices=['aggr_article_language_year_month_metric', 'aggr_journal_language_year_month_metric', 'aggr_journal_geolocation_year_month_metric'],
         default=TABLES_TO_UPDATE,
         help='Tabelas a serem preenchidas'
     )
@@ -97,10 +129,15 @@ def main():
                     elif table_name == 'aggr_journal_language_year_month_metric':
                         status = lib_database.extract_aggregated_data_for_journal_language_year_month(STR_CONNECTION, params.collection, date)
 
+                    elif table_name == 'aggr_journal_geolocation_year_month_metric':
+                        semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_year_month(STR_CONNECTION, params.collection, date)
+                        aggr_data = _translate_geolocation_to_country(semi_aggr_data)
+                        status = lib_database.update_aggr_journal_geolocation(SESSION_FACTORY(), aggr_data)
+
                     else:
                         status = None
 
-                    if status is not None and status._generate_rows:
+                    if _is_status_true(status):
                         lib_database.update_aggr_status_for_table(SESSION_FACTORY(), params.collection, date, lib_status.AGGR_STATUS_DONE, status_column_name)
 
                     logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))

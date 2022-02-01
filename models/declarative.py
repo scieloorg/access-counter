@@ -1,10 +1,49 @@
 from sqlalchemy import Column, ForeignKey, Integer, UniqueConstraint, Index, Date, DECIMAL
-from sqlalchemy.dialects.mysql import  BOOLEAN, INTEGER, VARCHAR
+from sqlalchemy.dialects.mysql import BIGINT,  BOOLEAN, DATE, DATETIME, INTEGER, VARCHAR
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 
 Base = declarative_base()
+
+
+class LogFile(Base):
+    __tablename__ = 'control_log_file'
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    full_path = Column(VARCHAR(255), nullable=False, unique=True)
+    name = Column(VARCHAR(255), nullable=False)
+    created_at = Column(DATETIME, nullable=False)
+    size = Column(BIGINT, nullable=False)
+    server = Column(VARCHAR(255), nullable=False)
+    date = Column(DATE, nullable=False, index=True)
+    status = Column(INTEGER, default=0)
+    collection = Column(VARCHAR(3), nullable=False)
+
+
+class LogFileSummary(Base):
+    __tablename__ = 'control_log_file_summary'
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+    idlogfile = Column(INTEGER(unsigned=True), ForeignKey('control_log_file.id', name='idlogfile'))
+
+    total_lines = Column(INTEGER, nullable=False)
+    lines_parsed = Column(INTEGER)
+
+    total_imported_lines = Column(INTEGER)
+    total_ignored_lines = Column(INTEGER)
+    sum_imported_ignored_lines = Column(INTEGER)
+
+    ignored_lines_filtered = Column(INTEGER)
+    ignored_lines_http_errors = Column(INTEGER)
+    ignored_lines_http_redirects = Column(INTEGER)
+    ignored_lines_invalid = Column(INTEGER)
+    ignored_lines_bots = Column(INTEGER)
+    ignored_lines_static_resources = Column(INTEGER)
+
+    total_time = Column(INTEGER)
+    status = Column(INTEGER)
 
 
 class DateStatus(Base):
@@ -32,6 +71,7 @@ class AggrStatus(Base):
 
     status_aggr_article_language_year_month_metric = Column(BOOLEAN, default=False)
     status_aggr_journal_language_year_month_metric = Column(BOOLEAN, default=False)
+    status_aggr_journal_geolocation_year_month_metric = Column(BOOLEAN, default=False)
 
 
 class Journal(Base):
@@ -198,13 +238,14 @@ class SushiArticleMetric(Base):
 
 class AggrArticleLanguageYearMonthMetric(Base):
     __tablename__ = 'aggr_article_language_year_month_metric'
-    __table_args__ = (UniqueConstraint('year_month', 'idarticle_aalymm', 'idlanguage_aalymm', name='uni_art_lan_aalymm'),)
-    __table_args__ += (Index('idx_ym_id', 'year_month', 'idarticle_aalymm'),)
+    __table_args__ = (UniqueConstraint('year_month', 'article_id', 'language_id', name='uni_art_lan_aalymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'article_id'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    idarticle_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle_aalymm'))
-    idlanguage_aalymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_aalymm'))
+    collection = Column(VARCHAR(3), nullable=False, primary_key=True)
+    article_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article.id', name='idarticle_aalymm'))
+    language_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_aalymm'))
     year_month = Column(VARCHAR(7), nullable=False)
 
     total_item_requests = Column(Integer, nullable=False)
@@ -215,13 +256,32 @@ class AggrArticleLanguageYearMonthMetric(Base):
 
 class AggrJournalLanguageYearMonthMetric(Base):
     __tablename__ = 'aggr_journal_language_year_month_metric'
-    __table_args__ = (UniqueConstraint('year_month', 'idjournal_ajlymm', 'idlanguage_ajlymm', name='uni_jou_lan_ajlymm'),)
-    __table_args__ += (Index('idx_ym_id', 'year_month', 'idjournal_ajlymm'),)
+    __table_args__ = (UniqueConstraint('year_month', 'journal_id', 'language_id', name='uni_jou_lan_ajlymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'journal_id'),)
 
     id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
 
-    idjournal_ajlymm = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_ajlymm'))
-    idlanguage_ajlymm = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_ajlymm'))
+    collection = Column(VARCHAR(3), nullable=False, primary_key=True)
+    journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_ajlymm'))
+    language_id = Column(INTEGER(unsigned=True), ForeignKey('counter_article_language.id', name='idlanguage_ajlymm'))
+    year_month = Column(VARCHAR(7), nullable=False)
+
+    total_item_requests = Column(Integer, nullable=False)
+    total_item_investigations = Column(Integer, nullable=False)
+    unique_item_requests = Column(Integer, nullable=False)
+    unique_item_investigations = Column(Integer, nullable=False)
+
+
+class AggrJournalGeolocationYearMonthMetric(Base):
+    __tablename__ = 'aggr_journal_geolocation_year_month_metric'
+    __table_args__ = (UniqueConstraint('year_month', 'journal_id', 'country_code', name='uni_jou_geo_ajlymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'journal_id'),)
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    collection = Column(VARCHAR(3), nullable=False, primary_key=True)
+    journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_ajlymm'))
+    country_code = Column(VARCHAR(4), nullable=False)
     year_month = Column(VARCHAR(7), nullable=False)
 
     total_item_requests = Column(Integer, nullable=False)
