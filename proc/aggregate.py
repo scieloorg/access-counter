@@ -45,6 +45,25 @@ def _extract_tables_to_update(tables: str):
     return [t.strip() for t in tables.split(',')]
 
 
+def _translate_geolocation_to_country(data):
+    translated_data = {}
+
+    for d in data:
+        geo_reversed = reverse_geocode.search([[d.latitude, d.longitude]])
+        if geo_reversed:
+            country_code = geo_reversed.pop().get('country_code', '')
+
+            key = (d.collection, d.id, d.ym, country_code)
+
+            if key not in translated_data:
+                translated_data[key] = [0, 0, 0, 0]
+
+            translated_data[key][0] += d.tir
+            translated_data[key][1] += d.tii
+            translated_data[key][2] += d.uir
+            translated_data[key][3] += d.uii
+
+    return translated_data
 def main():
     parser = argparse.ArgumentParser()
 
