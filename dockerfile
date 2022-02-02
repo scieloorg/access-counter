@@ -6,7 +6,7 @@ RUN cd /src \
     && python setup.py bdist_wheel -d /deps
 
 FROM python:3.9.1-alpine3.12
-MAINTAINER scielo-dev@googlegroups.com
+LABEL MAINTAINER scielo-dev@googlegroups.com
 
 COPY --from=build /deps/* /deps/
 COPY requirements.txt .
