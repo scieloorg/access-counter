@@ -12,6 +12,7 @@ pymongo==3.11.4
 python-dateutil==2.8.1
 pytz==2021.1
 requests==2.25.1
+reverse-geocode==1.4.1
 Sickle==0.7.0
 six==1.16.0
 SQLAlchemy==1.4.19
