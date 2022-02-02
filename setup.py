@@ -16,6 +16,7 @@ install_requires = [
     'python-dateutil',
     'pytz',
     'requests',
+    'reverse-geocode',
     'Sickle',
     'six',
     'SQLAlchemy',
