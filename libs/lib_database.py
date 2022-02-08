@@ -334,15 +334,14 @@ def extract_aggregated_data_for_article_language_year_month(database_uri, collec
             sum(cam.unique_item_investigations) AS uii
         FROM
             counter_article_metric cam
-        LEFT JOIN
+        JOIN
             counter_article ca ON ca.id = cam.idarticle
-        LEFT JOIN
-            counter_journal cj ON cj.id = ca.idjournal_a
-        LEFT JOIN
-            counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+        JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = ca.idjournal_a
         WHERE
-            year_month_day = '{0}' AND
-            cjc.collection = '{1}'
+            cjc.collection = '{0}' AND
+            cjc.collection = ca.collection AND
+            year_month_day = '{1}'
         GROUP BY
             ca.collection,
             cam.idarticle,
