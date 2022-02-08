@@ -420,21 +420,19 @@ def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collect
         sum(cam.unique_item_investigations) AS uii
     FROM
         counter_article_metric cam
-    LEFT JOIN
+    JOIN
         counter_article ca ON ca.id = cam.idarticle
-    LEFT JOIN
-        counter_journal cj ON cj.id = ca.idjournal_a
-    LEFT JOIN
-        counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
-    LEFT JOIN
-        counter_localization cl ON cam.idlocalization = cl.id 
+    JOIN
+        counter_journal_collection cjc ON cjc.idjournal_jc = ca.idjournal_a
+    JOIN
+        counter_localization cl ON cl.id = cam.idlocalization
     WHERE
-        year_month_day = '{0}' AND
-        cjc.collection = '{1}'
+        ca.collection = cjc.collection AND
+        cjc.collection = '{0}' AND
+        cam.year_month_day = '{1}'
     GROUP BY
-        cjc.collection,
-        cj.id,
-        cl.id,
+        cjc.id,
+        cam.idlocalization,
         ym
     ;
     '''.format(collection, date)
