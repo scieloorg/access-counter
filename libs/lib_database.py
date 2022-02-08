@@ -353,7 +353,7 @@ def extract_aggregated_data_for_article_language_year_month(database_uri, collec
         unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
         unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
     ;
-    '''.format(date, collection)
+    '''.format(collection, date)
     engine = create_engine(database_uri)
     return engine.execute(raw_query)
 
@@ -402,7 +402,7 @@ def extract_aggregated_data_for_journal_language_year_month(database_uri, collec
         unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
         unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
     ;
-    '''.format(date, collection)
+    '''.format(collection, date)
     engine = create_engine(database_uri)
     return engine.execute(raw_query)
 
@@ -438,7 +438,7 @@ def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collect
         cl.id,
         ym
     ;
-    '''.format(date, collection)
+    '''.format(collection, date)
     engine = create_engine(database_uri)
 
     return engine.execute(raw_query)
