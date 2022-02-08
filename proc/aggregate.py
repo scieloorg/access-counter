@@ -53,7 +53,7 @@ def _translate_geolocation_to_country(data):
         if geo_reversed:
             country_code = geo_reversed.pop().get('country_code', '')
 
-            key = (d.collection, d.id, d.ym, country_code)
+            key = (d.collection, d.journalID, d.ym, country_code)
 
             if key not in translated_data:
                 translated_data[key] = [0, 0, 0, 0]

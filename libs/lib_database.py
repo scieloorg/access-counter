@@ -334,15 +334,14 @@ def extract_aggregated_data_for_article_language_year_month(database_uri, collec
             sum(cam.unique_item_investigations) AS uii
         FROM
             counter_article_metric cam
-        LEFT JOIN
+        JOIN
             counter_article ca ON ca.id = cam.idarticle
-        LEFT JOIN
-            counter_journal cj ON cj.id = ca.idjournal_a
-        LEFT JOIN
-            counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+        JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = ca.idjournal_a
         WHERE
-            year_month_day = '{0}' AND
-            cjc.collection = '{1}'
+            cjc.collection = '{0}' AND
+            cjc.collection = ca.collection AND
+            year_month_day = '{1}'
         GROUP BY
             ca.collection,
             cam.idarticle,
@@ -354,7 +353,7 @@ def extract_aggregated_data_for_article_language_year_month(database_uri, collec
         unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
         unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
     ;
-    '''.format(date, collection)
+    '''.format(collection, date)
     engine = create_engine(database_uri)
     return engine.execute(raw_query)
 
@@ -374,7 +373,7 @@ def extract_aggregated_data_for_journal_language_year_month(database_uri, collec
         )
         SELECT
             cjc.collection,
-            cj.id,
+            cjc.idjournal_jc,
             cam.idlanguage,
             substr(cam.year_month_day, 1, 7) AS ym,
             sum(cam.total_item_requests) AS tir,
@@ -383,18 +382,17 @@ def extract_aggregated_data_for_journal_language_year_month(database_uri, collec
             sum(cam.unique_item_investigations) AS uii
         FROM
             counter_article_metric cam
-        LEFT JOIN
+        JOIN
             counter_article ca ON ca.id = cam.idarticle
-        LEFT JOIN
-            counter_journal cj ON cj.id = ca.idjournal_a
-        LEFT JOIN
-            counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
+        JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = ca.idjournal_a
         WHERE
-            year_month_day = '{0}' AND
-            cjc.collection = '{1}'
+            cjc.collection = '{0}' AND
+            cjc.collection = ca.collection AND
+            year_month_day = '{1}'
         GROUP BY
             cjc.collection,
-            cj.id,
+            cjc.idjournal_jc,
             cam.idlanguage,
             ym
     ON DUPLICATE KEY UPDATE
@@ -403,7 +401,7 @@ def extract_aggregated_data_for_journal_language_year_month(database_uri, collec
         unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
         unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
     ;
-    '''.format(date, collection)
+    '''.format(collection, date)
     engine = create_engine(database_uri)
     return engine.execute(raw_query)
 
@@ -412,7 +410,8 @@ def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collect
     raw_query = '''
     SELECT
         cjc.collection,
-        cj.id,
+        cjc.idjournal_jc as journalID,
+        cjc.id as journalCollectionID,
         cl.latitude,
         cl.longitude,
         substr(cam.year_month_day, 1, 7) AS ym,
@@ -422,24 +421,22 @@ def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collect
         sum(cam.unique_item_investigations) AS uii
     FROM
         counter_article_metric cam
-    LEFT JOIN
+    JOIN
         counter_article ca ON ca.id = cam.idarticle
-    LEFT JOIN
-        counter_journal cj ON cj.id = ca.idjournal_a
-    LEFT JOIN
-        counter_journal_collection cjc ON cjc.idjournal_jc = cj.id
-    LEFT JOIN
-        counter_localization cl ON cam.idlocalization = cl.id 
+    JOIN
+        counter_journal_collection cjc ON cjc.idjournal_jc = ca.idjournal_a
+    JOIN
+        counter_localization cl ON cl.id = cam.idlocalization
     WHERE
-        year_month_day = '{0}' AND
-        cjc.collection = '{1}'
+        ca.collection = cjc.collection AND
+        cjc.collection = '{0}' AND
+        cam.year_month_day = '{1}'
     GROUP BY
-        cjc.collection,
-        cj.id,
-        cl.id,
+        cjc.id,
+        cam.idlocalization,
         ym
     ;
-    '''.format(date, collection)
+    '''.format(collection, date)
     engine = create_engine(database_uri)
 
     return engine.execute(raw_query)
@@ -457,7 +454,7 @@ def update_aggr_journal_geolocation(db_session, data):
                 AggrJournalGeolocationYearMonthMetric.year_month == year_month,
                 AggrJournalGeolocationYearMonthMetric.country_code == country_code)
             ).one()
-        
+
             aggr_jou_geo.total_item_requests += tir
             aggr_jou_geo.total_item_investigations += tii
             aggr_jou_geo.unique_item_requests += uir
@@ -473,9 +470,9 @@ def update_aggr_journal_geolocation(db_session, data):
             aggr_jou_geo.total_item_requests = tir
             aggr_jou_geo.unique_item_investigations = uii
             aggr_jou_geo.unique_item_requests = uir
-            
+
             db_session.add(aggr_jou_geo)
-        
+
         except OperationalError as e:
             logging.error(e)
 
