@@ -410,7 +410,8 @@ def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collect
     raw_query = '''
     SELECT
         cjc.collection,
-        cj.id,
+        cjc.idjournal_jc as journalID,
+        cjc.id as journalCollectionID,
         cl.latitude,
         cl.longitude,
         substr(cam.year_month_day, 1, 7) AS ym,
@@ -453,7 +454,7 @@ def update_aggr_journal_geolocation(db_session, data):
                 AggrJournalGeolocationYearMonthMetric.year_month == year_month,
                 AggrJournalGeolocationYearMonthMetric.country_code == country_code)
             ).one()
-        
+
             aggr_jou_geo.total_item_requests += tir
             aggr_jou_geo.total_item_investigations += tii
             aggr_jou_geo.unique_item_requests += uir
@@ -469,9 +470,9 @@ def update_aggr_journal_geolocation(db_session, data):
             aggr_jou_geo.total_item_requests = tir
             aggr_jou_geo.unique_item_investigations = uii
             aggr_jou_geo.unique_item_requests = uir
-            
+
             db_session.add(aggr_jou_geo)
-        
+
         except OperationalError as e:
             logging.error(e)
 
