@@ -45,7 +45,7 @@ def _extract_tables_to_update(tables: str):
     return [t.strip() for t in tables.split(',')]
 
 
-def _translate_geolocation_to_country(data):
+def _translate_geolocation_to_country(data, group_by_yop=False):
     translated_data = {}
 
     for d in data:
@@ -53,7 +53,10 @@ def _translate_geolocation_to_country(data):
         if geo_reversed:
             country_code = geo_reversed.pop().get('country_code', '')
 
-            key = (d.collection, d.journalID, d.ym, country_code)
+            if not group_by_yop:
+                key = (d.collection, d.journalID, d.ym, country_code)
+            else:
+                key = (d.collection, d.journalID, d.ym, country_code, d.yop)
 
             if key not in translated_data:
                 translated_data[key] = [0, 0, 0, 0]
