@@ -66,12 +66,15 @@ class DateStatus(Base):
 class AggrStatus(Base):
     __tablename__ = 'aggr_status'
     __table_args__ = (UniqueConstraint('collection', 'date', name='uni_collection_date'), )
+
     collection = Column(VARCHAR(3), nullable=False, primary_key=True)
-    date = Column(Date, nullable=False, primary_key=True)
+    date = Column(DATE, nullable=False, primary_key=True)
 
     status_aggr_article_language_year_month_metric = Column(BOOLEAN, default=False)
     status_aggr_journal_language_year_month_metric = Column(BOOLEAN, default=False)
     status_aggr_journal_geolocation_year_month_metric = Column(BOOLEAN, default=False)
+    status_aggr_journal_language_yop_year_month_metric = Column(BOOLEAN, default=False)
+    status_aggr_journal_geolocation_yop_year_month_metric = Column(BOOLEAN, default=False)
 
 
 class Journal(Base):
