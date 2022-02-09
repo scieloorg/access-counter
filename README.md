@@ -67,16 +67,18 @@ export_to_database \
 
 __Agregar tabelas__
 ```bash
-usage: aggregate [-h] [-c COLLECTION] [-p PERIOD] [-t {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric}]
+usage: aggregate [-h] [-c COLLECTION] [-p PERIOD]
+                 [-t {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric,aggr_journal_language_yop_year_month_metric,aggr_journal_geolocation_yop_year_month_metric}]
 
 optional arguments:
   -h, --help            show this help message and exit
   -c COLLECTION, --collection COLLECTION
                         Acrônimo de coleção
   -p PERIOD, --period PERIOD
-                        Período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)
-  -t {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric}, --tables {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric}
-                        Tabelas a serem povoadas
+                        Período de datas a serem agregadas (YYYY-MM-DD,YYYY-
+                        MM-DD)
+  -t {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric,aggr_journal_language_yop_year_month_metric,aggr_journal_geolocation_yop_year_month_metric}, --tables {aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric,aggr_journal_language_yop_year_month_metric,aggr_journal_geolocation_yop_year_month_metric}
+                        Tabelas a serem preenchidas
 ```
 
 

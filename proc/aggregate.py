@@ -17,7 +17,7 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 ENGINE = create_engine(STR_CONNECTION, pool_recycle=1800)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)
 SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
-TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric')
+TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric,aggr_journal_language_yop_year_month_metric,aggr_journal_geolocation_yop_year_month_metric')
 
 
 def _extrac_dates_from_period(period: str):
@@ -45,7 +45,7 @@ def _extract_tables_to_update(tables: str):
     return [t.strip() for t in tables.split(',')]
 
 
-def _translate_geolocation_to_country(data):
+def _translate_geolocation_to_country(data, group_by_yop=False):
     translated_data = {}
 
     for d in data:
@@ -53,7 +53,10 @@ def _translate_geolocation_to_country(data):
         if geo_reversed:
             country_code = geo_reversed.pop().get('country_code', '')
 
-            key = (d.collection, d.journalID, d.ym, country_code)
+            if not group_by_yop:
+                key = (d.collection, d.journalID, d.ym, country_code)
+            else:
+                key = (d.collection, d.journalID, d.ym, country_code, d.yop)
 
             if key not in translated_data:
                 translated_data[key] = [0, 0, 0, 0]
@@ -94,7 +97,13 @@ def main():
     parser.add_argument(
         '-t',
         '--tables',
-        choices=['aggr_article_language_year_month_metric', 'aggr_journal_language_year_month_metric', 'aggr_journal_geolocation_year_month_metric'],
+        choices=[
+            'aggr_article_language_year_month_metric',
+            'aggr_journal_language_year_month_metric',
+            'aggr_journal_geolocation_year_month_metric',
+            'aggr_journal_language_yop_year_month_metric',
+            'aggr_journal_geolocation_yop_year_month_metric',
+        ],
         default=TABLES_TO_UPDATE,
         help='Tabelas a serem preenchidas'
     )
@@ -129,10 +138,18 @@ def main():
                     elif table_name == 'aggr_journal_language_year_month_metric':
                         status = lib_database.extract_aggregated_data_for_journal_language_year_month(STR_CONNECTION, params.collection, date)
 
+                    elif table_name == 'aggr_journal_language_yop_year_month_metric':
+                        status = lib_database.extract_aggregated_data_for_journal_language_yop_year_month(STR_CONNECTION, params.collection, date)
+
                     elif table_name == 'aggr_journal_geolocation_year_month_metric':
                         semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_year_month(STR_CONNECTION, params.collection, date)
                         aggr_data = _translate_geolocation_to_country(semi_aggr_data)
                         status = lib_database.update_aggr_journal_geolocation(SESSION_FACTORY(), aggr_data)
+
+                    elif table_name == 'aggr_journal_geolocation_yop_year_month_metric':
+                        semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_yop_year_month(STR_CONNECTION, params.collection, date)
+                        aggr_data = _translate_geolocation_to_country(semi_aggr_data, group_by_yop=True)
+                        status = lib_database.update_aggr_journal_geolocation_yop(SESSION_FACTORY(), aggr_data)
 
                     else:
                         status = None
