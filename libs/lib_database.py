@@ -572,6 +572,48 @@ def update_aggr_journal_geolocation(db_session, data):
     return True
 
 
+def update_aggr_journal_geolocation_yop(db_session, data):
+    for k, v in data.items():
+        collection, journal_id, year_month, country_code, yop = k
+        tir, tii, uir, uii = v
+
+        try:
+            aggr_jou_geo_yop = db_session.query(AggrJournalGeolocationYOPYearMonthMetric).filter(and_(
+                AggrJournalGeolocationYOPYearMonthMetric.collection == collection,
+                AggrJournalGeolocationYOPYearMonthMetric.journal_id == journal_id,
+                AggrJournalGeolocationYOPYearMonthMetric.year_month == year_month,
+                AggrJournalGeolocationYOPYearMonthMetric.country_code == country_code,
+                AggrJournalGeolocationYOPYearMonthMetric.yop == yop)
+            ).one()
+
+            aggr_jou_geo_yop.total_item_requests += tir
+            aggr_jou_geo_yop.total_item_investigations += tii
+            aggr_jou_geo_yop.unique_item_requests += uir
+            aggr_jou_geo_yop.unique_item_investigations += uii
+
+        except NoResultFound:
+            aggr_jou_geo_yop = AggrJournalGeolocationYOPYearMonthMetric()
+            aggr_jou_geo_yop.collection =  collection
+            aggr_jou_geo_yop.journal_id = journal_id
+            aggr_jou_geo_yop.year_month = year_month
+            aggr_jou_geo_yop.country_code = country_code
+            aggr_jou_geo_yop.yop = yop
+            aggr_jou_geo_yop.total_item_investigations = tii
+            aggr_jou_geo_yop.total_item_requests = tir
+            aggr_jou_geo_yop.unique_item_investigations = uii
+            aggr_jou_geo_yop.unique_item_requests = uir
+
+            db_session.add(aggr_jou_geo_yop)
+
+        except OperationalError as e:
+            logging.error(e)
+
+    db_session.commit()
+    db_session.flush()
+
+    return True
+
+
 def get_dates_able_to_extract(db_session, collection, number_of_days):
     dates = []
 
