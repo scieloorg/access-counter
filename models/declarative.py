@@ -310,3 +310,22 @@ class AggrJournalLanguageYOPYearMonthMetric(Base):
     total_item_investigations = Column(INTEGER, nullable=False)
     unique_item_requests = Column(INTEGER, nullable=False)
     unique_item_investigations = Column(INTEGER, nullable=False)
+
+
+class AggrJournalGeolocationYOPYearMonthMetric(Base):
+    __tablename__ = 'aggr_journal_geolocation_yop_year_month_metric'
+    __table_args__ = (UniqueConstraint('collection', 'year_month', 'journal_id', 'country_code', 'yop', name='uni_col_jou_geo_yop_ymm_ajgyymm'),)
+    __table_args__ += (Index('idx_ym_id', 'year_month', 'journal_id'),)
+
+    id = Column(INTEGER(unsigned=True), primary_key=True, autoincrement=True)
+
+    collection = Column(VARCHAR(3), nullable=False, primary_key=True)
+    journal_id = Column(INTEGER(unsigned=True), ForeignKey('counter_journal.id', name='idjournal_ajgyymm'))
+    country_code = Column(VARCHAR(4), nullable=False)
+    yop = Column(INTEGER(4))
+    year_month = Column(VARCHAR(7), nullable=False)
+
+    total_item_requests = Column(INTEGER, nullable=False)
+    total_item_investigations = Column(INTEGER, nullable=False)
+    unique_item_requests = Column(INTEGER, nullable=False)
+    unique_item_investigations = Column(INTEGER, nullable=False)
