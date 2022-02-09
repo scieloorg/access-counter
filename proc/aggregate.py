@@ -146,6 +146,11 @@ def main():
                         aggr_data = _translate_geolocation_to_country(semi_aggr_data)
                         status = lib_database.update_aggr_journal_geolocation(SESSION_FACTORY(), aggr_data)
 
+                    elif table_name == 'aggr_journal_geolocation_yop_year_month_metric':
+                        semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_yop_year_month(STR_CONNECTION, params.collection, date)
+                        aggr_data = _translate_geolocation_to_country(semi_aggr_data, group_by_yop=True)
+                        status = lib_database.update_aggr_journal_geolocation_yop(SESSION_FACTORY(), aggr_data)
+
                     else:
                         status = None
 
