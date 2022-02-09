@@ -20,6 +20,7 @@ from models.declarative import (
     DateStatus,
     AggrStatus,
     AggrJournalGeolocationYearMonthMetric,
+    AggrJournalGeolocationYOPYearMonthMetric,
 )
 
 
