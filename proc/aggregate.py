@@ -138,6 +138,9 @@ def main():
                     elif table_name == 'aggr_journal_language_year_month_metric':
                         status = lib_database.extract_aggregated_data_for_journal_language_year_month(STR_CONNECTION, params.collection, date)
 
+                    elif table_name == 'aggr_journal_language_yop_year_month_metric':
+                        status = lib_database.extract_aggregated_data_for_journal_language_yop_year_month(STR_CONNECTION, params.collection, date)
+
                     elif table_name == 'aggr_journal_geolocation_year_month_metric':
                         semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_year_month(STR_CONNECTION, params.collection, date)
                         aggr_data = _translate_geolocation_to_country(semi_aggr_data)
