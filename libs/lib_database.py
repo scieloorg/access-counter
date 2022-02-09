@@ -494,6 +494,44 @@ def get_aggregated_data_for_journal_geolocation_year_month(database_uri, collect
     return engine.execute(raw_query)
 
 
+def get_aggregated_data_for_journal_geolocation_yop_year_month(database_uri, collection, date):
+    raw_query = '''
+    SELECT
+        cjc.collection,
+        cjc.idjournal_jc as journalID,
+        cjc.id as journalCollectionID,
+        cl.latitude,
+        cl.longitude,
+        ca.yop,
+        substr(cam.year_month_day, 1, 7) AS ym,
+        sum(cam.total_item_requests) AS tir,
+        sum(cam.total_item_investigations) AS tii,
+        sum(cam.unique_item_requests) AS uir,
+        sum(cam.unique_item_investigations) AS uii
+    FROM
+        counter_article_metric cam
+    JOIN
+        counter_article ca ON ca.id = cam.idarticle
+    JOIN
+        counter_journal_collection cjc ON cjc.idjournal_jc = ca.idjournal_a
+    JOIN
+        counter_localization cl ON cl.id = cam.idlocalization
+    WHERE
+        ca.collection = cjc.collection AND
+        cjc.collection = '{0}' AND
+        cam.year_month_day = '{1}'
+    GROUP BY
+        cjc.id,
+        cam.idlocalization,
+        ca.yop,
+        ym
+    ;
+    '''.format(collection, date)
+    engine = create_engine(database_uri)
+
+    return engine.execute(raw_query)
+
+
 def update_aggr_journal_geolocation(db_session, data):
     for k, v in data.items():
         collection, journal_id, year_month, country_code = k
