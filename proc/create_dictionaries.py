@@ -472,6 +472,7 @@ def main():
         if pid not in pid_issns[collection]:
             pid_issns[collection][pid] = []
         pid_issns[collection][pid].extend(issns)
+        pid_issns[collection][pid] = sorted(set(pid_issns[collection][pid]))
 
         if pid not in pid_dates[collection]:
             pid_dates[collection][pid] = {}
