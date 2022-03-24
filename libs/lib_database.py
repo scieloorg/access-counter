@@ -311,6 +311,54 @@ def update_aggr_status_for_table(db_session, collection, date, status, table_nam
         logging.error('Error while trying to update aggr status')
 
 
+def extract_aggregate_data_for_article_journal_year_month(database_uri, collection, date):
+    raw_query = '''
+    INSERT INTO
+        aggr_article_journal_year_month_metric (
+            collection,
+            article_id,
+            journal_id,
+            `year_month`,
+            total_item_requests,
+            total_item_investigations,
+            unique_item_requests,
+            unique_item_investigations
+        )
+        SELECT
+            ca.collection,
+            sam.idarticle_sam,
+            ca.idjournal_a,
+            substr(sam.year_month_day, 1, 7) AS ym,
+            sum(sam.total_item_requests) AS tir,
+            sum(sam.total_item_investigations) AS tii,
+            sum(sam.unique_item_requests) AS uir,
+            sum(sam.unique_item_investigations) AS uii
+        FROM
+            sushi_article_metric sam
+        JOIN
+            counter_article ca ON ca.id = sam.idarticle_sam
+        JOIN
+            counter_journal_collection cjc ON cjc.idjournal_jc = ca.idjournal_a
+        WHERE
+            cjc.collection = '{0}' AND
+            cjc.collection = ca.collection AND
+            year_month_day = '{1}'
+        GROUP BY
+            ca.collection,
+            sam.idarticle_sam,
+            ca.idjournal_a,
+            ym
+    ON DUPLICATE KEY UPDATE
+        total_item_requests = total_item_requests + VALUES(total_item_requests),
+        total_item_investigations = total_item_investigations + VALUES(total_item_investigations),
+        unique_item_requests = unique_item_requests + VALUES(unique_item_requests),
+        unique_item_investigations = unique_item_investigations + VALUES(unique_item_investigations)
+    ;
+    '''.format(collection, date)
+    engine = create_engine(database_uri)
+    return engine.execute(raw_query)
+
+
 def extract_aggregated_data_for_article_language_year_month(database_uri, collection, date):
     raw_query = '''
     INSERT INTO
