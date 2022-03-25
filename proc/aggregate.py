@@ -136,7 +136,7 @@ def main():
                     if table_name == 'aggr_article_journal_year_month_metric':
                         status = lib_database.extract_aggregate_data_for_article_journal_year_month(STR_CONNECTION, params.collection, date)
 
-                    if table_name == 'aggr_article_language_year_month_metric':
+                    elif table_name == 'aggr_article_language_year_month_metric':
                         status = lib_database.extract_aggregated_data_for_article_language_year_month(STR_CONNECTION, params.collection, date)
 
                     elif table_name == 'aggr_journal_language_year_month_metric':
