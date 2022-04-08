@@ -29,7 +29,8 @@ def parse(record):
     return {
         preprint_pid: {
             'publication_date': record.metadata.get('date').pop(),
-            'default_language': record.metadata.get('language').pop()
+            'default_language': record.metadata.get('language').pop(),
+            'doi': _extract_doi(record.metadata.get('identifier', [])),
         }
     }
 
