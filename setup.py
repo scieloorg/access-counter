@@ -23,6 +23,7 @@ install_requires = [
     'thriftpy2',
     'urllib3',
     'xylose',
+    'scielo_scholarly_data'
 ]
 
 
