@@ -4,6 +4,7 @@ import logging
 import os
 import re
 
+from scielo_scholarly_data import standardizer
 from utils.regular_expressions import REGEX_PREPRINT_PID_PREFIX
 from sickle import Sickle
 
