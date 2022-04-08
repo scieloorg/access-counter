@@ -31,6 +31,7 @@ def parse(record):
             'publication_date': record.metadata.get('date').pop(),
             'default_language': record.metadata.get('language').pop(),
             'doi': _extract_doi(record.metadata.get('identifier', [])),
+            'identifiers': ';'.join([i for i in record.metadata.get('identifier', [])]),
         }
     }
 
