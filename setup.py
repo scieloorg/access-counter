@@ -23,12 +23,13 @@ install_requires = [
     'thriftpy2',
     'urllib3',
     'xylose',
+    'scielo_scholarly_data'
 ]
 
 
 setup(
     name="scielo-usage-counter",
-    version='0.6.2',
+    version='0.6.3',
     description="The SciELO COUNTER Tools",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",

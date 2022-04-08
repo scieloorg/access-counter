@@ -4,6 +4,7 @@ import logging
 import os
 import re
 
+from scielo_scholarly_data import standardizer
 from utils.regular_expressions import REGEX_PREPRINT_PID_PREFIX
 from sickle import Sickle
 
@@ -15,13 +16,22 @@ OAI_METADATA_PREFIX = os.environ.get('OAI_METADATA_PREFIX', 'oai_dc')
 PREPRINT_DICTIONARY_PREFIX = os.environ.get('PREPRINT_DICTIONARY_PREFIX', 'pre-counter-dict-')
 
 
+def _extract_doi(identifiers):
+    for i in identifiers:
+        doi = standardizer.document_doi(i, return_mode='path')
+        if 'error' not in doi:
+            return doi
+
+
 def parse(record):
     preprint_pid = re.match(REGEX_PREPRINT_PID_PREFIX, record.header.identifier).group(1)
 
     return {
         preprint_pid: {
             'publication_date': record.metadata.get('date').pop(),
-            'default_language': record.metadata.get('language').pop()
+            'default_language': record.metadata.get('language').pop(),
+            'doi': _extract_doi(record.metadata.get('identifier', [])),
+            'identifiers': ';'.join([i for i in record.metadata.get('identifier', [])]),
         }
     }
 
