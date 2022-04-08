@@ -16,6 +16,13 @@ OAI_METADATA_PREFIX = os.environ.get('OAI_METADATA_PREFIX', 'oai_dc')
 PREPRINT_DICTIONARY_PREFIX = os.environ.get('PREPRINT_DICTIONARY_PREFIX', 'pre-counter-dict-')
 
 
+def _extract_doi(identifiers):
+    for i in identifiers:
+        doi = standardizer.document_doi(i, return_mode='path')
+        if 'error' not in doi:
+            return doi
+
+
 def parse(record):
     preprint_pid = re.match(REGEX_PREPRINT_PID_PREFIX, record.header.identifier).group(1)
 
