@@ -11,7 +11,7 @@ LABEL MAINTAINER scielo-dev@googlegroups.com
 COPY --from=build /deps/* /deps/
 COPY requirements.txt .
 
-RUN apk add --no-cache --virtual .build-deps gcc g++ \
+RUN apk add --no-cache --virtual .build-deps gcc g++ git \
     && apk add --no-cache lapack lapack-dev blas blas-dev libstdc++ gfortran \
     && apk add --no-cache mariadb-dev libxslt-dev \
     && pip install --no-cache-dir --upgrade pip \
