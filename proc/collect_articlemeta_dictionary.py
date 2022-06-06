@@ -42,3 +42,9 @@ SLEEP_TIME = int(os.environ.get(
     'ARTICLEMETA_COLLECT_URL_SLEEP_TIME',
     30
 ))
+
+
+class ArticlemetaPaginationWasNotDetected(Exception):
+    ...
+
+
