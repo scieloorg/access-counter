@@ -48,3 +48,13 @@ class ArticlemetaPaginationWasNotDetected(Exception):
     ...
 
 
+
+
+def _extract_total_and_limit(response):
+    try:
+        total = response['meta']['total']
+        limit = response['meta']['limit']
+    except KeyError:
+        raise ArticlemetaPaginationWasNotDetected('Não foi possível extrair parâmetros limit e total')
+
+    return total, limit
