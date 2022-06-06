@@ -94,3 +94,14 @@ def _extract_total_and_limit(response):
 def _generate_filename(prefix, from_date, until_date, offset):
     return f'{prefix}-{from_date}-{until_date}-offset-{str(offset)}.json'
 
+
+def _collect_and_save(from_date, until_date, offset, prefix):
+    logging.info('Obtendo dados de Articlemeta para (%s, %s) e offset %d' % (from_date, until_date, offset))
+    content = collect(from_date, until_date)
+    
+    output_filename = _generate_filename(prefix, from_date, until_date, offset)
+    save(content, output_filename)
+
+    if offset == 0:
+        return content
+
