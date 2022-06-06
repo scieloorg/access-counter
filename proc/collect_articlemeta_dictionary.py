@@ -48,6 +48,25 @@ class ArticlemetaPaginationWasNotDetected(Exception):
     ...
 
 
+def collect(from_date, until_date, offset=0):
+    for t in range(1, MAX_RETRIES + 1):
+        params = {'from': from_date, 'offset': offset}
+
+        if until_date:
+            params.update({'until': until_date})
+
+        response = requests.get(ARTICLEMETA_ENDPOINT, params=params)
+
+        try:
+            response.raise_for_status()
+            logging.debug(response.url)
+
+        except requests.exceptions.HTTPError:
+            logging.warning('Não foi possível coletar dados de %s. Aguardando %d segundos para tentativa %d de %d' % (response.url,SLEEP_TIME, t, MAX_RETRIES))
+            sleep(SLEEP_TIME)
+
+        else:
+            return response.json()
 
 
 def _extract_total_and_limit(response):
