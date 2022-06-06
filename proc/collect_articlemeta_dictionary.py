@@ -25,7 +25,7 @@ ARTICLEMETA_ENDPOINT = os.environ.get(
 
 ARTICLEMETA_DICTIONARY_PREFIX = os.environ.get(
     'ARTICLEMETA_COLLECT_DICTIONARY_PREFIX', 
-    'am-counter-dict-'
+    'am-counter-dict'
 )
 
 LOGGING_LEVEL = os.environ.get(
