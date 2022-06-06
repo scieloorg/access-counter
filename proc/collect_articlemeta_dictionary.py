@@ -69,6 +69,18 @@ def collect(from_date, until_date, offset=0):
             return response.json()
 
 
+def save(response, filename):
+    filepath = os.path.join(DIR_DICTIONARIES, filename)
+
+    if not os.path.exists(DIR_DICTIONARIES):
+        os.makedirs(DIR_DICTIONARIES)
+
+    try:
+        json.dump(response, open(filepath, 'w'))
+    except FileExistsError:
+        logging.error('Arquivo %s já existe' % filepath)
+
+
 def _extract_total_and_limit(response):
     try:
         total = response['meta']['total']
