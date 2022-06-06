@@ -105,3 +105,20 @@ def _collect_and_save(from_date, until_date, offset, prefix):
     if offset == 0:
         return content
 
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--from_date', required=True)
+    parser.add_argument('-u', '--until_date', default=datetime.now().strftime('%Y-%m-%d'))
+
+    params = parser.parse_args()
+
+    logging.basicConfig(level=LOGGING_LEVEL,
+                        format='[%(asctime)s] %(levelname)s %(message)s',
+                        datefmt='%d/%b/%Y %H:%M:%S')
+
+    content = _collect_and_save(params.from_date, params.until_date, 0, ARTICLEMETA_DICTIONARY_PREFIX)
+    total, limit = _extract_total_and_limit(content)
+
+    for i_offset in range(limit, total, limit):
+        _collect_and_save(params.from_date, params.until_date, i_offset, ARTICLEMETA_DICTIONARY_PREFIX)
