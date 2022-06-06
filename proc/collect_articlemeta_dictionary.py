@@ -58,3 +58,8 @@ def _extract_total_and_limit(response):
         raise ArticlemetaPaginationWasNotDetected('Não foi possível extrair parâmetros limit e total')
 
     return total, limit
+
+
+def _generate_filename(prefix, from_date, until_date, offset):
+    return f'{prefix}-{from_date}-{until_date}-offset-{str(offset)}.json'
+
