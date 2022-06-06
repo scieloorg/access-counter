@@ -49,6 +49,7 @@ setup(
     extract_pretables=proc.extract_pretables:main
     collect_opac_dictionary=proc.collect_opac_dictionary:main
     collect_preprint_dictionary=proc.collect_preprint_dictionary:main
+    collect_articlemeta_dictionary=proc.collect_articlemeta_dictionary:main
     aggregate=proc.aggregate:main
     """
 )
