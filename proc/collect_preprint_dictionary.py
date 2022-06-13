@@ -4,16 +4,36 @@ import logging
 import os
 import re
 
+from datetime import datetime
 from scielo_scholarly_data import standardizer
 from utils.regular_expressions import REGEX_PREPRINT_PID_PREFIX
 from sickle import Sickle
 
 
-DIR_DATA = os.environ.get('DIR_DATA', '/opt/counter/data')
-DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
-OAI_PMH_PREPRINT_ENDPOINT = os.environ.get('OAI_PMH_PREPRINT_ENDPOINT', 'https://preprints.scielo.org/index.php/scielo/oai')
-OAI_METADATA_PREFIX = os.environ.get('OAI_METADATA_PREFIX', 'oai_dc')
-PREPRINT_DICTIONARY_PREFIX = os.environ.get('PREPRINT_DICTIONARY_PREFIX', 'pre-counter-dict-')
+DIR_DATA = os.environ.get(
+    'DIR_DATA', 
+    '/opt/counter/data'
+)
+
+DIR_DICTIONARIES = os.path.join(
+    DIR_DATA, 
+    'dictionaries'
+)
+
+OAI_PMH_PREPRINT_ENDPOINT = os.environ.get(
+    'OAI_PMH_PREPRINT_ENDPOINT', 
+    'https://preprints.scielo.org/index.php/scielo/oai'
+)
+
+OAI_METADATA_PREFIX = os.environ.get(
+    'OAI_METADATA_PREFIX', 
+    'oai_dc'
+)
+
+PREPRINT_DICTIONARY_PREFIX = os.environ.get(
+    'PREPRINT_DICTIONARY_PREFIX', 
+    'pre-counter-dict'
+)
 
 
 def _extract_doi(identifiers):
