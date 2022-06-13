@@ -90,21 +90,20 @@ def _collect_and_save(from_date, until_date, page, prefix):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--date', required=True)
+    parser.add_argument('-u', '--until_date', required=True)
+    parser.add_argument('-f', '--from_date')
+
     params = parser.parse_args()
+
+    if not params.from_date:
+        from_date = (datetime.strptime(params.until_date, '%Y-%m-%d') - timedelta(30)).strftime('%Y-%m-%d')
 
     logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
 
-    logging.info('Obtendo dados do OPAC para date=%s e página=%d' % (params.date, 1))
-    filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '-p', '1', '.json'])
-    data = collect(params.date, page=1)
-    save(data, filename)
+    content = _collect_and_save(from_date, params.until_date, 1, OPAC_DICTIONARY_PREFIX)
 
-    pages = int(data.get('pages', '1'))
+    pages = int(content.get('pages', '1'))
     for i in range(2, pages + 1):
-        logging.info('Obtendo dados do OPAC para date=%s e página=%d de %d' % (params.date, i, pages))
-        filename = ''.join([OPAC_DICTIONARY_PREFIX, COLLECTION, '-', params.date, '-p', str(i), '.json'])
-        data_i = collect(params.date, page=i)
-        save(data_i, filename)
+        _collect_and_save(from_date, params.until_date, i, OPAC_DICTIONARY_PREFIX)
