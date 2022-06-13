@@ -1,17 +1,17 @@
 import argparse
-import datetime
 import logging
 import json
 import os
 import requests
 
+from datetime import datetime, timedelta
+from time import sleep
 
-COLLECTION = os.environ.get('COLLECTION', 'scl')
-DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
-DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
-OPAC_ENDPOINT = os.environ.get('OPAC_ENDPOINT', 'https://scielo.br/api/v1/counter_dict')
-OPAC_DICTIONARY_PREFIX = os.environ.get('OPAC_DICTIONARY_PREFIX', 'opac-counter-dict-')
 
+DIR_DATA = os.environ.get(
+    'DIR_DATA', 
+    '/app/data'
+)
 
 def collect(date: str, page=1):
     try:
@@ -20,6 +20,20 @@ def collect(date: str, page=1):
         response = requests.get(url=OPAC_ENDPOINT, params={'end_date': until_date.strftime('%Y-%m-%d'), 'page': page}, verify=False)
         if response.status_code == 200:
             return response.json()
+OPAC_DICTIONARY_PREFIX = os.environ.get(
+    'OPAC_DICTIONARY_PREFIX', 
+    'opac-counter-dict'
+)
+
+MAX_RETRIES = int(os.environ.get(
+    'OPAC_COLLECT_MAX_RETRIES',
+    5
+))
+
+SLEEP_TIME = int(os.environ.get(
+    'OPAC_COLLECT_URL_SLEEP_TIME',
+    30
+))
 
     except ValueError:
         logging.error('Data inválida %s' % date)
