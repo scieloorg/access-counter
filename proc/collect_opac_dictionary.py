@@ -13,13 +13,16 @@ DIR_DATA = os.environ.get(
     '/app/data'
 )
 
-def collect(date: str, page=1):
-    try:
-        until_date = datetime.datetime.strptime(date, '%Y-%m-%d')
+DIR_DICTIONARIES = os.path.join(
+    DIR_DATA,
+    'dictionaries'
+)
 
-        response = requests.get(url=OPAC_ENDPOINT, params={'end_date': until_date.strftime('%Y-%m-%d'), 'page': page}, verify=False)
-        if response.status_code == 200:
-            return response.json()
+OPAC_ENDPOINT = os.environ.get(
+    'OPAC_ENDPOINT', 
+    'https://scielo.br/api/v1/counter_dict'
+)
+
 OPAC_DICTIONARY_PREFIX = os.environ.get(
     'OPAC_DICTIONARY_PREFIX', 
     'opac-counter-dict'
@@ -35,8 +38,27 @@ SLEEP_TIME = int(os.environ.get(
     30
 ))
 
-    except ValueError:
-        logging.error('Data inválida %s' % date)
+
+def collect(begin_date, end_date, page=1):
+    for t in range(1, MAX_RETRIES + 1):
+        params = {
+            'begin_date': begin_date, 
+            'end_date': end_date, 
+            'page': page
+        }
+
+        response = requests.get(url=OPAC_ENDPOINT, params=params, verify=False)
+
+        try:
+            response.raise_for_status()
+            logging.debug(response.url)
+
+        except requests.exceptions.HTTPError:
+            logging.warning('Não foi possível coletar dados de %s. Aguardando %d segundos para tentativa %d de %d' % (response.url,SLEEP_TIME, t, MAX_RETRIES))
+            sleep(SLEEP_TIME)
+
+        else:
+            return response.json()
 
 
 def save(response, filename):
