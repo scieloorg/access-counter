@@ -73,6 +73,21 @@ def save(response, filename):
         logging.error('Arquivo %s já existe' % filepath)
 
 
+def _generate_filename(prefix, from_date, until_date, page):
+    return f'{prefix}-{from_date}-{until_date}-page-{str(page)}.json'
+
+
+def _collect_and_save(from_date, until_date, page, prefix):
+    logging.info('Obtendo dados de OPAC para (%s, %s) e página %d' % (from_date, until_date, page))
+    content = collect(from_date, until_date)
+    
+    output_filename = _generate_filename(prefix, from_date, until_date, page)
+    save(content, output_filename)
+
+    if page == 1:
+        return content
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--date', required=True)
