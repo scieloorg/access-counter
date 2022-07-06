@@ -95,8 +95,7 @@ def main():
 
     params = parser.parse_args()
 
-    if not params.from_date:
-        from_date = (datetime.strptime(params.until_date, '%Y-%m-%d') - timedelta(30)).strftime('%Y-%m-%d')
+    from_date = params.from_date or (datetime.strptime(params.until_date, '%Y-%m-%d') - timedelta(30)).strftime('%Y-%m-%d')
 
     logging.basicConfig(level=logging.INFO,
                         format='[%(asctime)s] %(levelname)s %(message)s',
