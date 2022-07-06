@@ -4,16 +4,36 @@ import logging
 import os
 import re
 
+from datetime import datetime
 from scielo_scholarly_data import standardizer
 from utils.regular_expressions import REGEX_PREPRINT_PID_PREFIX
 from sickle import Sickle
 
 
-DIR_DATA = os.environ.get('DIR_DATA', '/opt/counter/data')
-DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
-OAI_PMH_PREPRINT_ENDPOINT = os.environ.get('OAI_PMH_PREPRINT_ENDPOINT', 'https://preprints.scielo.org/index.php/scielo/oai')
-OAI_METADATA_PREFIX = os.environ.get('OAI_METADATA_PREFIX', 'oai_dc')
-PREPRINT_DICTIONARY_PREFIX = os.environ.get('PREPRINT_DICTIONARY_PREFIX', 'pre-counter-dict-')
+DIR_DATA = os.environ.get(
+    'DIR_DATA', 
+    '/opt/counter/data'
+)
+
+DIR_DICTIONARIES = os.path.join(
+    DIR_DATA, 
+    'dictionaries'
+)
+
+OAI_PMH_PREPRINT_ENDPOINT = os.environ.get(
+    'OAI_PMH_PREPRINT_ENDPOINT', 
+    'https://preprints.scielo.org/index.php/scielo/oai'
+)
+
+OAI_METADATA_PREFIX = os.environ.get(
+    'OAI_METADATA_PREFIX', 
+    'oai_dc'
+)
+
+PREPRINT_DICTIONARY_PREFIX = os.environ.get(
+    'PREPRINT_DICTIONARY_PREFIX', 
+    'pre-counter-dict'
+)
 
 
 def _extract_doi(identifiers):
@@ -21,6 +41,10 @@ def _extract_doi(identifiers):
         doi = standardizer.document_doi(i, return_mode='path')
         if 'error' not in doi:
             return doi
+
+
+def _generate_filename(prefix, from_date, until_date):
+    return f'{prefix}-{from_date}-{until_date}.json'
 
 
 def parse(record):
@@ -51,6 +75,7 @@ def save(data, filename):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--from_date', required=True)
+    parser.add_argument('-u', '--until_date', default=datetime.now().strftime('%Y-%m-%d'))
     params = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO,
@@ -60,13 +85,14 @@ def main():
     oai_client = Sickle(endpoint=OAI_PMH_PREPRINT_ENDPOINT, max_retries=3, verify=False)
     records = oai_client.ListRecords(**{
         'metadataPrefix': OAI_METADATA_PREFIX,
-        'from': params.from_date
+        'from': params.from_date,
+        'until': params.until_date,
     })
 
-    logging.info('Obtendo dados do OAI-PMH Preprints para date >= %s' % params.from_date)
+    logging.info('Obtendo dados do OAI-PMH Preprints para (%s,%s)' % (params.from_date, params.until_date))
     data = {}
     for r in records:
         data.update(parse(r))
 
-    filename = ''.join([PREPRINT_DICTIONARY_PREFIX, params.from_date, '.json'])
+    filename = _generate_filename(PREPRINT_DICTIONARY_PREFIX, params.from_date, params.until_date)
     save(data, filename)
