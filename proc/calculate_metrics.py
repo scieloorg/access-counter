@@ -313,7 +313,7 @@ def main():
     )
 
     parser.add_argument(
-        '--v', '--dict_date',
+        '--dict_date',
         dest='dict_date',
         required=True,
         help='Data, no formato YYYY-MM-DD, da versão dos dicionários a serem utilizados'
