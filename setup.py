@@ -8,6 +8,7 @@ install_requires = [
     'dateutils',
     'greenlet',
     'idna',
+    'langcodes',
     'legendarium',
     'lxml',
     'mysqlclient',
