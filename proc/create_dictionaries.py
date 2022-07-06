@@ -6,14 +6,20 @@ import os
 from utils import dict_utils, dict_validator, file_utils
 
 
-ARTICLEMETA_DATABASE_STRING = os.environ.get('ARTICLEMETA_DATABASE_STRING', 'mongodb://username:password@host:port/database.collection')
-DIR_DATA = os.environ.get('DIR_DATA', '/app/data')
-LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
+DIR_DATA = os.environ.get(
+    'DIR_DATA', 
+    '/app/data'
+)
 
-DIR_DICTIONARIES = os.path.join(DIR_DATA, 'dictionaries')
-DOMAINS = set()
-FULLTEXT_MODES = ['pdf', 'html']
+LOGGING_LEVEL = os.environ.get(
+    'LOGGING_LEVEL', 
+    'INFO'
+)
 
+DIR_DICTIONARIES = os.path.join(
+    DIR_DATA, 
+    'dictionaries'
+)
 
 def _get_json_files(dir_dictionaries):
     json_files = [f for f in os.listdir(dir_dictionaries) if f.endswith('.json')]
