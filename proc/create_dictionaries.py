@@ -21,13 +21,20 @@ DIR_DICTIONARIES = os.path.join(
     'dictionaries'
 )
 
+ARTICLEMETA_PREFIX_PREFIX = os.environ.get(
+    'ARTICLEMETA_PREFIX_PREFIX', 
+    r'^am-counter-dict'
+)
 
-                            if vii == default_value:
-                                line += ',1'
-                            else:
-                                line += ',0'
+OPAC_DICTIONARY_PREFIX = os.environ.get(
+    'OPAC_DICTIONARY_PREFIX', 
+    r'^opac-counter-dict'
+)
 
-                            f.write(line + '\n')
+PREPRINT_DICTIONARY_PREFIX = os.environ.get(
+    'PREPRINT_DICTIONARY_PREFIX', 
+    r'^pre-counter-dict'
+)
 
 
 def main():
