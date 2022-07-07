@@ -79,7 +79,7 @@ def _generate_filename(prefix, from_date, until_date, page):
 
 def _collect_and_save(from_date, until_date, page, prefix):
     logging.info('Obtendo dados de OPAC para (%s, %s) e página %d' % (from_date, until_date, page))
-    content = collect(from_date, until_date)
+    content = collect(from_date, until_date, page)
     
     output_filename = _generate_filename(prefix, from_date, until_date, page)
     save(content, output_filename)
