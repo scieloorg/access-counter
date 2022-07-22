@@ -97,7 +97,7 @@ def _generate_filename(prefix, from_date, until_date, offset):
 
 def _collect_and_save(from_date, until_date, offset, prefix):
     logging.info('Obtendo dados de Articlemeta para (%s, %s) e offset %d' % (from_date, until_date, offset))
-    content = collect(from_date, until_date)
+    content = collect(from_date, until_date, offset)
     
     output_filename = _generate_filename(prefix, from_date, until_date, offset)
     save(content, output_filename)
