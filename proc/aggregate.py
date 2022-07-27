@@ -17,8 +17,15 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 ENGINE = create_engine(STR_CONNECTION, pool_recycle=1800)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)
 SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
-TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_journal_year_month_metric,aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric,aggr_journal_language_yop_year_month_metric,aggr_journal_geolocation_yop_year_month_metric')
 
+TABLES_TO_UPDATE_DEFAULT = [
+    'aggr_article_journal_year_month_metric',
+    'aggr_article_language_year_month_metric',
+    'aggr_journal_language_year_month_metric',
+    'aggr_journal_geolocation_year_month_metric',
+    'aggr_journal_language_yop_year_month_metric',
+    'aggr_journal_geolocation_yop_year_month_metric',
+]
 
 def _extrac_dates_from_period(period: str):
     dates = []
