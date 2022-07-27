@@ -127,10 +127,13 @@ def main():
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
 
-    dates = _extrac_dates_from_period(params.period)
-    logging.info('Há %d datas...' % len(dates))
+    logging.info(f'Detectando datas a serem agregadas...')
+    with SESSION_FACTORY() as dbsession:
+        dates = _extract_dates_from_period(params.period) if not params.auto else lib_database.get_dates_available_for_aggregation(dbsession, params.collection)
+    
+    tables = list(set(params.tables)) or TABLES_TO_UPDATE_DEFAULT
 
-    tables = _extract_tables_to_update(params.tables)
+    logging.info(f'Há {len(dates)} data(s) e {len(tables)} tabela(s) a ser(em) agregada(s)')
     logging.info('Há %d tabelas de agregação' % len(tables))
 
     for date in dates:
