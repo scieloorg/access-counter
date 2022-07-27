@@ -97,6 +97,12 @@ def main():
         '--period',
         help='Indica explicitamente o período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)'
     )
+
+    parser.add_argument(
+        '--auto',
+        action='store_true',
+        default=False,
+        help='Obtém por meio do banco de dados as datas cujos dados serão agregados'
     )
 
     parser.add_argument(
