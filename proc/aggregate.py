@@ -91,7 +91,8 @@ def main():
     parser.add_argument(
         '-p',
         '--period',
-        help='Período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)'
+        help='Indica explicitamente o período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)'
+    )
     )
 
     parser.add_argument(
