@@ -49,10 +49,6 @@ def _extract_dates_from_period(period: str):
         return []
 
 
-def _extract_tables_to_update(tables: str):
-    return [t.strip() for t in tables.split(',')]
-
-
 def _translate_geolocation_to_country(data, group_by_yop=False):
     translated_data = {}
 
