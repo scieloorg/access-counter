@@ -27,7 +27,8 @@ TABLES_TO_UPDATE_DEFAULT = [
     'aggr_journal_geolocation_yop_year_month_metric',
 ]
 
-def _extrac_dates_from_period(period: str):
+
+def _extract_dates_from_period(period: str):
     dates = []
 
     try:
