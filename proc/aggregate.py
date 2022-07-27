@@ -17,10 +17,18 @@ LOGGING_LEVEL = os.environ.get('LOGGING_LEVEL', 'INFO')
 ENGINE = create_engine(STR_CONNECTION, pool_recycle=1800)
 SESSION_FACTORY = sessionmaker(bind=ENGINE)
 SESSION_BULK_LIMIT = int(os.environ.get('SESSION_BULK_LIMIT', '500'))
-TABLES_TO_UPDATE = os.environ.get('TABLES', 'aggr_article_journal_year_month_metric,aggr_article_language_year_month_metric,aggr_journal_language_year_month_metric,aggr_journal_geolocation_year_month_metric,aggr_journal_language_yop_year_month_metric,aggr_journal_geolocation_yop_year_month_metric')
+
+TABLES_TO_UPDATE_DEFAULT = [
+    'aggr_article_journal_year_month_metric',
+    'aggr_article_language_year_month_metric',
+    'aggr_journal_language_year_month_metric',
+    'aggr_journal_geolocation_year_month_metric',
+    'aggr_journal_language_yop_year_month_metric',
+    'aggr_journal_geolocation_yop_year_month_metric',
+]
 
 
-def _extrac_dates_from_period(period: str):
+def _extract_dates_from_period(period: str):
     dates = []
 
     try:
@@ -39,10 +47,6 @@ def _extrac_dates_from_period(period: str):
     except Exception as e:
         logging.error(e)
         return []
-
-
-def _extract_tables_to_update(tables: str):
-    return [t.strip() for t in tables.split(',')]
 
 
 def _translate_geolocation_to_country(data, group_by_yop=False):
@@ -91,12 +95,20 @@ def main():
     parser.add_argument(
         '-p',
         '--period',
-        help='Período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)'
+        help='Indica explicitamente o período de datas a serem agregadas (YYYY-MM-DD,YYYY-MM-DD)'
+    )
+
+    parser.add_argument(
+        '--auto',
+        action='store_true',
+        default=False,
+        help='Obtém por meio do banco de dados as datas cujos dados serão agregados'
     )
 
     parser.add_argument(
         '-t',
         '--tables',
+        action='append',
         choices=[
             'aggr_article_journal_year_month_metric',
             'aggr_article_language_year_month_metric',
@@ -105,7 +117,7 @@ def main():
             'aggr_journal_language_yop_year_month_metric',
             'aggr_journal_geolocation_yop_year_month_metric',
         ],
-        default=TABLES_TO_UPDATE,
+        default=[],
         help='Tabelas a serem preenchidas'
     )
 
@@ -115,19 +127,22 @@ def main():
                         format='[%(asctime)s] %(levelname)s %(message)s',
                         datefmt='%d/%b/%Y %H:%M:%S')
 
-    dates = _extrac_dates_from_period(params.period)
-    logging.info('Há %d datas...' % len(dates))
+    logging.info(f'Detectando datas a serem agregadas...')
+    with SESSION_FACTORY() as dbsession:
+        dates = _extract_dates_from_period(params.period) if not params.auto else lib_database.get_dates_available_for_aggregation(dbsession, params.collection)
+    
+    tables = list(set(params.tables)) or TABLES_TO_UPDATE_DEFAULT
 
-    tables = _extract_tables_to_update(params.tables)
-    logging.info('Há %d tabelas de agregação' % len(tables))
+    logging.info(f'Há {len(dates)} data(s) e {len(tables)} tabela(s) a ser(em) agregada(s)')
 
     for date in dates:
         for table_name in tables:
             status_column_name = 'status_' + table_name
 
             try:
-                current_date_aggr_status_table = lib_database.get_aggr_status(SESSION_FACTORY(), params.collection, date, status_column_name)
-
+                with SESSION_FACTORY() as dbsession:
+                    current_date_aggr_status_table = lib_database.get_aggr_status(dbsession, params.collection, date, status_column_name)
+    
                 if current_date_aggr_status_table == lib_status.AGGR_STATUS_QUEUE:
                     logging.info('Adicionando métricas agregadas para tabela %s e data (%s)...' % (table_name, date))
 
@@ -148,19 +163,24 @@ def main():
                     elif table_name == 'aggr_journal_geolocation_year_month_metric':
                         semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_year_month(STR_CONNECTION, params.collection, date)
                         aggr_data = _translate_geolocation_to_country(semi_aggr_data)
-                        status = lib_database.update_aggr_journal_geolocation(SESSION_FACTORY(), aggr_data)
+                        
+                        with SESSION_FACTORY() as dbsession:
+                            status = lib_database.update_aggr_journal_geolocation(dbsession, aggr_data)
 
                     elif table_name == 'aggr_journal_geolocation_yop_year_month_metric':
                         semi_aggr_data = lib_database.get_aggregated_data_for_journal_geolocation_yop_year_month(STR_CONNECTION, params.collection, date)
                         aggr_data = _translate_geolocation_to_country(semi_aggr_data, group_by_yop=True)
-                        status = lib_database.update_aggr_journal_geolocation_yop(SESSION_FACTORY(), aggr_data)
+
+                        with SESSION_FACTORY() as dbsession:
+                            status = lib_database.update_aggr_journal_geolocation_yop(dbsession, aggr_data)
 
                     else:
                         status = None
 
                     if _is_status_true(status):
-                        lib_database.update_aggr_status_for_table(SESSION_FACTORY(), params.collection, date, lib_status.AGGR_STATUS_DONE, status_column_name)
-
+                        with SESSION_FACTORY() as dbsession:
+                            lib_database.update_aggr_status_for_table(dbsession, params.collection, date, lib_status.AGGR_STATUS_DONE, status_column_name)
+    
                     logging.info('Tempo total: %.2f segundos' % (time.time() - time_start))
 
                 elif current_date_aggr_status_table is None:

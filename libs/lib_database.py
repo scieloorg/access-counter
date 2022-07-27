@@ -195,6 +195,39 @@ def get_date_status(db_session, collection, date):
         return ''
 
 
+def get_dates_available_for_aggregation(db_session, collection):
+    try:
+        aggr_items = db_session.query(AggrStatus).filter(AggrStatus.collection == collection).all()
+        aggr_dates = [a.date for a in aggr_items]
+        
+        dates = []
+        for d in db_session.query(DateStatus).filter(and_(DateStatus.collection == collection, DateStatus.status == 5)):
+            if d.date not in aggr_dates:
+                dates.append(d.date)
+            else:
+                for a in aggr_items:
+                    if d.date == a.date:
+                        for i_name in [
+                            'status_aggr_article_journal_year_month_metric',
+                            'status_aggr_article_language_year_month_metric',
+                            'status_aggr_journal_language_year_month_metric',
+                            'status_aggr_journal_geolocation_year_month_metric',
+                            'status_aggr_journal_language_yop_year_month_metric',
+                            'status_aggr_journal_geolocation_yop_year_month_metric',
+                        ]:    
+                            i_value = getattr(a, i_name)
+                            if i_value == 0:
+                                dates.append(d.date)
+                                break
+
+        return dates
+
+    except NoResultFound:
+        return []
+    except OperationalError:
+        return []
+
+
 def get_missing_aggregations(db_session, collection, date):
     try:
         missing_aggregations = []
