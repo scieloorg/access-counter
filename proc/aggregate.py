@@ -98,6 +98,7 @@ def main():
     parser.add_argument(
         '-t',
         '--tables',
+        action='append',
         choices=[
             'aggr_article_journal_year_month_metric',
             'aggr_article_language_year_month_metric',
@@ -106,7 +107,7 @@ def main():
             'aggr_journal_language_yop_year_month_metric',
             'aggr_journal_geolocation_yop_year_month_metric',
         ],
-        default=TABLES_TO_UPDATE,
+        default=[],
         help='Tabelas a serem preenchidas'
     )
 
