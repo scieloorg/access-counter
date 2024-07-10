@@ -21,3 +21,4 @@ thriftpy2==0.4.14
 urllib3==1.26.6
 xylose==1.35.4
 -e git+https://github.com/scieloorg/scielo_scholarly_data#egg=scielo_scholarly_data
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
